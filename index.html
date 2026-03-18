@@ -1341,6 +1341,52 @@ function rdvTick(){
     }
   });
 }
+
+// ══════════════════════════════════════════════════════════════
+// RÉCEPTION RDV depuis la console principale (postMessage)
+// Écoute les messages provenant de https://nikoprdn.github.io
+// ══════════════════════════════════════════════════════════════
+window.addEventListener('message', function(event){
+  // Vérifier l'origine pour la sécurité
+  // Accepter depuis nikoprdn.github.io et localhost (dev)
+  const allowed=['https://nikoprdn.github.io','http://localhost','http://127.0.0.1'];
+  if(!allowed.some(o=>event.origin.startsWith(o))) return;
+
+  const msg=event.data;
+  if(!msg||msg.action!=='rdv_play') return;
+
+  const diffIdx=typeof msg.diffuser==='number'?msg.diffuser:0;
+  if(diffIdx<0||diffIdx>=D.length) return;
+
+  const d=D[diffIdx];
+  if(!d.playing && d.tracks.length>0){
+    // Résumer le contexte audio (requis par les navigateurs)
+    if(typeof getCtx==='function') getCtx().resume();
+    d.togglePlay();
+    console.log('[Diff2] RDV reçu → DIFF', diffIdx+1, 'lancé');
+  } else {
+    console.log('[Diff2] RDV reçu mais DIFF', diffIdx+1, 'déjà en cours ou vide');
+  }
+});
+
+// ── Démarrage automatique via paramètre URL (fallback) ──
+(function(){
+  const params=new URLSearchParams(window.location.search);
+  if(params.has('rdv_play')){
+    // Attendre que l'audio soit chargé avant de jouer
+    const tryPlay=()=>{
+      const d=D[0];
+      if(d && d.tracks.length>0 && !d.playing){
+        if(typeof getCtx==='function') getCtx().resume();
+        d.togglePlay();
+        console.log('[Diff2] Autoplay via URL param');
+      } else {
+        setTimeout(tryPlay,500);
+      }
+    };
+    setTimeout(tryPlay,800);
+  }
+})();
 </script>
 </body>
 </html>
