@@ -1580,6 +1580,13 @@ async function sigHandleMessage(msg){
     case 'stop':
       diffStop();
       break;
+    // Réponse WebRTC de RC
+    case 'rtc-answer':
+      await handleD2RtcAnswer(msg.sdp);
+      break;
+    case 'rtc-ice-rcd2':
+      await handleD2RtcIce(msg.c);
+      break;
   }
 }
 
@@ -1590,6 +1597,92 @@ function sendToRC(msg){
 }
 
 // Démarrage signaling
+// ══════════════════════════════════════════════════════════════
+// WEBRTC — Capture audio + stream vers Radio-Console
+// ══════════════════════════════════════════════════════════════
+let _d2Peer      = null;
+let _d2CaptureDst= null;
+let _d2GainNode  = null;
+let _d2RtcActive = false;
+
+function ensureCapture(){
+  // Créer le nœud de capture si pas encore fait
+  const ctx=getCtx();
+  if(!_d2GainNode){
+    _d2GainNode=ctx.createGain(); _d2GainNode.gain.value=1;
+  }
+  if(!_d2CaptureDst){
+    _d2CaptureDst=ctx.createMediaStreamDestination();
+    _d2GainNode.connect(_d2CaptureDst);
+  }
+  _d2GainNode.connect(ctx.destination);
+}
+
+function wireAudioD2(el){
+  if(!el||el._d2Wired) return;
+  const ctx=getCtx(); ensureCapture();
+  try{
+    const src=ctx.createMediaElementSource(el);
+    src.connect(_d2GainNode);    // → capture WebRTC
+    src.connect(ctx.destination); // → haut-parleurs locaux
+    el._d2Wired=true;
+    console.log('[Diff2] Audio capturé pour WebRTC');
+    setTimeout(startD2WebRTC, 300);
+  }catch(e){
+    el._d2Wired=true;
+    console.warn('[wireAudioD2]',e.message);
+  }
+}
+
+async function startD2WebRTC(){
+  ensureCapture();
+  const tracks=_d2CaptureDst.stream.getAudioTracks();
+  if(!tracks.length){ console.warn('[D2 WebRTC] Pas de piste audio'); return; }
+  if(_d2Peer){ try{_d2Peer.close();}catch(e){} _d2Peer=null; }
+
+  _d2Peer=new RTCPeerConnection({iceServers:[
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'}
+  ]});
+
+  tracks.forEach(t=>_d2Peer.addTrack(t,_d2CaptureDst.stream));
+
+  _d2Peer.onicecandidate=e=>{
+    if(!e.candidate) return;
+    const msg={action:'rtc-ice-d2rc', c:e.candidate.toJSON()};
+    sigSend(msg);
+    if(_bc) try{_bc.postMessage(msg);}catch(ex){}
+  };
+
+  _d2Peer.onconnectionstatechange=()=>{
+    const s=_d2Peer?.connectionState||'';
+    _d2RtcActive=(s==='connected');
+    setRtcStatus(_d2RtcActive);
+    if(s==='failed'||s==='disconnected') setTimeout(startD2WebRTC,3000);
+    console.log('[D2 WebRTC] state:',s);
+  };
+
+  const offer=await _d2Peer.createOffer();
+  await _d2Peer.setLocalDescription(offer);
+
+  const msg={action:'rtc-offer', sdp:_d2Peer.localDescription.sdp};
+  sigSend(msg);
+  if(_bc) try{_bc.postMessage(msg);}catch(e){}
+  console.log('[D2 WebRTC] Offre envoyée');
+}
+
+async function handleD2RtcAnswer(sdp){
+  if(!_d2Peer) return;
+  try{ await _d2Peer.setRemoteDescription({type:'answer',sdp}); }
+  catch(e){ console.warn('[D2 WebRTC answer]',e); }
+}
+async function handleD2RtcIce(c){
+  if(!_d2Peer) return;
+  try{ await _d2Peer.addIceCandidate(c); }
+  catch(e){ console.warn('[D2 WebRTC ice]',e); }
+}
+
+
 function initSignaling(){
   setInterval(sigPoll, 2000);
   setInterval(sigHeartbeat, 5000);
@@ -1608,6 +1701,8 @@ try{
     if(m.action==='ping'){ _bc.postMessage({action:'pong',source:'Diff2'}); setRcStatus(true,'BC'); }
     if(m.action==='play'){ ensureAudioCtx(); if(!playing){const ok=diffPlay();if(!ok){pendingPlay=true;showAutoplayBanner();}} }
     if(m.action==='stop') diffStop();
+    if(m.action==='rtc-answer') await handleD2RtcAnswer(m.sdp);
+    if(m.action==='rtc-ice-rcd2') await handleD2RtcIce(m.c);
   });
   setTimeout(()=>{ _bc.postMessage({action:'ready',source:'Diff2'}); }, 600);
 }catch(e){ console.warn('[BC]',e); }
@@ -2477,6 +2572,15 @@ const D2_CONFIG={
   fdzCount:'d2-fdz-count', autoBtn:'d2-auto-btn',
 };
 const D=[new Diffuser(D2_CONFIG,0)];
+// Surcharge : brancher l'audio sur la capture WebRTC quand un son démarre
+const _origStartTrack = Diffuser.prototype._startTrack;
+Diffuser.prototype._startTrack = function(i){
+  _origStartTrack.call(this, i);
+  const el=this.audios[i];
+  if(el) setTimeout(()=>wireAudioD2(el), 100);
+};
+
+
 
 function fireMacroTrack(macroKey,diffIdx){
   if(macroKey==='raccro-ext') runRaccroExt();
