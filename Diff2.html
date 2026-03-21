@@ -191,6 +191,7 @@
 <div class="conn-bar">
   <div class="conn-dot" id="conn-dot2"></div>
   <span id="conn-label">Attente de commande depuis Radio-Console…</span>
+  <span style="margin-left:auto;font-size:8px;color:var(--cyan);transition:opacity .5s" id="load-status"></span>
 </div>
 
 <!-- Banner autoplay -->
@@ -275,10 +276,23 @@
 // DIFF2 — NATIONAL EXTERNE
 // Reçoit des commandes postMessage depuis Radio-Console
 // Origin autorisé : https://nikoprdn.github.io
+//
+// STRUCTURE DU DÉPÔT :
+//   Diff2/
+//   ├── index.html       ← cette page
+//   └── Audio/
+//       ├── playlist.json  ← liste des fichiers à charger
+//       ├── son1.mp3
+//       ├── son2.mp3
+//       └── ...
+//
+// playlist.json : tableau de noms de fichiers (ordre de lecture)
+//   ["intro.mp3", "jingle.mp3", "pub1.mp3"]
 // ══════════════════════════════════════════════════════════════
 
 const ALLOWED_ORIGIN = 'https://nikoprdn.github.io';
-const SOURCE_CONSOLE = 'https://nikoprdn.github.io/Radio-Console/';
+const AUDIO_DIR      = 'Audio/';
+const PLAYLIST_JSON  = AUDIO_DIR + 'playlist.json';
 
 // ── État ──
 let tracks    = [];   // {file, title, dur, audio}
@@ -298,6 +312,62 @@ setInterval(()=>{
   const d=new Date();
   document.getElementById('clock').textContent=fmt2(d.getHours())+':'+fmt2(d.getMinutes())+':'+fmt2(d.getSeconds());
 },1000);
+
+// ══════════════════════════════════════════════════════════════
+// CHARGEMENT AUTOMATIQUE depuis Audio/playlist.json
+// ══════════════════════════════════════════════════════════════
+async function loadPlaylistFromServer(){
+  const statusEl = document.getElementById('load-status');
+  try{
+    const res = await fetch(PLAYLIST_JSON);
+    if(!res.ok) throw new Error('playlist.json introuvable ('+res.status+')');
+    const files = await res.json();
+    if(!Array.isArray(files)||!files.length) throw new Error('playlist.json vide');
+
+    let loaded = 0;
+    if(statusEl) statusEl.textContent = 'Chargement de '+files.length+' fichier(s)…';
+
+    const promises = files.map(filename=>{
+      return new Promise(resolve=>{
+        const url  = AUDIO_DIR + encodeURIComponent(filename);
+        const title = filename.replace(/\.[^/.]+$/,'');
+        const track = {file:url, title, dur:0, audio:null};
+        const a = new Audio(url);
+        a.addEventListener('loadedmetadata', ()=>{
+          track.dur   = a.duration||0;
+          track.audio = a;
+          loaded++;
+          if(statusEl) statusEl.textContent = 'Chargement '+loaded+'/'+files.length+'…';
+          render();
+          resolve();
+        });
+        a.addEventListener('error', ()=>{
+          console.warn('Impossible de charger:', filename);
+          resolve(); // on continue sans ce fichier
+        });
+        // Déclencher le chargement des métadonnées
+        a.load();
+        track.audio = a;
+        tracks.push(track);
+        render();
+      });
+    });
+
+    await Promise.all(promises);
+    if(statusEl) statusEl.textContent = loaded+' fichier(s) prêt(s)';
+    setTimeout(()=>{ if(statusEl) statusEl.style.opacity='0'; }, 3000);
+
+  } catch(e){
+    console.warn('Chargement playlist.json:', e.message);
+    if(statusEl){
+      statusEl.textContent = '⚠ '+e.message+' — glisse des fichiers manuellement';
+      statusEl.style.color = 'var(--yellow)';
+    }
+  }
+}
+
+// Lancer au démarrage
+loadPlaylistFromServer();
 
 // ══════════════════════════════════════════════════════════════
 // RÉCEPTION postMessage depuis Radio-Console
