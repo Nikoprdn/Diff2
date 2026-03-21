@@ -183,11 +183,6 @@
     <span class="status-badge" id="status-badge">EN ATTENTE</span>
     <div class="conn-dot" id="conn-dot"></div>
     <span class="conn-source" id="conn-source">non connecté</span>
-    <div style="display:flex;align-items:center;gap:4px;padding:0 6px;border-left:1px solid #1e3060;margin-left:4px"
-         title="WebRTC audio vers Radio-Console">
-      <div id="rtc-dot" style="width:6px;height:6px;border-radius:50%;background:#2a1a3a;transition:background .3s"></div>
-      <span style="font-family:var(--mono);font-size:8px;color:#4a2a7a;letter-spacing:1px">WebRTC</span>
-    </div>
     <span class="clock" id="clock">--:--:--</span>
   </div>
 </nav>
@@ -277,501 +272,343 @@
 </div>
 
 <script>
+'use strict';
 // ══════════════════════════════════════════════════════════════
 // DIFF2 — NATIONAL EXTERNE
-// Reçoit des commandes postMessage depuis Radio-Console
-// Origin autorisé : https://nikoprdn.github.io
-//
-// STRUCTURE DU DÉPÔT :
-//   Diff2/
-//   ├── index.html       ← cette page
-//   └── Audio/
-//       ├── playlist.json  ← liste des fichiers à charger
-//       ├── son1.mp3
-//       ├── son2.mp3
-//       └── ...
-//
-// playlist.json : tableau de noms de fichiers (ordre de lecture)
-//   ["intro.mp3", "jingle.mp3", "pub1.mp3"]
+// - Reçoit commandes de Radio-Console via BroadcastChannel
+// - Stream audio vers Radio-Console via WebRTC (VU-mètre EXT)
+// - Macro RACCRO EXT : déclenche DIFF1 de Radio-Console
+// - Ping autonome toutes les 10s vers Radio-Console
 // ══════════════════════════════════════════════════════════════
 
-const ALLOWED_ORIGIN = 'https://nikoprdn.github.io';
-const AUDIO_DIR      = 'Audio/';
-const PLAYLIST_JSON  = AUDIO_DIR + 'playlist.json';
+const RC_ORIGIN = 'https://nikoprdn.github.io';
+const AUDIO_DIR = 'Audio/';
+const PL_JSON   = AUDIO_DIR + 'playlist.json';
 
-// ── BroadcastChannel — reçoit les commandes de Radio-Console
-//    (même navigateur, même domaine github.io)
-// ── WebRTC : envoyer l'audio à Radio-Console ──
-let _bc        = null;   // BroadcastChannel global
-let _peer      = null;   // RTCPeerConnection
-let _audioCtx  = null;   // AudioContext Diff2
-let _audioDest = null;   // MediaStreamDestination (capture)
-let _rtcReady  = false;
+// ── État lecture ──
+let tracks      = [];
+let ci          = 0;
+let playing     = false;
+let playToken   = 0;
+let outTimer    = null;
+let pendingPlay = false;
 
-// Initialiser l'AudioContext et la capture
-function initAudioCapture(){
-  if(_audioCtx) return;
-  try{
-    _audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-    _audioDest = _audioCtx.createMediaStreamDestination();
-    console.log('[Diff2] Capture audio initialisée');
-  } catch(e){ console.warn('[Diff2] AudioContext:', e); }
-}
+// ── WebRTC + Audio ──
+let _bc         = null;
+let _audioCtx   = null;
+let _gainNode   = null;
+let _captureDst = null;
+let _peer       = null;
+let _rtcActive  = false;
+let _rcOnline   = false;
+let _rcLastSeen = 0;
 
-// Connecter un élément audio à la capture WebRTC
-function wireToCapture(audioEl){
-  if(!_audioCtx||!_audioDest||!audioEl) return;
-  if(audioEl._wiredCapture) return; // déjà branché
-  try{
-    const src = _audioCtx.createMediaElementSource(audioEl);
-    src.connect(_audioDest);           // vers WebRTC
-    src.connect(_audioCtx.destination); // vers haut-parleurs locaux
-    audioEl._wiredCapture = true;
-    console.log('[Diff2] Audio branché sur capture WebRTC');
-    // Si le peer est déjà établi, renégocier
-    if(_peer && _peer.connectionState!=='closed') _startWebRTC();
-  } catch(e){ console.warn('[Diff2] wireToCapture:', e); }
-}
-
-// Créer l'offre WebRTC et l'envoyer à Radio-Console
-async function _startWebRTC(){
-  if(!_audioDest||!_bc) return;
-  try{
-    if(_peer){ _peer.close(); _peer=null; }
-    _peer = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-
-    // Ajouter la piste audio du stream de capture
-    _audioDest.stream.getAudioTracks().forEach(track=>{
-      _peer.addTrack(track, _audioDest.stream);
-    });
-
-    _peer.onicecandidate = (e)=>{
-      if(e.candidate){
-        _bc.postMessage({action:'webrtc-ice', candidate:e.candidate});
-      }
-    };
-
-    _peer.onconnectionstatechange = ()=>{
-      _rtcReady = _peer?.connectionState==='connected';
-      const dot = document.getElementById('rtc-dot');
-      if(dot) dot.style.background = _rtcReady ? '#9b5de5' : '#2a1a3a';
-      console.log('[Diff2] WebRTC state:', _peer?.connectionState);
-    };
-
-    const offer = await _peer.createOffer({offerToReceiveAudio:false});
-    await _peer.setLocalDescription(offer);
-    _bc.postMessage({action:'webrtc-offer', sdp:offer.sdp});
-    console.log('[Diff2] Offre WebRTC envoyée');
-  } catch(ex){ console.warn('[Diff2] WebRTC offer error:', ex); }
-}
-
-// Réception de la réponse WebRTC de Radio-Console
-async function _handleAnswer(sdp){
-  try{
-    if(_peer) await _peer.setRemoteDescription({type:'answer', sdp});
-  } catch(ex){ console.warn('[Diff2] WebRTC answer:', ex); }
-}
-async function _handleIceAnswer(candidate){
-  try{ if(_peer&&candidate) await _peer.addIceCandidate(candidate); }
-  catch(ex){ console.warn('[Diff2] ICE answer:', ex); }
-}
-
-// ── BroadcastChannel principal ──
-try{
-  _bc = new BroadcastChannel('diff2_control');
-  _bc.addEventListener('message', e=>{
-    const msg = e.data || {};
-    const { action } = msg;
-    if(action==='ping'){
-      _bc.postMessage({action:'pong', ready:true, source:'Diff2'});
-      setConnected(true, 'Radio-Console');
-      // Lancer WebRTC au premier ping si pas encore fait
-      if(!_peer && _audioDest && _audioDest.stream.getAudioTracks().length>0){
-        _startWebRTC();
-      }
-    } else if(action==='play'){
-      setConnected(true, 'Radio-Console');
-      initAudioCapture();
-      if(!playing){
-        const ok = diffPlay();
-        if(!ok){ pendingPlay=true; showAutoplayBanner(); }
-      }
-    } else if(action==='stop'){
-      setConnected(true, 'Radio-Console');
-      diffStop();
-    } else if(action==='webrtc-answer'){
-      _handleAnswer(msg.sdp);
-    } else if(action==='webrtc-ice-answer'){
-      _handleIceAnswer(msg.candidate);
-    }
-  });
-  // Annoncer présence
-  setTimeout(()=>{
-    _bc.postMessage({action:'ready', source:'Diff2'});
-    initAudioCapture();
-  }, 500);
-  console.log('[Diff2] BroadcastChannel actif');
-} catch(e){ console.warn('[Diff2] BroadcastChannel:', e); }
-
-// ── postMessage iframe (fallback) ──
-window.addEventListener('message', e=>{
-  if(!e.origin.startsWith('https://nikoprdn.github.io') &&
-     !e.origin.startsWith('http://localhost') &&
-     !e.origin.startsWith('file://')) return;
-  const { action } = e.data || {};
-  setConnected(true, e.origin);
-  if(action==='ping'){
-    e.source?.postMessage({action:'pong', ready:true, source:'Diff2'}, e.origin);
-  } else if(action==='play' && !playing){
-    initAudioCapture();
-    const ok = diffPlay();
-    if(!ok){ pendingPlay=true; showAutoplayBanner(); }
-  } else if(action==='stop'){ diffStop(); }
-  else if(action==='webrtc-answer') _handleAnswer(e.data.sdp);
-  else if(action==='webrtc-ice-answer') _handleIceAnswer(e.data.candidate);
-});
-
-// ── État ──
-let tracks    = [];   // {file, title, dur, audio}
-let ci        = 0;    // index courant
-let playing   = false;
-let playToken = 0;
-let outTimer  = null;
-let pendingPlay = false; // commande play en attente (autoplay bloqué)
-
-// ── Formatage ──
-const fmt2 = n => String(n).padStart(2,'0');
+// ── Format ──
+const fmt2    = n => String(n).padStart(2,'0');
 const fmtFull = s => { s=Math.round(s||0); return fmt2(Math.floor(s/3600))+':'+fmt2(Math.floor((s%3600)/60))+':'+fmt2(s%60); };
 const fmtSec  = s => { s=Math.round(s||0); return fmt2(Math.floor(s/60))+':'+fmt2(s%60); };
 
 // ── Horloge ──
 setInterval(()=>{
   const d=new Date();
-  document.getElementById('clock').textContent=fmt2(d.getHours())+':'+fmt2(d.getMinutes())+':'+fmt2(d.getSeconds());
+  const el=document.getElementById('clock');
+  if(el) el.textContent=fmt2(d.getHours())+':'+fmt2(d.getMinutes())+':'+fmt2(d.getSeconds());
 },1000);
 
 // ══════════════════════════════════════════════════════════════
-// CHARGEMENT AUTOMATIQUE depuis Audio/playlist.json
+// AUDIO CONTEXT
 // ══════════════════════════════════════════════════════════════
-async function loadPlaylistFromServer(){
-  const statusEl = document.getElementById('load-status');
-  try{
-    const res = await fetch(PLAYLIST_JSON);
-    if(!res.ok) throw new Error('playlist.json introuvable ('+res.status+')');
-    const files = await res.json();
-    if(!Array.isArray(files)||!files.length) throw new Error('playlist.json vide');
-
-    let loaded = 0;
-    if(statusEl) statusEl.textContent = 'Chargement de '+files.length+' fichier(s)…';
-
-    const promises = files.map(filename=>{
-      return new Promise(resolve=>{
-        const url  = AUDIO_DIR + encodeURIComponent(filename);
-        const title = filename.replace(/\.[^/.]+$/,'');
-        const track = {file:url, title, dur:0, audio:null};
-        const a = new Audio(url);
-        a.addEventListener('loadedmetadata', ()=>{
-          track.dur   = a.duration||0;
-          track.audio = a;
-          loaded++;
-          if(statusEl) statusEl.textContent = 'Chargement '+loaded+'/'+files.length+'…';
-          render();
-          resolve();
-        });
-        a.addEventListener('error', ()=>{
-          console.warn('Impossible de charger:', filename);
-          resolve(); // on continue sans ce fichier
-        });
-        // Déclencher le chargement des métadonnées
-        a.load();
-        track.audio = a;
-        tracks.push(track);
-        render();
-      });
-    });
-
-    await Promise.all(promises);
-    if(statusEl) statusEl.textContent = loaded+' fichier(s) prêt(s)';
-    setTimeout(()=>{ if(statusEl) statusEl.style.opacity='0'; }, 3000);
-
-  } catch(e){
-    console.warn('Chargement playlist.json:', e.message);
-    if(statusEl){
-      statusEl.textContent = '⚠ '+e.message+' — glisse des fichiers manuellement';
-      statusEl.style.color = 'var(--yellow)';
-    }
-  }
+function ensureAudioCtx(){
+  if(_audioCtx) return;
+  _audioCtx   = new (window.AudioContext||window.webkitAudioContext)();
+  _gainNode   = _audioCtx.createGain(); _gainNode.gain.value=1;
+  _captureDst = _audioCtx.createMediaStreamDestination();
+  _gainNode.connect(_captureDst);
+  _gainNode.connect(_audioCtx.destination);
 }
 
-// Lancer au démarrage
-loadPlaylistFromServer();
+function wireAudio(el){
+  if(!el||el._d2Wired) return;
+  ensureAudioCtx();
+  try{
+    const src = _audioCtx.createMediaElementSource(el);
+    src.connect(_gainNode);
+    el._d2Wired = true;
+    setTimeout(startWebRTC, 150);
+  }catch(e){ console.warn('[Diff2] wireAudio:', e); }
+}
 
 // ══════════════════════════════════════════════════════════════
-// RÉCEPTION postMessage depuis Radio-Console
+// WEBRTC
 // ══════════════════════════════════════════════════════════════
-window.addEventListener('message', e=>{
-  // Accepter uniquement depuis nikoprdn.github.io
-  if(!e.origin.startsWith('https://nikoprdn.github.io') &&
-     !e.origin.startsWith('http://localhost') &&
-     !e.origin.startsWith('file://')) return;
+async function startWebRTC(){
+  if(!_captureDst||!_bc) return;
+  const tr = _captureDst.stream.getAudioTracks();
+  if(!tr.length) return;
+  if(_peer){ try{_peer.close();}catch(e){} _peer=null; }
 
-  const { action, source } = e.data || {};
+  _peer = new RTCPeerConnection({iceServers:[
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'}
+  ]});
 
-  // Marquer la connexion
-  setConnected(true, e.origin);
+  tr.forEach(t => _peer.addTrack(t, _captureDst.stream));
 
-  if(action === 'play'){
-    // Tenter de lancer la lecture
-    if(!playing){
-      const started = diffPlay();
-      if(!started){
-        // Autoplay bloqué — afficher le banner
-        pendingPlay = true;
-        showAutoplayBanner();
-      }
+  _peer.onicecandidate = e => {
+    if(e.candidate) _bc.postMessage({action:'rtc-ice-d2rc', c:e.candidate.toJSON()});
+  };
+
+  _peer.onconnectionstatechange = () => {
+    const s = _peer?.connectionState||'closed';
+    _rtcActive = (s==='connected');
+    const dot = document.getElementById('dot-rtc');
+    const lbl = document.getElementById('lbl-rtc');
+    const c={connected:'#9b5de5',connecting:'#5a3a8a',new:'#2a1a3a',
+             disconnected:'#3a1a1a',failed:'#e03020',closed:'#2a1a3a'}[s]||'#2a1a3a';
+    if(dot) dot.style.background=c;
+    if(lbl){ lbl.textContent=s==='connected'?'RTC ●':'RTC —';
+             lbl.style.color=s==='connected'?'#9b5de5':'#4a2a7a'; }
+    if(s==='failed'||s==='disconnected') setTimeout(startWebRTC,3000);
+  };
+
+  const offer = await _peer.createOffer();
+  await _peer.setLocalDescription(offer);
+  _bc.postMessage({action:'rtc-offer', sdp:_peer.localDescription.sdp});
+}
+
+async function handleRtcAnswer(sdp){
+  if(!_peer) return;
+  try{ await _peer.setRemoteDescription({type:'answer',sdp}); }
+  catch(e){ console.warn('[Diff2] answer:',e); }
+}
+async function handleRtcIce(c){
+  if(!_peer) return;
+  try{ await _peer.addIceCandidate(c); }
+  catch(e){ console.warn('[Diff2] ice:',e); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// STATUT RADIO-CONSOLE
+// ══════════════════════════════════════════════════════════════
+function setRcStatus(online, origin){
+  _rcOnline=online; _rcLastSeen=Date.now();
+  const dot  = document.getElementById('dot-rc');
+  const lbl  = document.getElementById('lbl-rc');
+  const conn = document.getElementById('conn-label');
+  if(dot){ dot.style.background=online?'#00d96a':'#2a3a50'; }
+  if(lbl){ lbl.textContent=online?'RC ●':'RC —';
+           lbl.style.color=online?'#00d96a':'var(--txt-mute)'; }
+  if(conn) conn.textContent=online?('✓ Connecté à Radio-Console'+(origin?' — '+origin:''))
+                                   :'Connexion Radio-Console perdue — en attente…';
+}
+
+// Ping autonome toutes les 10s
+setInterval(()=>{
+  if(_bc) _bc.postMessage({action:'d2-ping', source:'Diff2', ts:Date.now()});
+  if(_rcOnline && Date.now()-_rcLastSeen>15000) setRcStatus(false);
+}, 10000);
+
+// ══════════════════════════════════════════════════════════════
+// MACRO RACCRO EXT
+// ══════════════════════════════════════════════════════════════
+function runRaccroExt(){
+  if(!_bc) return;
+  _bc.postMessage({action:'raccro-ext', source:'Diff2'});
+  const btn = document.querySelector('.btn.macro');
+  if(btn){ btn.style.background='#2a1040'; setTimeout(()=>btn.style.background='',600); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// BROADCASTCHANNEL
+// ══════════════════════════════════════════════════════════════
+try{
+  _bc = new BroadcastChannel('diff2_control');
+  _bc.addEventListener('message', async e=>{
+    const m = e.data||{};
+    switch(m.action){
+      case 'ping':
+        _bc.postMessage({action:'pong',source:'Diff2'});
+        setRcStatus(true,'BroadcastChannel');
+        break;
+      case 'd2-pong':
+        setRcStatus(true,'BroadcastChannel');
+        break;
+      case 'play':
+        setRcStatus(true,'BroadcastChannel');
+        ensureAudioCtx();
+        if(!playing){ const ok=diffPlay(); if(!ok){pendingPlay=true;showAutoplayBanner();} }
+        break;
+      case 'stop':
+        setRcStatus(true,'BroadcastChannel'); diffStop(); break;
+      case 'rtc-answer':
+        await handleRtcAnswer(m.sdp); break;
+      case 'rtc-ice-rcd2':
+        await handleRtcIce(m.c); break;
     }
-  } else if(action === 'stop'){
-    diffStop();
-  } else if(action === 'ping'){
-    // Répondre au ping de Radio-Console
-    e.source?.postMessage({action:'pong', ready:true}, e.origin);
-  }
+  });
+  setTimeout(()=>{ ensureAudioCtx(); _bc.postMessage({action:'ready',source:'Diff2'}); }, 700);
+}catch(e){ console.warn('[Diff2] BroadcastChannel:',e); }
+
+// Fallback postMessage
+window.addEventListener('message', async e=>{
+  if(!e.origin.startsWith(RC_ORIGIN)&&!e.origin.startsWith('http://localhost')&&!e.origin.startsWith('file://')) return;
+  const m=e.data||{};
+  setRcStatus(true,e.origin);
+  if(m.action==='ping') e.source?.postMessage({action:'pong',source:'Diff2'},e.origin);
+  else if(m.action==='play'&&!playing){ ensureAudioCtx(); const ok=diffPlay(); if(!ok){pendingPlay=true;showAutoplayBanner();} }
+  else if(m.action==='stop') diffStop();
+  else if(m.action==='rtc-answer') await handleRtcAnswer(m.sdp);
+  else if(m.action==='rtc-ice-rcd2') await handleRtcIce(m.c);
 });
 
-function setConnected(ok, origin){
-  const dot  = document.getElementById('conn-dot');
-  const dot2 = document.getElementById('conn-dot2');
-  const lbl  = document.getElementById('conn-label');
-  const src  = document.getElementById('conn-source');
-  if(dot)  dot.classList.toggle('connected', ok);
-  if(dot2) dot2.classList.toggle('connected', ok);
-  if(lbl)  lbl.textContent = ok ? ('Connecté depuis '+origin) : 'Attente de commande…';
-  if(src)  src.textContent = ok ? origin : 'non connecté';
-}
-
 function showAutoplayBanner(){
-  const b = document.getElementById('autoplay-banner');
-  if(b){ b.classList.add('show'); b.onclick=()=>{ b.classList.remove('show'); diffPlay(true); }; }
+  const b=document.getElementById('autoplay-banner'); if(b) b.classList.add('show');
 }
 
-// Autoplay via paramètre URL au chargement
-(function(){
-  const p = new URLSearchParams(window.location.search);
-  if(p.has('autoplay')){
-    // Attendre que l'utilisateur interagisse si nécessaire
-    window.addEventListener('click', function onceClick(){
-      window.removeEventListener('click', onceClick);
-      if(!playing && tracks.length) diffPlay(true);
-    }, {once:true});
-    showAutoplayBanner();
+// ══════════════════════════════════════════════════════════════
+// PLAYLIST DEPUIS Audio/playlist.json
+// ══════════════════════════════════════════════════════════════
+async function loadPlaylist(){
+  const st=document.getElementById('load-status');
+  try{
+    const res=await fetch(PL_JSON);
+    if(!res.ok) throw new Error('playlist.json introuvable ('+res.status+')');
+    const files=await res.json();
+    if(!Array.isArray(files)||!files.length) throw new Error('vide');
+    if(st) st.textContent='Chargement '+files.length+' fichier(s)…';
+    let loaded=0;
+    files.forEach(fn=>{
+      const url=AUDIO_DIR+encodeURIComponent(fn);
+      const track={file:url,title:fn.replace(/\.[^/.]+$/,''),dur:0,audio:null};
+      tracks.push(track);
+      const a=new Audio(url);
+      a.addEventListener('loadedmetadata',()=>{track.dur=a.duration||0;track.audio=a;loaded++;
+        if(st) st.textContent='Chargé '+loaded+'/'+files.length; render();});
+      a.addEventListener('error',()=>{loaded++;render();});
+      a.load(); track.audio=a; render();
+    });
+    setTimeout(()=>{if(st)st.style.opacity='0';},4000);
+  }catch(e){
+    if(st){st.textContent='⚠ '+e.message;st.style.color='var(--yellow)';}
   }
-})();
+}
+loadPlaylist();
 
-// ══════════════════════════════════════════════════════════════
-// GESTION DES FICHIERS
-// ══════════════════════════════════════════════════════════════
 function handleFiles(files){
-  Array.from(files)
-    .filter(f=>f.type.startsWith('audio/'))
+  Array.from(files).filter(f=>f.type.startsWith('audio/'))
     .sort((a,b)=>a.name.localeCompare(b.name))
     .forEach(f=>{
-      const url = URL.createObjectURL(f);
-      const track = {file:url, title:f.name.replace(/\.[^/.]+$/,''), dur:0, audio:null};
-      tracks.push(track);
-      const a = new Audio(url);
-      a.addEventListener('loadedmetadata',()=>{
-        track.dur = a.duration||0;
-        track.audio = a;
-        render();
-      });
-      if(!track.audio) track.audio = a;
+      const url=URL.createObjectURL(f);
+      const t={file:url,title:f.name.replace(/\.[^/.]+$/,''),dur:0,audio:null};
+      tracks.push(t);
+      const a=new Audio(url);
+      a.addEventListener('loadedmetadata',()=>{t.dur=a.duration||0;t.audio=a;render();});
+      a.load(); t.audio=a;
     });
-  updateFileCount();
   render();
 }
-
 function handleDrop(e){
   e.preventDefault();
   document.getElementById('drop-zone').classList.remove('drag-over');
   handleFiles(e.dataTransfer.files);
 }
 
-function updateFileCount(){
-  const el = document.getElementById('file-count');
-  if(el) el.textContent = tracks.length ? tracks.length+' fichier'+(tracks.length>1?'s':'') : 'Aucun fichier';
-}
-
 // ══════════════════════════════════════════════════════════════
 // LECTURE
 // ══════════════════════════════════════════════════════════════
-function diffPlay(force=false){
+function diffPlay(){
   if(!tracks.length) return false;
-  const token = ++playToken;
-  playing = true;
-  ci = Math.max(0, ci);
-
-  const t = tracks[ci];
-  if(!t || !t.audio) return false;
-
-  if(outTimer){ clearTimeout(outTimer); outTimer=null; }
-  t.audio.currentTime = 0;
-
-  const playPromise = t.audio.play();
-  if(!playPromise) return startTimer(t, token);
-
-  playPromise.then(()=>{
-    startTimer(t, token);
-    setLive(true, t.title);
-    pendingPlay = false;
-    // Brancher cet audio sur la capture WebRTC
-    if(_audioCtx && _audioDest){
-      wireToCapture(t.audio);
-      // Lancer WebRTC si c'est la première piste
-      if(!_peer || _peer.connectionState==='closed'||_peer.connectionState==='failed'){
-        _startWebRTC();
-      }
-    }
-  }).catch(e=>{
-    playing = false;
-    console.warn('Autoplay bloqué:', e);
-    return false;
-  });
-
-  render();
-  return true;
+  const token=++playToken;
+  playing=true;
+  ci=Math.max(0,Math.min(ci,tracks.length-1));
+  const t=tracks[ci]; if(!t||!t.audio) return false;
+  if(outTimer){clearTimeout(outTimer);outTimer=null;}
+  t.audio.currentTime=0;
+  const p=t.audio.play();
+  if(!p){afterPlay(t,token);return true;}
+  p.then(()=>afterPlay(t,token)).catch(err=>{playing=false;console.warn('[Diff2] autoplay:',err);});
+  render(); return true;
 }
 
-function startTimer(t, token){
-  const dur = t.dur||0;
-  if(!dur) return;
-  outTimer = setTimeout(()=>{
-    if(token!==playToken||!playing) return;
-    t.audio.pause();
-    // Passer à la piste suivante
-    ci++;
-    if(ci < tracks.length){
-      diffPlay();
-    } else {
-      // Fin de playlist — rester armé
-      ci = 0;
-      playing = true; // reste rouge
-      setLive(false);
-      render();
-    }
-  }, dur*1000);
+function afterPlay(t,token){
+  setLive(true,t.title);
+  wireAudio(t.audio);
+  if(t.dur>0){
+    outTimer=setTimeout(()=>{
+      if(token!==playToken||!playing) return;
+      t.audio.pause(); ci++;
+      if(ci<tracks.length) diffPlay();
+      else { ci=0; playing=true; setLive(false); render(); }
+    }, t.dur*1000);
+  }
 }
 
 function diffStop(){
-  playToken++;
-  if(outTimer){ clearTimeout(outTimer); outTimer=null; }
-  tracks.forEach(t=>{ if(t.audio&&!t.audio.paused) t.audio.pause(); });
-  playing = false;
-  ci = 0;
-  setLive(false);
-  render();
+  ++playToken;
+  if(outTimer){clearTimeout(outTimer);outTimer=null;}
+  tracks.forEach(t=>{if(t.audio&&!t.audio.paused)t.audio.pause();});
+  playing=false; ci=0; setLive(false); render();
 }
 
 // ══════════════════════════════════════════════════════════════
 // UI
 // ══════════════════════════════════════════════════════════════
-function setLive(on, title=''){
-  const card    = document.getElementById('main-card');
-  const bar     = document.getElementById('onair-bar');
-  const dot     = document.getElementById('dot-live');
-  const badge   = document.getElementById('status-badge');
-  const trackEl = document.getElementById('onair-track');
-
-  card.classList.toggle('live', on);
-  bar.classList.toggle('live', on);
-  if(dot){ dot.style.opacity=on?'1':'0'; dot.style.animation=on?'':'none'; }
-  if(badge){ badge.textContent=on?'EN DIRECT':'EN ATTENTE'; badge.className='status-badge '+(on?'live':'waiting'); }
-  if(trackEl) trackEl.textContent = on&&title ? '— '+title : '';
+function setLive(on,title){
+  const card=document.getElementById('main-card');
+  const bar=document.getElementById('onair-bar');
+  const dot=document.getElementById('dot-live');
+  const badge=document.getElementById('status-badge');
+  const tr=document.getElementById('onair-track');
+  card.classList.toggle('live',on);
+  bar.classList.toggle('live',on);
+  if(dot){dot.style.opacity=on?'1':'0';dot.style.animation=on?'blink .8s ease-in-out infinite':'none';}
+  if(badge){badge.textContent=on?'EN DIRECT':'EN ATTENTE';badge.className='status-badge '+(on?'live':'waiting');}
+  if(tr) tr.textContent=on&&title?'— '+title:'';
 }
 
 function render(){
-  const tbody = document.getElementById('tracks-body');
-  if(!tbody) return;
-  tbody.innerHTML = '';
-
+  const tbody=document.getElementById('tracks-body'); if(!tbody) return;
+  tbody.innerHTML='';
   tracks.forEach((t,i)=>{
-    const isActive = i===ci && playing;
-    const audio = t.audio;
-    const pos   = audio?audio.currentTime:0;
-    const rem   = isActive ? Math.max(0,(t.dur||0)-pos) : (t.dur||0);
-
-    const tr = document.createElement('tr');
-    if(isActive) tr.className='active';
-
-    tr.innerHTML = `
-      <td class="td-num ${isActive?'playing':''}">${isActive?'▶':(i+1)}</td>
+    const active=i===ci&&playing;
+    const pos=active&&t.audio?t.audio.currentTime:0;
+    const rem=active?Math.max(0,(t.dur||0)-pos):(t.dur||0);
+    const tr=document.createElement('tr');
+    if(active) tr.className='active';
+    tr.innerHTML=`<td class="td-num ${active?'playing':''}">${active?'▶':(i+1)}</td>
       <td class="td-title" title="${t.title}">${t.title}</td>
       <td class="td-dur">${fmtFull(t.dur||0)}</td>
-      <td class="td-cd ${isActive?'active':''}" id="cd-${i}">${fmtFull(rem)}</td>
-      <td class="td-del"><button class="del-btn" onclick="removeTrack(${i})">✕</button></td>
-    `;
+      <td class="td-cd ${active?'active':''}" id="cd-${i}">${fmtFull(rem)}</td>
+      <td><button class="del-btn" onclick="removeTrack(${i})">✕</button></td>`;
     tbody.appendChild(tr);
   });
-
-  // Counter
-  const counter = document.getElementById('counter');
-  if(counter) counter.textContent = tracks.length ? (ci+1)+'/'+tracks.length : '0/0';
-
-  // Total
-  const total = tracks.reduce((s,t)=>s+(t.dur||0),0);
-  const totalEl = document.getElementById('total-time');
-  if(totalEl) totalEl.textContent = fmtFull(total);
-
-  updateFileCount();
+  const n=tracks.length;
+  const cnt=document.getElementById('counter'); if(cnt) cnt.textContent=n?(ci+1)+'/'+n:'0/0';
+  const tot=tracks.reduce((s,t)=>s+(t.dur||0),0);
+  const totEl=document.getElementById('total-time'); if(totEl) totEl.textContent=fmtFull(tot);
+  const fc=document.getElementById('file-count'); if(fc) fc.textContent=n?n+' fichier'+(n>1?'s':''):'Aucun fichier';
 }
 
 function removeTrack(i){
-  if(playing && i===ci){ diffStop(); }
-  tracks.splice(i,1);
-  if(ci>i) ci--;
-  ci = Math.min(ci, Math.max(0,tracks.length-1));
-  render();
+  if(playing&&i===ci) diffStop();
+  tracks.splice(i,1); if(ci>i) ci--;
+  ci=Math.min(ci,Math.max(0,tracks.length-1)); render();
 }
 
-// ── RAF pour mise à jour temps réel ──
-(function rafLoop(){
-  requestAnimationFrame(rafLoop);
-  if(!playing || !tracks.length) return;
-  const t = tracks[ci];
-  if(!t||!t.audio||t.audio.paused) return;
-
-  const pos  = t.audio.currentTime;
-  const dur  = t.dur||1;
-  const rem  = Math.max(0,dur-pos);
-  const prog = Math.min(1,(pos/dur));
-
-  // Décompte
-  const cdEl = document.getElementById('cd-'+ci);
-  if(cdEl) cdEl.textContent = fmtFull(rem);
-
-  // Progress bar
-  const fill = document.getElementById('progress-fill');
-  if(fill) fill.style.width=(prog*100).toFixed(2)+'%';
-
-  // Barre row-active
-  const row = document.querySelector('.tracks-table tbody tr.active');
-  if(row) row.style.setProperty('--prog', prog.toFixed(4));
-
-  // Timers header
-  const avant = document.getElementById('timer-avant');
-  const avance = document.getElementById('timer-avance');
-  if(avant)  avant.textContent  = fmtFull(rem);
-  if(avance) avance.textContent = fmtFull(pos);
-
-  // Elapsed footer
-  const elapsed = document.getElementById('elapsed');
-  if(elapsed) elapsed.textContent = fmtSec(pos);
-
-  // onair track name
-  const track = document.getElementById('onair-track');
-  if(track && !track.textContent) track.textContent = '— '+t.title;
+(function raf(){
+  requestAnimationFrame(raf);
+  if(!playing||!tracks.length) return;
+  const t=tracks[ci]; if(!t||!t.audio||t.audio.paused) return;
+  const pos=t.audio.currentTime, dur=t.dur||1;
+  const rem=Math.max(0,dur-pos), prog=Math.min(1,pos/dur);
+  const cd=document.getElementById('cd-'+ci); if(cd) cd.textContent=fmtFull(rem);
+  const fill=document.getElementById('progress-fill'); if(fill) fill.style.width=(prog*100).toFixed(2)+'%';
+  const row=document.querySelector('.tracks tbody tr.active'); if(row) row.style.setProperty('--prog',prog.toFixed(4));
+  const av=document.getElementById('timer-avant'); if(av) av.textContent=fmtFull(rem);
+  const ava=document.getElementById('timer-avance'); if(ava) ava.textContent=fmtFull(pos);
+  const el=document.getElementById('elapsed'); if(el) el.textContent=fmtSec(pos);
 })();
 
-// Render initial
 render();
 </script>
 </body>
