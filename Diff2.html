@@ -294,6 +294,25 @@ const ALLOWED_ORIGIN = 'https://nikoprdn.github.io';
 const AUDIO_DIR      = 'Audio/';
 const PLAYLIST_JSON  = AUDIO_DIR + 'playlist.json';
 
+// ── BroadcastChannel — reçoit les commandes de Radio-Console
+//    (même navigateur, même domaine github.io)
+try{
+  const bc = new BroadcastChannel('diff2_control');
+  bc.addEventListener('message', e=>{
+    const { action } = e.data || {};
+    setConnected(true, 'Radio-Console (BroadcastChannel)');
+    if(action==='play' && !playing){
+      const ok = diffPlay();
+      if(!ok){ pendingPlay=true; showAutoplayBanner(); }
+    } else if(action==='stop'){
+      diffStop();
+    }
+  });
+  console.log('[Diff2] BroadcastChannel "diff2_control" actif');
+} catch(e){
+  console.warn('[Diff2] BroadcastChannel non supporté:', e);
+}
+
 // ── État ──
 let tracks    = [];   // {file, title, dur, audio}
 let ci        = 0;    // index courant
