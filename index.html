@@ -283,19 +283,15 @@
 </div>
 
 <script>
-
 'use strict';
 // ══════════════════════════════════════════════════════════════
 // DIFF2 — NATIONAL EXTERNE
-// PeerJS (serveur officiel 0.peerjs.com) pour connexion cross-PC/réseau
-// + BroadcastChannel en complément (même navigateur)
+// Signaling via Cloudflare Worker (polling HTTP) — cross-PC/réseau
+// + BroadcastChannel (même navigateur, même domaine)
 // ══════════════════════════════════════════════════════════════
 
-// ── IDs PeerJS fixes ──────────────────────────────────────────
-const PEER_ID_D2 = 'radioconsolediff22024d2';
-const PEER_ID_RC = 'radioconsolemain2024rc';
-const AUDIO_DIR  = 'Audio/';
-const PL_JSON    = AUDIO_DIR + 'playlist.json';
+const SIG_URL  = 'https://radio-signaling.nicolas7lejeune.workers.dev';
+const SIG_ROLE = 'd2';
 
 // ── Variables d'état LECTURE ──────────────────────────────────
 let tracks      = [];
@@ -305,27 +301,21 @@ let playToken   = 0;
 let outTimer    = null;
 let pendingPlay = false;
 
-// ── Variables de connexion ────────────────────────────────────
-let _bc         = null;   // BroadcastChannel (même navigateur)
-let _peerJS     = null;   // PeerJS instance
-let _peerConn   = null;   // DataConnection vers RC
+// ── Variables connexion ───────────────────────────────────────
+let _bc         = null;   // BroadcastChannel
 let _rcOnline   = false;
 let _rcLastSeen = 0;
 
-// ── Variables audio/WebRTC ────────────────────────────────────
+// ── Variables audio ───────────────────────────────────────────
 let _audioCtx   = null;
 let _gainNode   = null;
 let _captureDst = null;
-let _peerCall   = null;   // MediaConnection PeerJS
-let _nativePeer = null;   // RTCPeerConnection (fallback BC)
-let _rtcActive  = false;
 
 // ── Format ────────────────────────────────────────────────────
 const fmt2    = n => String(n).padStart(2,'0');
 const fmtFull = s => { s=Math.round(s||0); return fmt2(Math.floor(s/3600))+':'+fmt2(Math.floor((s%3600)/60))+':'+fmt2(s%60); };
 const fmtSec  = s => { s=Math.round(s||0); return fmt2(Math.floor(s/60))+':'+fmt2(s%60); };
 
-// Horloge
 setInterval(()=>{
   const d=new Date(); const el=document.getElementById('clock');
   if(el) el.textContent=fmt2(d.getHours())+':'+fmt2(d.getMinutes())+':'+fmt2(d.getSeconds());
@@ -344,176 +334,135 @@ function setRcStatus(online, method){
     dot.style.boxShadow  = online ? '0 0 6px #00d96a' : '0 0 6px #e03020';
   }
   if(lbl){
-    lbl.textContent = online ? ('RC ● ' + (method||'')) : 'RC ✗ hors-ligne';
+    lbl.textContent = online ? ('RC ● '+(method||'')) : 'RC ✗';
     lbl.style.color = online ? '#00d96a' : '#e03020';
   }
   if(conn) conn.textContent = online
-    ? '✓ Connecté à Radio-Console' + (method ? ' via ' + method : '')
-    : '✗ Radio-Console non connecté — vérifier la connexion réseau';
+    ? '✓ Connecté à Radio-Console via '+(method||'?')
+    : '✗ Radio-Console non connecté';
 }
 
 function setRtcStatus(online){
-  _rtcActive = online;
   const dot = document.getElementById('dot-rtc');
   const lbl = document.getElementById('lbl-rtc');
-  if(dot){
-    dot.style.background = online ? '#9b5de5' : '#2a1a2a';
-    dot.style.boxShadow  = online ? '0 0 6px #9b5de5' : 'none';
-  }
-  if(lbl){
-    lbl.textContent = online ? 'RTC ● Audio' : 'RTC ✗';
-    lbl.style.color = online ? '#9b5de5' : '#3a1a3a';
-  }
+  if(dot){ dot.style.background=online?'#9b5de5':'#2a1a2a'; dot.style.boxShadow=online?'0 0 6px #9b5de5':'none'; }
+  if(lbl){ lbl.textContent=online?'RTC ● Audio':'RTC ✗'; lbl.style.color=online?'#9b5de5':'#3a1a3a'; }
 }
 
-// Watchdog — si pas de réponse depuis 20s → hors-ligne
+// Watchdog 20s
 setInterval(()=>{
-  if(_rcOnline && Date.now() - _rcLastSeen > 20000){
-    setRcStatus(false, 'timeout');
-    setRtcStatus(false);
-  }
-  // Ping actif
-  sendToRC({action:'d2-ping', source:'Diff2', ts:Date.now()});
-}, 10000);
+  if(_rcOnline && Date.now()-_rcLastSeen > 20000) setRcStatus(false,'timeout');
+}, 5000);
 
 // ══════════════════════════════════════════════════════════════
-// ENVOI VERS RADIO-CONSOLE (PeerJS + BC en parallèle)
+// CLOUDFLARE SIGNALING — polling HTTP
 // ══════════════════════════════════════════════════════════════
-function sendToRC(msg){
-  if(_peerConn && _peerConn.open){
-    try{ _peerConn.send(msg); }catch(e){}
-  }
-  if(_bc){
-    try{ _bc.postMessage(msg); }catch(e){}
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-// PEERJS — connexion cross-PC / cross-réseau
-// Serveur officiel 0.peerjs.com (gratuit, mondial, HTTPS)
-// ══════════════════════════════════════════════════════════════
-function initPeerJS(){
-  if(_peerJS && !_peerJS.destroyed) return;
-
-  _peerJS = new Peer(PEER_ID_D2, {
-    host:   '0.peerjs.com',
-    port:   443,
-    path:   '/',
-    secure: true,
-    debug:  0,
-    config: {
-      iceServers:[
-        {urls:'stun:stun.l.google.com:19302'},
-        {urls:'stun:stun1.l.google.com:19302'},
-        {urls:'stun:stun2.l.google.com:19302'},
-        {urls:'stun:global.stun.twilio.com:3478'},
-      ]
-    }
-  });
-
-  _peerJS.on('open', id=>{
-    console.log('[PeerJS] Diff2 connecté, ID:', id);
-    setRcStatus(false, 'PeerJS prêt — attente RC...');
-    connectToRC();
-  });
-
-  _peerJS.on('connection', conn=>{
-    // RC se connecte à nous (si RC démarre après)
-    console.log('[PeerJS] Connexion entrante:', conn.peer);
-    setupDataConn(conn);
-  });
-
-  _peerJS.on('error', err=>{
-    console.warn('[PeerJS] Erreur:', err.type, err.message||'');
-    const conn = document.getElementById('conn-label');
-    if(conn) conn.textContent = '⚠ PeerJS erreur: ' + err.type + ' — reconnexion…';
-    if(err.type==='unavailable-id'){
-      // ID occupé — ajouter un suffixe aléatoire
-      setTimeout(()=>{
-        if(_peerJS){ _peerJS.destroy(); _peerJS=null; }
-        setTimeout(initPeerJS, 1000);
-      }, 1000);
-    } else if(err.type==='network'||err.type==='server-error'||err.type==='socket-error'){
-      setTimeout(()=>{ if(_peerJS){ _peerJS.destroy(); _peerJS=null; } initPeerJS(); }, 5000);
-    } else if(err.type==='peer-unavailable'){
-      // RC pas encore en ligne — réessayer dans 5s
-      setTimeout(connectToRC, 5000);
-    }
-  });
-
-  _peerJS.on('disconnected', ()=>{
-    console.log('[PeerJS] Déconnecté du serveur — reconnexion…');
-    setTimeout(()=>{ if(_peerJS && !_peerJS.destroyed) _peerJS.reconnect(); }, 2000);
-  });
-}
-
-function connectToRC(){
-  if(!_peerJS || _peerJS.destroyed || _peerJS.disconnected) return;
-  if(_peerConn && _peerConn.open) return;
-  console.log('[PeerJS] Tentative connexion vers RC…');
+async function sigSend(msg){
   try{
-    const conn = _peerJS.connect(PEER_ID_RC, {reliable:true, label:'d2ctrl', serialization:'json'});
-    conn.on('open', ()=>{ setupDataConn(conn); });
-    conn.on('error', err=>{
-      console.warn('[PeerJS] DataConn error:', err);
-      setTimeout(connectToRC, 5000);
+    await fetch(`${SIG_URL}/send?from=d2&to=rc`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(msg)
     });
-  }catch(e){
-    console.warn('[PeerJS] connect() error:', e);
-    setTimeout(connectToRC, 5000);
+  }catch(e){ console.warn('[Sig]',e.message); }
+}
+
+async function sigPoll(){
+  try{
+    const r = await fetch(`${SIG_URL}/poll?role=d2`);
+    if(!r.ok) return;
+    const data = await r.json();
+    for(const msg of (data.messages||[])) {
+      await sigHandleMessage(msg);
+    }
+  }catch(e){}
+}
+
+async function sigHeartbeat(){
+  try{
+    await fetch(`${SIG_URL}/heartbeat?role=d2`, {method:'POST'});
+    // Vérifier si RC est en ligne
+    const r = await fetch(`${SIG_URL}/status`);
+    if(r.ok){
+      const s = await r.json();
+      const rcWasOnline = _rcOnline;
+      if(s.rc?.online && !_rcOnline) setRcStatus(true,'Cloudflare');
+      else if(!s.rc?.online && _rcOnline) setRcStatus(false,'timeout');
+    }
+  }catch(e){}
+}
+
+async function sigHandleMessage(msg){
+  if(!msg||!msg.action) return;
+  setRcStatus(true,'Cloudflare');
+  switch(msg.action){
+    case 'ping':
+      sigSend({action:'pong', source:'Diff2'});
+      break;
+    case 'd2-pong':
+      break;
+    case 'play':
+      ensureAudioCtx();
+      if(!playing){ const ok=diffPlay(); if(!ok){pendingPlay=true;showAutoplayBanner();} }
+      break;
+    case 'stop':
+      diffStop();
+      break;
   }
 }
 
-function setupDataConn(conn){
-  if(_peerConn && _peerConn.open && _peerConn !== conn){ _peerConn.close(); }
-  _peerConn = conn;
+// Envoi vers RC (Cloudflare + BC en parallèle)
+function sendToRC(msg){
+  sigSend(msg);
+  if(_bc) try{ _bc.postMessage(msg); }catch(e){}
+}
 
-  conn.on('open', ()=>{
-    console.log('[PeerJS] DataConnection ouverte avec RC');
-    setRcStatus(true, 'PeerJS');
-    // S'annoncer
-    conn.send({action:'ready', source:'Diff2', ts:Date.now()});
-    // Lancer le stream audio si déjà initialisé
-    ensureAudioCtx();
-    if(_captureDst) setTimeout(startAudioStream, 300);
-  });
-
-  conn.on('data', async msg=>{
-    if(!msg || !msg.action) return;
-    setRcStatus(true, 'PeerJS');
-    switch(msg.action){
-      case 'ping':
-        conn.send({action:'pong', source:'Diff2'});
-        break;
-      case 'd2-pong':
-        // RC a répondu à notre ping
-        break;
-      case 'play':
-        ensureAudioCtx();
-        if(!playing){ const ok=diffPlay(); if(!ok){pendingPlay=true;showAutoplayBanner();} }
-        break;
-      case 'stop':
-        diffStop();
-        break;
-    }
-  });
-
-  conn.on('close', ()=>{
-    console.log('[PeerJS] DataConnection fermée');
-    if(_peerConn===conn) _peerConn=null;
-    setRcStatus(false, 'connexion fermée');
-    // Reconnexion automatique
-    setTimeout(connectToRC, 5000);
-  });
-
-  conn.on('error', err=>{
-    console.warn('[PeerJS] DataConn err:', err);
-    setTimeout(connectToRC, 5000);
-  });
+// Démarrage signaling
+function initSignaling(){
+  setInterval(sigPoll, 2000);
+  setInterval(sigHeartbeat, 5000);
+  setTimeout(sigHeartbeat, 500);
+  setTimeout(sigPoll, 1000);
+  console.log('[Diff2] Cloudflare signaling démarré');
 }
 
 // ══════════════════════════════════════════════════════════════
-// AUDIO — AudioContext + capture WebRTC
+// BROADCASTCHANNEL (même navigateur)
+// ══════════════════════════════════════════════════════════════
+try{
+  _bc = new BroadcastChannel('diff2_control');
+  _bc.addEventListener('message', async e=>{
+    const m=e.data||{};
+    if(m.action==='ping'){ _bc.postMessage({action:'pong',source:'Diff2'}); setRcStatus(true,'BC'); }
+    if(m.action==='play'){ ensureAudioCtx(); if(!playing){const ok=diffPlay();if(!ok){pendingPlay=true;showAutoplayBanner();}} }
+    if(m.action==='stop') diffStop();
+  });
+  setTimeout(()=>{ _bc.postMessage({action:'ready',source:'Diff2'}); }, 600);
+}catch(e){ console.warn('[BC]',e); }
+
+window.addEventListener('message', e=>{
+  if(!e.origin.startsWith('https://nikoprdn.github.io')&&!e.origin.startsWith('http://localhost')&&!e.origin.startsWith('file://')) return;
+  const m=e.data||{};
+  if(m.action==='ping') e.source?.postMessage({action:'pong',source:'Diff2'},e.origin);
+  if(m.action==='play'&&!playing){ ensureAudioCtx();const ok=diffPlay();if(!ok){pendingPlay=true;showAutoplayBanner();} }
+  if(m.action==='stop') diffStop();
+});
+
+function showAutoplayBanner(){
+  const b=document.getElementById('autoplay-banner'); if(b) b.classList.add('show');
+}
+
+// ══════════════════════════════════════════════════════════════
+// MACRO RACCRO EXT → lance DIFF1 de Radio-Console
+// ══════════════════════════════════════════════════════════════
+function runRaccroExt(){
+  sendToRC({action:'raccro-ext', source:'Diff2'});
+  const btns=document.querySelectorAll('[onclick*="runRaccroExt"]');
+  btns.forEach(b=>{ b.style.background='#2a1040'; setTimeout(()=>b.style.background='',500); });
+}
+
+// ══════════════════════════════════════════════════════════════
+// AUDIO CONTEXT
 // ══════════════════════════════════════════════════════════════
 function ensureAudioCtx(){
   if(_audioCtx) return;
@@ -521,129 +470,20 @@ function ensureAudioCtx(){
     _audioCtx   = new (window.AudioContext||window.webkitAudioContext)();
     _gainNode   = _audioCtx.createGain(); _gainNode.gain.value=1;
     _captureDst = _audioCtx.createMediaStreamDestination();
-    // UNIQUEMENT vers la capture WebRTC — pas vers destination
-    // Le son passe par le chemin natif <audio> → haut-parleurs
     _gainNode.connect(_captureDst);
-  }catch(e){ console.warn('[AudioCtx]', e); }
+  }catch(e){ console.warn('[AudioCtx]',e); }
 }
 
 function wireAudio(el){
-  // Seulement si AudioContext déjà initialisé (geste utilisateur fait)
-  // Le son <audio> joue SANS wireAudio — c'est uniquement pour WebRTC
-  if(!el || el._d2Wired || !_audioCtx) return;
+  if(!el||el._d2Wired||!_audioCtx) return;
   try{
-    const src = _audioCtx.createMediaElementSource(el);
-    src.connect(_gainNode);              // → capture WebRTC
-    src.connect(_audioCtx.destination); // → haut-parleurs (sans ça = silence)
-    el._d2Wired = true;
-    setTimeout(startAudioStream, 200);
-  }catch(e){
-    // createMediaElementSource échoue si déjà branché ailleurs — ignorer
-    el._d2Wired = true; // marquer quand même pour éviter boucle
-    console.warn('[wireAudio]', e.message);
-  }
+    const src=_audioCtx.createMediaElementSource(el);
+    src.connect(_gainNode);
+    src.connect(_audioCtx.destination);
+    el._d2Wired=true;
+  }catch(e){ el._d2Wired=true; console.warn('[wireAudio]',e.message); }
 }
 
-// ── Envoi audio via PeerJS MediaConnection ────────────────────
-function startAudioStream(){
-  if(!_captureDst) return;
-  const stream = _captureDst.stream;
-  if(!stream.getAudioTracks().length) return;
-  // Via PeerJS (cross-PC)
-  if(_peerJS && !_peerJS.destroyed && _peerConn && _peerConn.open){
-    try{
-      if(_peerCall){ _peerCall.close(); _peerCall=null; }
-      _peerCall = _peerJS.call(PEER_ID_RC, stream);
-      _peerCall.on('stream', ()=>{});
-      _peerCall.on('close',  ()=>setRtcStatus(false));
-      _peerCall.on('error',  ()=>setRtcStatus(false));
-      setRtcStatus(true);
-      console.log('[PeerJS] Appel audio lancé vers RC');
-      return;
-    }catch(e){ console.warn('[PeerJS call]', e); }
-  }
-  // Fallback BroadcastChannel (même navigateur)
-  startNativeWebRTC();
-}
-
-// ── WebRTC natif via BroadcastChannel (même navigateur) ───────
-async function startNativeWebRTC(){
-  if(!_captureDst || !_bc) return;
-  const tr = _captureDst.stream.getAudioTracks();
-  if(!tr.length) return;
-  if(_nativePeer){ try{_nativePeer.close();}catch(e){} _nativePeer=null; }
-  _nativePeer = new RTCPeerConnection({iceServers:[
-    {urls:'stun:stun.l.google.com:19302'},
-    {urls:'stun:stun1.l.google.com:19302'}
-  ]});
-  tr.forEach(t => _nativePeer.addTrack(t, _captureDst.stream));
-  _nativePeer.onicecandidate = e=>{
-    if(e.candidate) _bc.postMessage({action:'rtc-ice-d2rc', c:e.candidate.toJSON()});
-  };
-  _nativePeer.onconnectionstatechange = ()=>{
-    const s = _nativePeer?.connectionState||'';
-    setRtcStatus(s==='connected');
-    if(s==='failed'||s==='disconnected') setTimeout(startNativeWebRTC, 3000);
-  };
-  try{
-    const offer = await _nativePeer.createOffer();
-    await _nativePeer.setLocalDescription(offer);
-    _bc.postMessage({action:'rtc-offer', sdp:_nativePeer.localDescription.sdp});
-  }catch(e){ console.warn('[nativeWebRTC offer]', e); }
-}
-async function handleRtcAnswer(sdp){
-  if(!_nativePeer) return;
-  try{ await _nativePeer.setRemoteDescription({type:'answer',sdp}); }catch(e){}
-}
-async function handleRtcIce(c){
-  if(!_nativePeer) return;
-  try{ await _nativePeer.addIceCandidate(c); }catch(e){}
-}
-
-// ══════════════════════════════════════════════════════════════
-// BROADCASTCHANNEL (même navigateur — complément)
-// ══════════════════════════════════════════════════════════════
-try{
-  _bc = new BroadcastChannel('diff2_control');
-  _bc.addEventListener('message', async e=>{
-    const m = e.data||{};
-    if(m.action==='ping'){
-      _bc.postMessage({action:'pong', source:'Diff2'});
-      setRcStatus(true, 'BC');
-    }
-    if(m.action==='d2-pong') setRcStatus(true, 'BC');
-    if(m.action==='play'){
-      ensureAudioCtx();
-      if(!playing){ const ok=diffPlay(); if(!ok){pendingPlay=true;showAutoplayBanner();} }
-    }
-    if(m.action==='stop') diffStop();
-    if(m.action==='rtc-answer') await handleRtcAnswer(m.sdp);
-    if(m.action==='rtc-ice-rcd2') await handleRtcIce(m.c);
-  });
-  setTimeout(()=>{
-    // NE PAS appeler ensureAudioCtx ici — doit être fait après geste user
-    _bc.postMessage({action:'ready', source:'Diff2'});
-  }, 600);
-}catch(e){ console.warn('[BC]', e); }
-
-// postMessage (iframe fallback)
-window.addEventListener('message', e=>{
-  const origins = ['https://nikoprdn.github.io','http://localhost','file://'];
-  if(!origins.some(o=>e.origin.startsWith(o))) return;
-  const m=e.data||{};
-  if(m.action==='ping') e.source?.postMessage({action:'pong',source:'Diff2'},e.origin);
-  if(m.action==='play'&&!playing){ ensureAudioCtx(); const ok=diffPlay(); if(!ok){pendingPlay=true;showAutoplayBanner();} }
-  if(m.action==='stop') diffStop();
-});
-
-function showAutoplayBanner(){
-  const b=document.getElementById('autoplay-banner');
-  if(b){ b.classList.add('show'); b.onclick=()=>{b.classList.remove('show');if(!playing)diffPlay(true);}; }
-}
-
-// ══════════════════════════════════════════════════════════════
-// MACRO RACCRO EXT → lance DIFF1 de Radio-Console
-// ══════════════════════════════════════════════════════════════
 // ── Macro RACCRO EXT épinglée en dernière position ────────────
 function insertRaccroExtMacro(){
   // Supprimer toute macro raccro-ext existante
@@ -900,7 +740,7 @@ function render(){
 // ── Démarrage ──
 loadPlaylist();
 render();
-setTimeout(initPeerJS, 300);
+initSignaling();
 
 </script>
 </body>
