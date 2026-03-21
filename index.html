@@ -204,8 +204,9 @@
 </div>
 
 <!-- Banner autoplay -->
-<div class="autoplay-banner" id="autoplay-banner">
-  ⚡ Commande PLAY reçue — cliquez ici pour démarrer (politique autoplay navigateur)
+<div class="autoplay-banner" id="autoplay-banner" style="cursor:pointer"
+  onclick="this.classList.remove('show'); if(!playing) diffPlay();">
+  ⚡ Commande PLAY reçue — <strong>cliquez ici</strong> pour démarrer (politique autoplay navigateur)
 </div>
 
 <!-- Card principale -->
@@ -637,6 +638,36 @@ function showAutoplayBanner(){
 // ══════════════════════════════════════════════════════════════
 // MACRO RACCRO EXT → lance DIFF1 de Radio-Console
 // ══════════════════════════════════════════════════════════════
+// ── Macro RACCRO EXT épinglée en dernière position ────────────
+function insertRaccroExtMacro(){
+  // Supprimer toute macro raccro-ext existante
+  const existing = tracks.findIndex(t => t.isMacro && t.action==='raccro-ext');
+  if(existing >= 0) tracks.splice(existing, 1);
+  // Insérer en dernier si la playlist a des sons
+  const hasSounds = tracks.some(t => !t.isMacro);
+  if(hasSounds){
+    tracks.push({
+      isMacro : true,
+      pinned  : true,
+      action  : 'raccro-ext',
+      title   : '⚡ RACCRO EXT → DIFF1',
+      dur     : 0,
+      audio   : null
+    });
+  }
+  render();
+}
+
+// Quand on supprime une piste, recalculer la macro
+function removeTrack(i){
+  if(playing && i===ci) diffStop();
+  tracks.splice(i,1);
+  if(ci>i) ci--;
+  ci = Math.min(ci, Math.max(0, tracks.length-1));
+  insertRaccroExtMacro();
+  render();
+}
+
 function runRaccroExt(){
   sendToRC({action:'raccro-ext', source:'Diff2'});
   const btns = document.querySelectorAll('[onclick*="runRaccroExt"]');
@@ -671,7 +702,8 @@ async function loadPlaylist(){
       a.load(); track.audio = a;
       render();
     });
-    setTimeout(()=>{ if(st){st.style.opacity='0';} }, 4000);
+    // Attendre que toutes les métadonnées soient chargées puis insérer la macro
+    setTimeout(()=>{ if(st){st.style.opacity='0';} insertRaccroExtMacro(); }, 4000);
   }catch(e){
     if(st){ st.textContent='⚠ '+e.message; st.style.color='var(--yellow)'; }
     console.warn('[Playlist]', e.message);
@@ -693,6 +725,8 @@ function handleFiles(files){
       a.load(); track.audio = a;
     });
   render();
+  // Insérer/replacer la macro en dernier après ajout de fichiers
+  setTimeout(insertRaccroExtMacro, 200);
 }
 
 function handleDrop(e){
@@ -710,6 +744,18 @@ function diffPlay(force){
   playing = true;
   ci = Math.max(0, Math.min(ci, tracks.length-1));
   const t = tracks[ci];
+  // Si c'est une piste macro : l'exécuter et s'arrêter
+  if(t && t.isMacro){
+    if(t.action === 'raccro-ext') runRaccroExt();
+    // Supprimer si non épinglée
+    if(!t.pinned){
+      tracks.splice(ci, 1);
+      ci = Math.max(0, ci-1);
+    }
+    playing = false;
+    setLive(false); render();
+    return true;
+  }
   if(!t || !t.audio) return false;
   if(outTimer){ clearTimeout(outTimer); outTimer=null; }
   t.audio.currentTime = 0;
@@ -733,7 +779,16 @@ function afterPlay(t, token){
       if(token !== playToken || !playing) return;
       t.audio.pause(); ci++;
       if(ci < tracks.length){
-        diffPlay();
+        const next = tracks[ci];
+        if(next && next.isMacro){
+          // Exécuter la macro et rester armé
+          if(next.action==='raccro-ext') runRaccroExt();
+          if(!next.pinned) tracks.splice(ci,1);
+          ci = 0; playing=true;
+          setLive(false); render();
+        } else {
+          diffPlay();
+        }
       } else {
         ci=0; playing=true; // reste armé
         setLive(false); render();
@@ -774,10 +829,26 @@ function render(){
   tbody.innerHTML = '';
   tracks.forEach((t,i)=>{
     const active = i===ci && playing;
-    const pos    = active && t.audio ? t.audio.currentTime : 0;
-    const rem    = active ? Math.max(0,(t.dur||0)-pos) : (t.dur||0);
-    const tr     = document.createElement('tr');
+    const tr = document.createElement('tr');
     if(active) tr.className = 'active';
+
+    // ── Piste MACRO ──
+    if(t.isMacro){
+      tr.style.borderLeft = '3px solid #9b5de5';
+      tr.style.background = '#06040e';
+      const delBtn = t.pinned ? '' : `<button class="del-btn" onclick="removeTrack(${i})">✕</button>`;
+      tr.innerHTML = `
+        <td class="td-num" style="color:#9b5de5;font-size:14px">⚡</td>
+        <td class="td-title" colspan="2" style="color:#9b5de5;font-family:var(--mono);font-size:10px;letter-spacing:2px">${t.title}</td>
+        <td class="td-cd" style="color:#6a3aaa;font-size:9px;letter-spacing:1px">AUTO</td>
+        <td>${delBtn}</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    // ── Piste audio normale ──
+    const pos = active && t.audio ? t.audio.currentTime : 0;
+    const rem = active ? Math.max(0,(t.dur||0)-pos) : (t.dur||0);
     tr.innerHTML = `
       <td class="td-num ${active?'playing':''}">${active?'▶':(i+1)}</td>
       <td class="td-title" title="${t.title}">${t.title}</td>
@@ -786,49 +857,41 @@ function render(){
       <td><button class="del-btn" onclick="removeTrack(${i})">✕</button></td>`;
     tbody.appendChild(tr);
   });
-  const n = tracks.length;
+  const n = tracks.filter(t=>!t.isMacro).length;
   const cnt = document.getElementById('counter');
-  if(cnt) cnt.textContent = n ? (ci+1)+'/'+n : '0/0';
-  const tot = tracks.reduce((s,t)=>s+(t.dur||0),0);
+  if(cnt) cnt.textContent = n ? (ci+1)+'/'+tracks.length : '0/0';
+  const tot = tracks.filter(t=>!t.isMacro).reduce((s,t)=>s+(t.dur||0),0);
   const totEl = document.getElementById('total-time');
   if(totEl) totEl.textContent = fmtFull(tot);
   const fc = document.getElementById('file-count');
   if(fc) fc.textContent = n ? n+' fichier'+(n>1?'s':'') : 'Aucun fichier';
 }
 
-function removeTrack(i){
-  if(playing && i===ci) diffStop();
-  tracks.splice(i,1);
-  if(ci>i) ci--;
-  ci = Math.min(ci, Math.max(0, tracks.length-1));
-  render();
-}
-
-// RAF — timecodes en temps réel
+// ── RAF — timecodes en temps réel ──
 (function raf(){
   requestAnimationFrame(raf);
   if(!playing || !tracks.length) return;
   const t = tracks[ci];
-  if(!t || !t.audio || t.audio.paused) return;
+  if(!t || t.isMacro || !t.audio || t.audio.paused) return;
   const pos  = t.audio.currentTime;
   const dur  = t.dur || 1;
-  const rem  = Math.max(0, dur-pos);
-  const prog = Math.min(1, pos/dur);
+  const rem  = Math.max(0, dur - pos);
+  const prog = Math.min(1, pos / dur);
   const cd   = document.getElementById('cd-'+ci);
   if(cd) cd.textContent = fmtFull(rem);
-  const fill = document.getElementById('progress-fill')||document.getElementById('progress-bar-fill');
+  const fill = document.getElementById('progress-fill');
   if(fill) fill.style.width = (prog*100).toFixed(2)+'%';
-  const row  = document.querySelector('table tbody tr.active');
+  const row  = document.querySelector('#tracks-body tr.active');
   if(row)  row.style.setProperty('--prog', prog.toFixed(4));
-  const av  = document.getElementById('timer-avant');
-  const ava = document.getElementById('timer-avance');
-  const el  = document.getElementById('elapsed');
+  const av   = document.getElementById('timer-avant');
+  const ava  = document.getElementById('timer-avance');
+  const elp  = document.getElementById('elapsed');
   if(av)  av.textContent  = fmtFull(rem);
   if(ava) ava.textContent = fmtFull(pos);
-  if(el)  el.textContent  = fmtSec(pos);
+  if(elp) elp.textContent = fmtSec(pos);
 })();
 
-// ── Démarrage ─────────────────────────────────────────────────
+// ── Démarrage ──
 loadPlaylist();
 render();
 setTimeout(initPeerJS, 300);
