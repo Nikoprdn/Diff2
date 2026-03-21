@@ -300,18 +300,44 @@ try{
   const bc = new BroadcastChannel('diff2_control');
   bc.addEventListener('message', e=>{
     const { action } = e.data || {};
-    setConnected(true, 'Radio-Console (BroadcastChannel)');
-    if(action==='play' && !playing){
-      const ok = diffPlay();
-      if(!ok){ pendingPlay=true; showAutoplayBanner(); }
+    if(action==='ping'){
+      // Répondre immédiatement : on est en ligne
+      bc.postMessage({action:'pong', ready:true, source:'Diff2'});
+      setConnected(true, 'Radio-Console (BroadcastChannel)');
+    } else if(action==='play'){
+      setConnected(true, 'Radio-Console (BroadcastChannel)');
+      if(!playing){
+        const ok = diffPlay();
+        if(!ok){ pendingPlay=true; showAutoplayBanner(); }
+      }
     } else if(action==='stop'){
+      setConnected(true, 'Radio-Console (BroadcastChannel)');
       diffStop();
     }
   });
+  // Annoncer qu'on est prêt dès le chargement
+  setTimeout(()=> bc.postMessage({action:'ready', source:'Diff2'}), 500);
   console.log('[Diff2] BroadcastChannel "diff2_control" actif');
 } catch(e){
   console.warn('[Diff2] BroadcastChannel non supporté:', e);
 }
+
+// ── postMessage depuis l'iframe (fallback cross-origin) ──
+window.addEventListener('message', e=>{
+  if(!e.origin.startsWith('https://nikoprdn.github.io') &&
+     !e.origin.startsWith('http://localhost') &&
+     !e.origin.startsWith('file://')) return;
+  const { action } = e.data || {};
+  setConnected(true, e.origin);
+  if(action==='ping'){
+    e.source?.postMessage({action:'pong', ready:true, source:'Diff2'}, e.origin);
+  } else if(action==='play' && !playing){
+    const ok = diffPlay();
+    if(!ok){ pendingPlay=true; showAutoplayBanner(); }
+  } else if(action==='stop'){
+    diffStop();
+  }
+});
 
 // ── État ──
 let tracks    = [];   // {file, title, dur, audio}
