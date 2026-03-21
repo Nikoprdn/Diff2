@@ -205,7 +205,7 @@
 
 <!-- Banner autoplay -->
 <div class="autoplay-banner" id="autoplay-banner" style="cursor:pointer"
-  onclick="this.classList.remove('show'); if(!playing) diffPlay();">
+  onclick="this.classList.remove('show'); ensureAudioCtx(); if(!playing) diffPlay();">
   ⚡ Commande PLAY reçue — <strong>cliquez ici</strong> pour démarrer (politique autoplay navigateur)
 </div>
 
@@ -237,7 +237,7 @@
       <span class="onair-track" id="onair-track"></span>
     </div>
     <div class="onair-controls">
-      <button class="btn play" onclick="diffPlay()">▶ PLAY</button>
+      <button class="btn play" onclick="ensureAudioCtx();diffPlay()">▶ PLAY</button>
       <button class="btn stop" onclick="diffStop()">■ STOP</button>
       <button onclick="runRaccroExt()" style="background:transparent;border:1px solid #9b5de5;color:#9b5de5;font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:4px 12px;border-radius:2px;cursor:pointer">⚡ RACCRO EXT</button>
       <span style="font-family:var(--mono);font-size:9px;color:var(--txt-mute);border:1px solid var(--border);padding:1px 8px;border-radius:2px">
@@ -521,21 +521,27 @@ function ensureAudioCtx(){
     _audioCtx   = new (window.AudioContext||window.webkitAudioContext)();
     _gainNode   = _audioCtx.createGain(); _gainNode.gain.value=1;
     _captureDst = _audioCtx.createMediaStreamDestination();
+    // UNIQUEMENT vers la capture WebRTC — pas vers destination
+    // Le son passe par le chemin natif <audio> → haut-parleurs
     _gainNode.connect(_captureDst);
-    _gainNode.connect(_audioCtx.destination);
   }catch(e){ console.warn('[AudioCtx]', e); }
 }
 
 function wireAudio(el){
-  if(!el || el._d2Wired) return;
-  ensureAudioCtx();
-  if(!_audioCtx) return;
+  // Seulement si AudioContext déjà initialisé (geste utilisateur fait)
+  // Le son <audio> joue SANS wireAudio — c'est uniquement pour WebRTC
+  if(!el || el._d2Wired || !_audioCtx) return;
   try{
     const src = _audioCtx.createMediaElementSource(el);
-    src.connect(_gainNode);
+    src.connect(_gainNode);              // → capture WebRTC
+    src.connect(_audioCtx.destination); // → haut-parleurs (sans ça = silence)
     el._d2Wired = true;
     setTimeout(startAudioStream, 200);
-  }catch(e){ console.warn('[wireAudio]', e); }
+  }catch(e){
+    // createMediaElementSource échoue si déjà branché ailleurs — ignorer
+    el._d2Wired = true; // marquer quand même pour éviter boucle
+    console.warn('[wireAudio]', e.message);
+  }
 }
 
 // ── Envoi audio via PeerJS MediaConnection ────────────────────
@@ -615,7 +621,7 @@ try{
     if(m.action==='rtc-ice-rcd2') await handleRtcIce(m.c);
   });
   setTimeout(()=>{
-    ensureAudioCtx();
+    // NE PAS appeler ensureAudioCtx ici — doit être fait après geste user
     _bc.postMessage({action:'ready', source:'Diff2'});
   }, 600);
 }catch(e){ console.warn('[BC]', e); }
