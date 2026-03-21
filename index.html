@@ -183,6 +183,11 @@
     <span class="status-badge" id="status-badge">EN ATTENTE</span>
     <div class="conn-dot" id="conn-dot"></div>
     <span class="conn-source" id="conn-source">non connecté</span>
+    <div style="display:flex;align-items:center;gap:4px;padding:0 6px;border-left:1px solid #1e3060;margin-left:4px"
+         title="WebRTC audio vers Radio-Console">
+      <div id="rtc-dot" style="width:6px;height:6px;border-radius:50%;background:#2a1a3a;transition:background .3s"></div>
+      <span style="font-family:var(--mono);font-size:8px;color:#4a2a7a;letter-spacing:1px">WebRTC</span>
+    </div>
     <span class="clock" id="clock">--:--:--</span>
   </div>
 </nav>
@@ -296,33 +301,119 @@ const PLAYLIST_JSON  = AUDIO_DIR + 'playlist.json';
 
 // ── BroadcastChannel — reçoit les commandes de Radio-Console
 //    (même navigateur, même domaine github.io)
+// ── WebRTC : envoyer l'audio à Radio-Console ──
+let _bc        = null;   // BroadcastChannel global
+let _peer      = null;   // RTCPeerConnection
+let _audioCtx  = null;   // AudioContext Diff2
+let _audioDest = null;   // MediaStreamDestination (capture)
+let _rtcReady  = false;
+
+// Initialiser l'AudioContext et la capture
+function initAudioCapture(){
+  if(_audioCtx) return;
+  try{
+    _audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    _audioDest = _audioCtx.createMediaStreamDestination();
+    console.log('[Diff2] Capture audio initialisée');
+  } catch(e){ console.warn('[Diff2] AudioContext:', e); }
+}
+
+// Connecter un élément audio à la capture WebRTC
+function wireToCapture(audioEl){
+  if(!_audioCtx||!_audioDest||!audioEl) return;
+  if(audioEl._wiredCapture) return; // déjà branché
+  try{
+    const src = _audioCtx.createMediaElementSource(audioEl);
+    src.connect(_audioDest);           // vers WebRTC
+    src.connect(_audioCtx.destination); // vers haut-parleurs locaux
+    audioEl._wiredCapture = true;
+    console.log('[Diff2] Audio branché sur capture WebRTC');
+    // Si le peer est déjà établi, renégocier
+    if(_peer && _peer.connectionState!=='closed') _startWebRTC();
+  } catch(e){ console.warn('[Diff2] wireToCapture:', e); }
+}
+
+// Créer l'offre WebRTC et l'envoyer à Radio-Console
+async function _startWebRTC(){
+  if(!_audioDest||!_bc) return;
+  try{
+    if(_peer){ _peer.close(); _peer=null; }
+    _peer = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+
+    // Ajouter la piste audio du stream de capture
+    _audioDest.stream.getAudioTracks().forEach(track=>{
+      _peer.addTrack(track, _audioDest.stream);
+    });
+
+    _peer.onicecandidate = (e)=>{
+      if(e.candidate){
+        _bc.postMessage({action:'webrtc-ice', candidate:e.candidate});
+      }
+    };
+
+    _peer.onconnectionstatechange = ()=>{
+      _rtcReady = _peer?.connectionState==='connected';
+      const dot = document.getElementById('rtc-dot');
+      if(dot) dot.style.background = _rtcReady ? '#9b5de5' : '#2a1a3a';
+      console.log('[Diff2] WebRTC state:', _peer?.connectionState);
+    };
+
+    const offer = await _peer.createOffer({offerToReceiveAudio:false});
+    await _peer.setLocalDescription(offer);
+    _bc.postMessage({action:'webrtc-offer', sdp:offer.sdp});
+    console.log('[Diff2] Offre WebRTC envoyée');
+  } catch(ex){ console.warn('[Diff2] WebRTC offer error:', ex); }
+}
+
+// Réception de la réponse WebRTC de Radio-Console
+async function _handleAnswer(sdp){
+  try{
+    if(_peer) await _peer.setRemoteDescription({type:'answer', sdp});
+  } catch(ex){ console.warn('[Diff2] WebRTC answer:', ex); }
+}
+async function _handleIceAnswer(candidate){
+  try{ if(_peer&&candidate) await _peer.addIceCandidate(candidate); }
+  catch(ex){ console.warn('[Diff2] ICE answer:', ex); }
+}
+
+// ── BroadcastChannel principal ──
 try{
-  const bc = new BroadcastChannel('diff2_control');
-  bc.addEventListener('message', e=>{
-    const { action } = e.data || {};
+  _bc = new BroadcastChannel('diff2_control');
+  _bc.addEventListener('message', e=>{
+    const msg = e.data || {};
+    const { action } = msg;
     if(action==='ping'){
-      // Répondre immédiatement : on est en ligne
-      bc.postMessage({action:'pong', ready:true, source:'Diff2'});
-      setConnected(true, 'Radio-Console (BroadcastChannel)');
+      _bc.postMessage({action:'pong', ready:true, source:'Diff2'});
+      setConnected(true, 'Radio-Console');
+      // Lancer WebRTC au premier ping si pas encore fait
+      if(!_peer && _audioDest && _audioDest.stream.getAudioTracks().length>0){
+        _startWebRTC();
+      }
     } else if(action==='play'){
-      setConnected(true, 'Radio-Console (BroadcastChannel)');
+      setConnected(true, 'Radio-Console');
+      initAudioCapture();
       if(!playing){
         const ok = diffPlay();
         if(!ok){ pendingPlay=true; showAutoplayBanner(); }
       }
     } else if(action==='stop'){
-      setConnected(true, 'Radio-Console (BroadcastChannel)');
+      setConnected(true, 'Radio-Console');
       diffStop();
+    } else if(action==='webrtc-answer'){
+      _handleAnswer(msg.sdp);
+    } else if(action==='webrtc-ice-answer'){
+      _handleIceAnswer(msg.candidate);
     }
   });
-  // Annoncer qu'on est prêt dès le chargement
-  setTimeout(()=> bc.postMessage({action:'ready', source:'Diff2'}), 500);
-  console.log('[Diff2] BroadcastChannel "diff2_control" actif');
-} catch(e){
-  console.warn('[Diff2] BroadcastChannel non supporté:', e);
-}
+  // Annoncer présence
+  setTimeout(()=>{
+    _bc.postMessage({action:'ready', source:'Diff2'});
+    initAudioCapture();
+  }, 500);
+  console.log('[Diff2] BroadcastChannel actif');
+} catch(e){ console.warn('[Diff2] BroadcastChannel:', e); }
 
-// ── postMessage depuis l'iframe (fallback cross-origin) ──
+// ── postMessage iframe (fallback) ──
 window.addEventListener('message', e=>{
   if(!e.origin.startsWith('https://nikoprdn.github.io') &&
      !e.origin.startsWith('http://localhost') &&
@@ -332,11 +423,12 @@ window.addEventListener('message', e=>{
   if(action==='ping'){
     e.source?.postMessage({action:'pong', ready:true, source:'Diff2'}, e.origin);
   } else if(action==='play' && !playing){
+    initAudioCapture();
     const ok = diffPlay();
     if(!ok){ pendingPlay=true; showAutoplayBanner(); }
-  } else if(action==='stop'){
-    diffStop();
-  }
+  } else if(action==='stop'){ diffStop(); }
+  else if(action==='webrtc-answer') _handleAnswer(e.data.sdp);
+  else if(action==='webrtc-ice-answer') _handleIceAnswer(e.data.candidate);
 });
 
 // ── État ──
@@ -531,8 +623,15 @@ function diffPlay(force=false){
     startTimer(t, token);
     setLive(true, t.title);
     pendingPlay = false;
+    // Brancher cet audio sur la capture WebRTC
+    if(_audioCtx && _audioDest){
+      wireToCapture(t.audio);
+      // Lancer WebRTC si c'est la première piste
+      if(!_peer || _peer.connectionState==='closed'||_peer.connectionState==='failed'){
+        _startWebRTC();
+      }
+    }
   }).catch(e=>{
-    // Autoplay bloqué
     playing = false;
     console.warn('Autoplay bloqué:', e);
     return false;
