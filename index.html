@@ -568,10 +568,10 @@ class Diffuser{
     const starts=this.tracks.map((_,i)=>{const t=new Date(cur);cur=new Date(cur.getTime()+this._playDur(i)*1000);return t;});
     const tbody=document.getElementById(this.ids.body);if(!tbody)return;
     tbody.innerHTML='';
-    const nextIdx=this.playing?this.tracks.findIndex((tt,ii)=>!tt.isMacro&&this.audios[ii]?.paused):-1;
+    const nextIdx=this.playing?this.tracks.findIndex((tt,ii)=>!tt.isMacro&&this.audios[ii]?.paused&&!tt._launching):-1;
     this.tracks.forEach((t,i)=>{
       const audio_i=this.audios[i];
-      const isActive=this.playing && !!audio_i && !audio_i.paused && !t.isMacro;
+      const isActive=this.playing && !t.isMacro && !!audio_i && (!audio_i.paused || !!t._launching);
       const isMacroActive=this.playing && t.isMacro && i===this.ci;
       const isNext=i===nextIdx;
       const tr=document.createElement('tr');
@@ -691,11 +691,18 @@ class Diffuser{
   }
 
   tick(){
-    if(!this.tracks.length){if(this.playing){this.playing=false;this.render();}return;}
     if(!this.playing)return;
     let activeIdx=-1;
-    for(let j=0;j<this.tracks.length;j++){const a=this.audios[j];if(a&&!a.paused&&!this.tracks[j].isMacro){activeIdx=j;break;}}
-    if(activeIdx===-1)return;
+    for(let j=0;j<this.tracks.length;j++){
+      const a=this.audios[j];
+      if(a&&(!a.paused||!!this.tracks[j]._launching)&&!this.tracks[j].isMacro){activeIdx=j;break;}
+    }
+    if(activeIdx===-1){
+      if(!this.tracks.length||!this.tracks.some((t2,j)=>!t2.isMacro&&this.audios[j]&&(!this.audios[j].paused||t2._launching))){
+        this.playing=false;this.render();
+      }
+      return;
+    }
     const t=this.tracks[activeIdx];const audio=this.audios[activeIdx];
     const pos=audio.currentTime;
     const inCue=this._inOf(activeIdx),outCue=this._outOf(activeIdx),fileDur=this.durs[activeIdx]||1;
@@ -730,14 +737,25 @@ class Diffuser{
       return;
     }
     const audio=this.audios[i];if(!audio)return;
-    ++this._playToken;audio.onended=null;
-    if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}
+    const myToken=++this._playToken;audio.onended=null;
+    if(this._outTimer){cancelAnimationFrame(this._outTimer);clearTimeout(this._outTimer);this._outTimer=null;}
     if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}
-    const inCue=this._inOf(i),outCue=this._outOf(i),fileDur=this.durs[i]||0;
-    const chainDelay=Math.max(0,outCue-inCue);
+    const inCue=this._inOf(i);
+    const fileDur=this.durs[i]||0;
     audio.currentTime=inCue;this.ci=i;
+    let _chained=false;
 
-    this._outTimer=setTimeout(()=>{
+    const _watchOut=()=>{
+      if(myToken!==this._playToken||!this.playing||audio.paused)return;
+      const currentOut=this._outOf(i);
+      if(audio.currentTime>=currentOut&&!_chained){
+        _chained=true;_doChain();
+      }else{this._outTimer=requestAnimationFrame(_watchOut);}
+    };
+
+    const _doChain=()=>{
+      if(this._outTimer){cancelAnimationFrame(this._outTimer);this._outTimer=null;}
+      if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}
       if(!this.playing)return;
       const idx=this.tracks.indexOf(t);
       if(idx!==-1){this.tracks.splice(idx,1);this.durs.splice(idx,1);this.audios.splice(idx,1);}
@@ -745,24 +763,25 @@ class Diffuser{
       if(!this._stopAfterMacro&&this.tracks.length>0)this._startNextInQueue();
       if(!this.tracks.length){this.playing=false;}
       this.render();
-      const remaining=Math.max(0,(fileDur-outCue))*1000;
-      if(remaining>50){this._removeTimer=setTimeout(()=>{audio.onended=null;if(!audio.paused)audio.pause();},remaining+200);}
+      const remaining=Math.max(0,(fileDur-audio.currentTime))*1000;
+      if(remaining>200){this._removeTimer=setTimeout(()=>{audio.onended=null;if(!audio.paused)audio.pause();},remaining+200);}
       else{audio.onended=null;if(!audio.paused)audio.pause();}
-    },chainDelay*1000);
+    };
 
     audio.onended=()=>{
       audio.onended=null;
-      if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}
+      if(this._outTimer){cancelAnimationFrame(this._outTimer);this._outTimer=null;}
       if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}
-      const idx=this.tracks.indexOf(t);
-      if(idx!==-1){if(t.file?.startsWith('blob:'))URL.revokeObjectURL(t.file);this.tracks.splice(idx,1);this.durs.splice(idx,1);this.audios.splice(idx,1);}
-      this.ci=0;this._updateFdzCount();
-      if(!this._stopAfterMacro&&this.tracks.length>0)this._startNextInQueue();
-      if(!this.tracks.length){this.playing=false;}
-      this.render();
+      if(!_chained){_chained=true;_doChain();}
     };
 
-    audio.play().then(()=>wireAudio(audio)).catch(e=>{audio.onended=null;if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}console.warn('play() error:',e);});
+    t._launching=true;
+    this._outTimer=requestAnimationFrame(_watchOut);
+    audio.play().then(()=>{t._launching=false;wireAudio(audio);}).catch(e=>{
+      t._launching=false;audio.onended=null;
+      if(this._outTimer){cancelAnimationFrame(this._outTimer);this._outTimer=null;}
+      console.warn('play() error:',e);
+    });
   }
 
   _startNextInQueue(){
@@ -770,7 +789,7 @@ class Diffuser{
     const t=this.tracks[0];
     if(t.isMacro){this._startTrack(0);return;}
     const a=this.audios[0];if(!a)return;
-    if(a.paused)this._startTrack(0);
+    if(a.paused&&!t._launching)this._startTrack(0);
   }
 
   _updateFdzCount(){
@@ -781,12 +800,13 @@ class Diffuser{
   togglePlay(){
     if(!this.tracks.length)return;
     const hasAudio=this.tracks.some(t=>!t.isMacro);if(!hasAudio)return;
-    if(!this.playing){this._stopAfterMacro=false;this.playing=true;this.ci=0;this._chainDone.clear();this._startTrack(0);this.render();}
-    else{this._playToken++;if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}this.audios.forEach(a=>{if(a){a.onended=null;if(!a.paused)a.pause();}});this._stopAfterMacro=false;this.playing=false;this.render();}
+    if(!this.playing){this._stopAfterMacro=false;this.playing=true;this.ci=0;this._chainDone.clear();this.tracks.forEach(t2=>{t2._launching=false;});this._startTrack(0);this.render();}
+    else{this._playToken++;if(this._outTimer){cancelAnimationFrame(this._outTimer);clearTimeout(this._outTimer);this._outTimer=null;}if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}this.audios.forEach(a=>{if(a){a.onended=null;if(!a.paused)a.pause();}});this.tracks.forEach(t2=>{t2._launching=false;});this._stopAfterMacro=false;this.playing=false;this.render();}
   }
   stopAll(){
-    this._playToken++;if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}
+    this._playToken++;if(this._outTimer){cancelAnimationFrame(this._outTimer);clearTimeout(this._outTimer);this._outTimer=null;}if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}
     this.audios.forEach(a=>{if(a){a.onended=null;if(!a.paused)a.pause();a.currentTime=0;}});
+    this.tracks.forEach(t2=>{t2._launching=false;});
     this._stopAfterMacro=false;this.playing=false;this.ci=0;this._chainDone.clear();
     const pb=document.getElementById('d2-progress-fill');if(pb)pb.style.width='0%';
     this.render();
