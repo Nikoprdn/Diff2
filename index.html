@@ -469,6 +469,7 @@ class Diffuser{
     this.playing=false;this.ci=0;this.auto=false;
     this._chainDone=new Set();this._playToken=0;
     this._outTimer=null;this._removeTimer=null;
+    this._stopAfterMacro=false;
   }
   addTracks(newTracks){
     const insertAt=this._insertionIndex();
@@ -498,9 +499,11 @@ class Diffuser{
     const tbody=document.getElementById(this.ids.body);if(!tbody)return;
     tbody.innerHTML='';
     this.tracks.forEach((t,i)=>{
-      const isActive=i===this.ci&&this.playing;
+      const audio_i=this.audios[i];
+      const isActive=this.playing && !!audio_i && !audio_i.paused && !t.isMacro;
+      const isMacroActive=this.playing && t.isMacro && i===this.ci;
       const tr=document.createElement('tr');
-      if(isActive)tr.className='row-active';else if(i===this.ci+1&&this.playing)tr.className='row-next';
+      if(isActive||isMacroActive)tr.className='row-active';else if(i===this.ci&&this.playing&&!isActive&&!isMacroActive)tr.className='row-next';
       tr.onclick=()=>this.jumpTo(i);
       const st=starts[i];
       const hhmm=fmt2(st.getHours())+':'+fmt2(st.getMinutes())+':'+fmt2(st.getSeconds());
@@ -659,42 +662,41 @@ class Diffuser{
     const chainDelay=Math.max(0,outCue-inCue);
     audio.currentTime=inCue;this.ci=i;
 
-    const _removeCurrent=()=>{
-      audio.onended=null;if(!audio.paused)audio.pause();
-      const idx=this.tracks.indexOf(t);
-      if(idx!==-1){if(t.file?.startsWith('blob:'))URL.revokeObjectURL(t.file);this.tracks.splice(idx,1);this.durs.splice(idx,1);this.audios.splice(idx,1);}
-      this.ci=0;this._updateFdzCount();
-    };
-
-    // Point OUT = enchaînement, le son courant continue en fond
+    // Point OUT = ENCHAÎNEMENT — le son courant continue en fond jusqu'à sa fin naturelle
     this._outTimer=setTimeout(()=>{
-      if(token!==this._playToken||!this.playing)return;
-      if(this.tracks.length>1) this._startNextAfterChain(token);
+      if(!this.playing)return;
+      if(!this._stopAfterMacro && this.tracks.length>1) this._startNextAfterChain();
       const remaining=Math.max(0,(fileDur-outCue))*1000;
       this._removeTimer=setTimeout(()=>{
-        if(this.tracks.indexOf(t)!==-1) _removeCurrent();
-        this.render();
-      }, remaining+500);
+        audio.onended=null;if(!audio.paused)audio.pause();
+        const idx=this.tracks.indexOf(t);
+        if(idx!==-1){if(t.file?.startsWith('blob:'))URL.revokeObjectURL(t.file);this.tracks.splice(idx,1);this.durs.splice(idx,1);this.audios.splice(idx,1);}
+        this.ci=0;this._updateFdzCount();this.render();
+      }, remaining+300);
     },chainDelay*1000);
 
     audio.onended=()=>{
       audio.onended=null;
       if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}
-      const needsChain=this.tracks.indexOf(t)!==-1&&this.tracks.length>1;
       if(this._outTimer){
         clearTimeout(this._outTimer);this._outTimer=null;
-        if(token===this._playToken&&this.playing&&needsChain) this._startNextAfterChain(token);
+        if(this.playing && !this._stopAfterMacro && this.tracks.length>1) this._startNextAfterChain();
       }
-      _removeCurrent();this.render();
+      const idx=this.tracks.indexOf(t);
+      if(idx!==-1){if(t.file?.startsWith('blob:'))URL.revokeObjectURL(t.file);this.tracks.splice(idx,1);this.durs.splice(idx,1);this.audios.splice(idx,1);}
+      this.ci=0;this._updateFdzCount();this.render();
     };
 
     audio.play().then(()=>wireAudio(audio)).catch(e=>{audio.onended=null;if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}console.warn('play() error:',e);});
   }
 
-  _startNextAfterChain(token){
-    if(token!==this._playToken||!this.playing)return;
-    if(this.tracks.length<2)return;
-    this._startTrack(1);
+  _startNextAfterChain(){
+    if(!this.playing)return;
+    for(let j=0;j<this.tracks.length;j++){
+      const nt=this.tracks[j];const na=this.audios[j];
+      if(nt.isMacro){this._startTrack(j);return;}
+      if(na&&na.paused){this._startTrack(j);return;}
+    }
   }
 
   _updateFdzCount(){
@@ -705,13 +707,13 @@ class Diffuser{
   togglePlay(){
     if(!this.tracks.length)return;
     const hasAudio=this.tracks.some(t=>!t.isMacro);if(!hasAudio)return;
-    if(!this.playing){this.playing=true;this.ci=0;this._chainDone.clear();this._startTrack(0);this.render();}
-    else{this._playToken++;if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}this.audios.forEach(a=>{if(a){a.onended=null;if(!a.paused)a.pause();}});this.playing=false;this.render();}
+    if(!this.playing){this._stopAfterMacro=false;this.playing=true;this.ci=0;this._chainDone.clear();this._startTrack(0);this.render();}
+    else{this._playToken++;if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}this.audios.forEach(a=>{if(a){a.onended=null;if(!a.paused)a.pause();}});this._stopAfterMacro=false;this.playing=false;this.render();}
   }
   stopAll(){
     this._playToken++;if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}
     this.audios.forEach(a=>{if(a){a.onended=null;if(!a.paused)a.pause();a.currentTime=0;}});
-    this.playing=false;this.ci=0;this._chainDone.clear();
+    this._stopAfterMacro=false;this.playing=false;this.ci=0;this._chainDone.clear();
     const pb=document.getElementById('d2-progress-fill');if(pb)pb.style.width='0%';
     this.render();
   }
