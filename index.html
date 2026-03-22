@@ -2571,6 +2571,19 @@ const D2_CONFIG={
        total:'d2-total',suffix:'d2-suffix',progress:'d2-progress',micros:'d2-micros'},
   fdzCount:'d2-fdz-count', autoBtn:'d2-auto-btn',
 };
+// Override _startTrack pour brancher l'audio sur capture WebRTC
+const _d2OrigStartTrack = Diffuser.prototype._startTrack;
+Diffuser.prototype._startTrack = function(i){
+  _d2OrigStartTrack.call(this, i);
+  const el=this.audios[i];
+  if(el) setTimeout(()=>wireAudioD2(el), 100);
+};
+
+
+// Alias CONFIGS pour compatibilité avec le moteur RC
+const CONFIGS = [D2_CONFIG];
+
+
 const D=[new Diffuser(D2_CONFIG,0)];
 // Surcharge : brancher l'audio sur la capture WebRTC quand un son démarre
 const _origStartTrack = Diffuser.prototype._startTrack;
@@ -2581,6 +2594,8 @@ Diffuser.prototype._startTrack = function(i){
 };
 
 
+
+function flashVoyant(key){} // stub
 
 function fireMacroTrack(macroKey,diffIdx){
   if(macroKey==='raccro-ext') runRaccroExt();
@@ -2631,10 +2646,14 @@ async function loadPlaylist(){
 
 // Drag & drop fichiers manuels
 function handleDrop2(e){
-  e.preventDefault();
-  document.getElementById('d2-drop-zone').classList.remove('drag-over');
-  const files=e.dataTransfer.files||e.target.files;
-  const newTracks=Array.from(files).filter(f=>f.type.startsWith('audio/')).map((f,i)=>({
+  if(e.preventDefault) e.preventDefault();
+  const dz=document.getElementById('d2-drop-zone');
+  if(dz) dz.style.borderColor='var(--border)';
+  // Support drag&drop ET sélection fichier classique
+  const files=(e.dataTransfer && e.dataTransfer.files) || (e.target && e.target.files) || [];
+  const arr=Array.from(files).filter(f=>f.type.startsWith('audio/'));
+  if(!arr.length) return;
+  const newTracks=arr.map((f,i)=>({
     file:URL.createObjectURL(f),
     title:f.name.replace(/\.[^/.]+$/,''),
     color:D2_COLORS[i%D2_COLORS.length], inCue:0, outCue:null
