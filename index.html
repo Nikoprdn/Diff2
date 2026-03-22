@@ -9,11 +9,11 @@
 <style>
   :root {
     --mono:'Share Tech Mono',monospace; --display:'Oswald',sans-serif;
-    --bg:#080d18; --s1:#0d1428; --s2:#111c38; --s3:#0c1530;
-    --border:#1e3060; --cyan:#00d4f0; --cyan-dim:#0099b8;
-    --green:#00d96a; --green-dk:#006630;
-    --yellow:#f5c400; --orange:#f07800; --red:#e03020;
-    --txt:#ddeeff; --txt-dim:#5a7090; --txt-mute:#3a5070;
+    --bg:#111214; --s1:#1a1c1f; --s2:#212428; --s3:#181a1d;
+    --border:#2e3238; --cyan:#b0bec5; --cyan-dim:#78909c;
+    --green:#66bb6a; --green-dk:#2e4a2e;
+    --yellow:#ffa726; --orange:#ef6c00; --red:#ef5350;
+    --txt:#cfd8dc; --txt-dim:#607d8b; --txt-mute:#37474f;
   }
   html,body{background:var(--bg)!important;min-height:100vh;overflow-x:hidden;width:100%;}
   .navbar.is-console{background:var(--s1);border-bottom:1px solid var(--border);}
@@ -29,14 +29,14 @@
   .notification.is-onair{background:var(--s2);border:1px solid var(--border);border-top:none;border-radius:0;padding:.5rem 1rem;margin:0;display:flex;align-items:center;justify-content:space-between;transition:background .2s,border-color .2s;}
 
   /* EN DIRECT */
-  .diff-card-header.is-live{background:linear-gradient(90deg,#2a0505 0%,#1a0808 100%)!important;border-bottom-color:#8a1010!important;}
-  .diff-card-header.is-live .diff-badge{background:#6a0000!important;color:#ff6060!important;border-color:#aa2020!important;box-shadow:0 0 8px rgba(220,30,30,.4);}
-  .diff-onair-bar.is-live{background:linear-gradient(90deg,#3a0808 0%,#250505 100%)!important;border-color:#7a1010!important;}
-  .diff-onair-bar.is-live .onair-title{color:#ff5050!important;}
-  .diff-onair-bar.is-live .dot-live{background:#ff3030!important;box-shadow:0 0 6px #ff3030,0 0 12px rgba(255,30,30,.6)!important;animation:live-pulse .8s ease-in-out infinite!important;}
-  .card.is-dark-card.diff-is-live{border-color:#7a1010!important;box-shadow:0 0 0 1px rgba(200,10,10,.25),inset 0 0 40px rgba(120,0,0,.08)!important;}
-  .card.is-dark-card.diff-is-live .card-header{background:linear-gradient(90deg,#1a0404 0%,#0e0808 100%)!important;border-bottom-color:#6a1010!important;}
-  @keyframes live-pulse{0%,100%{opacity:1;box-shadow:0 0 6px #ff3030,0 0 14px rgba(255,30,30,.5);}50%{opacity:.6;box-shadow:0 0 3px #ff3030;}}
+  .diff-card-header.is-live{background:linear-gradient(90deg,#1a0a0a 0%,#120808 100%)!important;border-bottom-color:#4a1010!important;}
+  .diff-card-header.is-live .diff-badge{background:#3a0000!important;color:#ef9a9a!important;border-color:#6a2020!important;box-shadow:0 0 8px rgba(180,30,30,.3);}
+  .diff-onair-bar.is-live{background:linear-gradient(90deg,#1e0808 0%,#140505 100%)!important;border-color:#4a1010!important;}
+  .diff-onair-bar.is-live .onair-title{color:#ef5350!important;}
+  .diff-onair-bar.is-live .dot-live{background:#ef5350!important;box-shadow:0 0 6px #ef5350,0 0 12px rgba(200,30,30,.5)!important;animation:live-pulse .8s ease-in-out infinite!important;}
+  .card.is-dark-card.diff-is-live{border-color:#4a1010!important;box-shadow:0 0 0 1px rgba(150,10,10,.2),inset 0 0 40px rgba(80,0,0,.08)!important;}
+  .card.is-dark-card.diff-is-live .card-header{background:linear-gradient(90deg,#140404 0%,#0a0606 100%)!important;border-bottom-color:#4a1010!important;}
+  @keyframes live-pulse{0%,100%{opacity:1;box-shadow:0 0 6px #ef5350,0 0 14px rgba(200,30,30,.4);}50%{opacity:.6;box-shadow:0 0 3px #ef5350;}}
   .onair-title{font-family:var(--display);font-size:22px;font-weight:700;color:var(--txt);letter-spacing:3px;}
   .onair-track-name{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:2px;color:var(--yellow);margin-left:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px;}
   .dot-live{display:inline-block;width:8px;height:8px;background:var(--red);border-radius:50%;animation:blink 1s step-start infinite;vertical-align:middle;margin-right:6px;}
@@ -103,17 +103,25 @@
   .vu-strip-bar{width:100%;border-radius:1px;min-height:2px;flex:1;opacity:0.08;transition:opacity .05s ease-out;}
 
   /* Barre de progression */
-  .diff-progress-wrap{position:relative;height:4px;background:#0a1020;overflow:hidden;}
-  .diff-progress-fill{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,#e03020,#f5c400,#00d96a);transition:width .08s linear;}
+  .diff-progress-wrap{position:relative;height:4px;background:#222428;overflow:hidden;}
+  .diff-progress-fill{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,#ef5350,#ffa726,#66bb6a);transition:width .08s linear;}
 
   /* Voyant RC */
   @keyframes blink-ext{0%,100%{opacity:1}50%{opacity:.3}}
   #rc-status-dot.connected{animation:none!important;}
 
   /* Statut connexion */
-  #sig-status-bar{font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:6px 1rem;background:#040810;border-bottom:1px solid #0d1828;display:flex;align-items:center;gap:12px;}
-  .sig-dot{width:8px;height:8px;border-radius:50%;background:#e03020;flex-shrink:0;transition:background .3s;}
-  .sig-dot.on{background:#00d96a;box-shadow:0 0 6px #00d96a;}
+  #sig-status-bar{font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:6px 1rem;background:#0e1012;border-bottom:1px solid #222428;display:flex;align-items:center;gap:12px;}
+  .sig-dot{width:8px;height:8px;border-radius:50%;background:#ef5350;flex-shrink:0;transition:background .3s;}
+  .sig-dot.on{background:#66bb6a;box-shadow:0 0 6px #66bb6a;}
+
+  /* Waveform sur les lignes normales */
+  .wv-handle{position:absolute;top:0;bottom:0;width:3px;cursor:ew-resize;z-index:4;transform:translateX(-1.5px);}
+  .wv-handle-in{background:#66bb6a;}
+  .wv-handle-out{background:#ef5350;}
+  .wv-handle::after{content:'';position:absolute;top:0;bottom:0;left:-8px;right:-8px;}
+  .wv-edit-btn{position:absolute;bottom:3px;right:3px;z-index:6;background:rgba(20,22,26,.85);border:1px solid #2e3238;color:#607d8b;font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:2px;cursor:pointer;letter-spacing:1px;}
+  .wv-edit-btn:hover{border-color:#78909c;color:#b0bec5;}
 
   /* Intro badge */
   .intro-badge{font-family:var(--mono);font-size:7px;background:#2a2000;color:#f5c400;border:1px solid #6a5000;border-radius:2px;padding:1px 4px;letter-spacing:1px;}
@@ -182,7 +190,8 @@
       <button class="button is-dark is-small" onclick="D[0].prevTrack()">|◀</button>
       <button class="button is-dark is-small" onclick="D[0].nextTrack()">▶|</button>
       <button class="button is-auto is-small" id="d2-auto-btn" onclick="D[0].toggleAuto()">AUTO</button>
-      <span class="tag" style="background:#0c1428;color:#3a5070;border:1px solid #1e3060">PISTE <strong id="d2-counter" style="color:#5a7090;margin-left:4px">0/0</strong></span>
+      <button id="macro-raccro-ext" onclick="runMacroRaccroExt()" style="background:transparent;border:1px solid #455a64;color:#78909c;font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:2px;cursor:pointer;letter-spacing:1px;transition:all .15s" onmouseover="this.style.background='#1e272b'" onmouseout="this.style.background='transparent'" title="Lance la lecture sur Radio Console">⚡ RACCRO EXT</button>
+      <span class="tag" style="background:#1a1c1f;color:#37474f;border:1px solid #2e3238">PISTE <strong id="d2-counter" style="color:#455a64;margin-left:4px">0/0</strong></span>
     </div>
   </div>
   <div class="diff-progress-wrap">
@@ -302,7 +311,6 @@ function sigHandleMessage(msg){
   _rcSetStatus(true,'Cloudflare');
   switch(msg.action){
     case 'play':
-      // RC demande de lancer la lecture
       if(D[0]&&!D[0].playing) D[0].togglePlay();
       break;
     case 'stop':
@@ -311,12 +319,56 @@ function sigHandleMessage(msg){
     case 'd2-pong':
       _rcSetStatus(true,'Cloudflare');
       break;
+    // RC demande à Diff2 de lancer RACCRO EXT (pour faire jouer RC depuis Diff2)
+    case 'raccro-ext':
+      // Impossible depuis Diff2 — c'est Diff2 qui déclenche RC
+      break;
     default:
-      // Répondre à tous les pings
       if(msg.action==='ping'||msg.action==='d2-ping'){
         sigSend({action:'pong',source:'D2'});
       }
   }
+}
+
+// ── Macro RACCRO EXT : envoyer play à RC ──
+function runMacroRaccroExt(){
+  sigSend({action:'raccro-ext',source:'D2'});
+  _flashMacroBtnD2('macro-raccro-ext');
+  const dot=document.getElementById('rc-status-dot');
+  if(dot){dot.style.background='#ffffff';setTimeout(()=>_rcSetStatus(_rcOnline,'Cloudflare'),300);}
+}
+function _flashMacroBtnD2(id){
+  const btn=document.getElementById(id);if(!btn)return;
+  btn.style.background='#1e272b';
+  setTimeout(()=>btn.style.background='transparent',600);
+}
+
+// ── Poignées IN/OUT sur les lignes normales (Diff2) ──
+function _bindHandlesD2(wvId,trackIdx){
+  const wrap=document.querySelector(`#${wvId}`)?.parentElement;
+  const inH=document.getElementById(wvId+'-in');
+  const outH=document.getElementById(wvId+'-out');
+  if(!wrap||!inH||!outH)return;
+  const xToR=(clientX)=>{const rect=wrap.getBoundingClientRect();return Math.min(1,Math.max(0,(clientX-rect.left)/rect.width));};
+  const applyIn=(sec)=>{const dur=D[0].durs[trackIdx]||1;const pct=(sec/dur*100).toFixed(2);inH.style.left=pct+'%';const pre=document.getElementById(wvId+'-pre');if(pre)pre.style.width=pct+'%';};
+  const applyOut=(sec)=>{const dur=D[0].durs[trackIdx]||1;const pct=(sec/dur*100).toFixed(2);outH.style.left=pct+'%';const post=document.getElementById(wvId+'-post');if(post)post.style.left=pct+'%';};
+  const bindOne=(handle,type)=>{
+    let active=false;
+    handle.addEventListener('mousedown',e=>{e.stopPropagation();e.preventDefault();active=true;document.body.style.userSelect='none';},{passive:false});
+    document.addEventListener('mousemove',e=>{
+      if(!active)return;
+      const t=D[0].tracks[trackIdx];if(!t)return;
+      const dur=D[0].durs[trackIdx]||1,sec=xToR(e.clientX)*dur;
+      if(type==='in'){t.inCue=Math.max(0,Math.min(sec,(t.outCue??dur)-0.1));applyIn(t.inCue);}
+      else{t.outCue=Math.min(dur,Math.max(sec,(t.inCue||0)+0.1));applyOut(t.outCue);}
+    });
+    document.addEventListener('mouseup',()=>{
+      if(!active)return;active=false;document.body.style.userSelect='';
+      const cv=document.getElementById(wvId);const file=D[0].tracks[trackIdx]?.file;
+      if(cv&&file&&WV_DATA_CACHE[file])drawWaveformFromData(cv,WV_DATA_CACHE[file],0,1);
+    });
+  };
+  bindOne(inH,'in');bindOne(outH,'out');
 }
 
 function initSignaling(){
@@ -351,18 +403,18 @@ async function drawWaveform(canvas,file){
 }
 function drawWaveformFromData(canvas,data,startRatio=0,endRatio=1){
   const W=canvas.width,H=canvas.height;const c=canvas.getContext('2d');
-  c.fillStyle='#080e1c';c.fillRect(0,0,W,H);
-  c.strokeStyle='rgba(30,50,90,.6)';c.lineWidth=1;
+  c.fillStyle='#151719';c.fillRect(0,0,W,H);
+  c.strokeStyle='rgba(46,50,56,.8)';c.lineWidth=1;
   [0.25,0.5,0.75].forEach(y=>{c.beginPath();c.moveTo(0,Math.round(H*y)+.5);c.lineTo(W,Math.round(H*y)+.5);c.stroke();});
   const start=Math.floor(startRatio*data.length),end=Math.floor(endRatio*data.length);
   const len=Math.max(1,end-start),step=Math.max(1,Math.floor(len/W));
   const grad=c.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'rgba(0,180,220,0.08)');grad.addColorStop(0.5,'rgba(0,200,240,0.18)');grad.addColorStop(1,'rgba(0,180,220,0.08)');
+  grad.addColorStop(0,'rgba(120,144,156,0.06)');grad.addColorStop(0.5,'rgba(144,164,174,0.14)');grad.addColorStop(1,'rgba(120,144,156,0.06)');
   c.fillStyle=grad;c.beginPath();c.moveTo(0,H/2);
   for(let x=0;x<W;x++){let mx=0;for(let j=0;j<step;j++){const v=Math.abs(data[start+x*step+j]||0);if(v>mx)mx=v;}c.lineTo(x,H/2-mx*(H/2)*.95);}
   for(let x=W-1;x>=0;x--){let mx=0;for(let j=0;j<step;j++){const v=Math.abs(data[start+x*step+j]||0);if(v>mx)mx=v;}c.lineTo(x,H/2+mx*(H/2)*.95);}
   c.closePath();c.fill();
-  c.strokeStyle='rgba(0,212,240,0.8)';c.lineWidth=1;
+  c.strokeStyle='rgba(176,190,197,0.75)';c.lineWidth=1;
   for(let x=0;x<W;x++){
     let mn=0,mx=0;for(let j=0;j<step;j++){const v=data[start+x*step+j]||0;if(v<mn)mn=v;if(v>mx)mx=v;}
     const y1=Math.round((1+mn)/2*H),y2=Math.round((1+mx)/2*H);
@@ -466,18 +518,30 @@ class Diffuser{
           <td class="cell-num">${i+1}</td>
           <td class="cell-time"><span>${hhmm}</span><span class="cell-sub">${sub}</span></td>
           <td class="cell-title" style="display:flex;align-items:center;gap:4px">${delBtn}<span class="cell-simple" title="${t.title}">${t.title}</span></td>
-          <td class="cell-wv" style="width:50px;text-align:center">
-            <span style="font-family:var(--mono);font-size:9px;color:var(--txt-mute)">${fmtFull(this.durs[i]||0)}</span>
-          </td>
-          <td class="cell-dur" style="position:relative;min-width:90px">
-            <span style="font-family:var(--mono);font-size:10px">${fmtFull(this.durs[i]||0)}</span>
-            <div style="position:absolute;bottom:2px;left:4px;right:4px;height:2px;background:#0a1020;border-radius:1px">
-              <div style="position:absolute;left:${inPct}%;width:${Math.max(1,outPct-parseFloat(inPct))}%;height:100%;background:${t.color||'#3a5080'};border-radius:1px;opacity:.7"></div>
+          <td class="cell-wv" style="min-width:160px;padding:4px 8px!important;vertical-align:middle">
+            <div style="position:relative;height:40px;border-radius:3px;overflow:hidden">
+              <canvas id="${wvId}" width="400" height="40" style="display:block;width:100%;height:40px;border-radius:3px"></canvas>
+              <div id="${wvId}-pre" style="position:absolute;top:0;bottom:0;left:0;width:${inPct}%;background:rgba(0,0,0,.45);pointer-events:none"></div>
+              <div id="${wvId}-post" style="position:absolute;top:0;bottom:0;left:${outPct}%;right:0;background:rgba(0,0,0,.45);pointer-events:none"></div>
+              <div id="${wvId}-in" class="wv-handle wv-handle-in" style="left:${inPct}%" data-wv="${wvId}" data-diff="0" data-track="${i}"></div>
+              <div id="${wvId}-out" class="wv-handle wv-handle-out" style="left:${outPct}%" data-wv="${wvId}" data-diff="0" data-track="${i}"></div>
             </div>
+          </td>
+          <td class="cell-dur" style="min-width:70px">
+            <span style="font-family:var(--mono);font-size:10px">${fmtFull(this.durs[i]||0)}</span>
           </td>
           <td class="cell-cd">${fmtFull(this._playDur(i))}</td>
           <td class="cell-bar"><span class="color-bar" style="background:${t.color}"></span></td>`;
         tbody.appendChild(tr);
+        // Waveform immédiate
+        const cv=document.getElementById(wvId);
+        if(cv){
+          cv.width=400;cv.height=40;
+          if(WV_DATA_CACHE[t.file]) drawWaveformFromData(cv,WV_DATA_CACHE[t.file],0,1);
+          else drawWaveform(cv,t.file);
+        }
+        // Poignées IN/OUT légères
+        _bindHandlesD2(wvId,i);
       }
     });
     document.getElementById(this.ids.counter).textContent=this.tracks.length?`${this.ci+1}/${this.tracks.length}`:'0/0';
