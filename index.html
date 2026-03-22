@@ -298,6 +298,8 @@ const WV_DATA_CACHE={};
 // ═══════════════════════════════════════════════════════
 const SIG_URL='https://radio-signaling.nicolas7lejeune.workers.dev';
 let _rcOnline=false;
+let _rcPlaying=false;
+let _rcTrack='';
 function _rcSetStatus(online,method){
   method=method||'';
   const dot=document.getElementById('rc-status-dot');
@@ -372,6 +374,19 @@ function _updateRcTrackList(tracks){
   el.style.color='#b0bec5';
 }
 
+
+// ── Macro RACCRO EXT ──
+function runMacroRaccroExt(){
+  const macroStep={isMacro:true,title:'RACCRO EXT',color:'#2a3a4a',inCue:0,outCue:null,
+    action:(diffuser)=>{
+      sigSend({action:'raccro-ext',source:'D2'});
+      const dot=document.getElementById('rc-status-dot');
+      if(dot){dot.style.background='#ffffff';setTimeout(()=>_rcSetStatus(_rcOnline,'Cloudflare'),300);}
+    }
+  };
+  D[0].tracks.push(macroStep);D[0].durs.push(0);D[0].audios.push(null);
+  D[0]._updateFdzCount();D[0].render();
+}
 function initSignaling(){sigSend({action:'ready',source:'D2'});_sh();_startPolling();}
 
 // ═══════════════════════════════════════════════════════
@@ -433,6 +448,19 @@ function drawWaveformBg(canvas,data){
 // ═══════════════════════════════════════════════════════
 // CLASSE DIFFUSER (identique à RC)
 // ═══════════════════════════════════════════════════════
+
+// ── Voyants ON AIR diff2 ──
+function _updateOnAirBadgesD2(){
+  const extOn=D[0]&&D[0].playing;
+  const ba=document.getElementById('badge-diffa-ext');
+  const bas=document.getElementById('badge-diffa-ext-state');
+  if(ba)ba.className='onair-badge '+(extOn?'on-air':'off-air');
+  if(bas)bas.textContent=extOn?'ON AIR':'OFF AIR';
+  const bb=document.getElementById('badge-diffa');
+  const bbs=document.getElementById('badge-diffa-state');
+  if(bb)bb.className='onair-badge '+(_rcPlaying?'on-air':'off-air');
+  if(bbs)bbs.textContent=_rcPlaying?'ON AIR':'OFF AIR';
+}
 class Diffuser{
   constructor(cfg,diffIdx){
     this.cfg=cfg;this.idx=diffIdx;this.ids=cfg.ids;
