@@ -339,7 +339,6 @@ async function sigPoll(){
 async function sigHeartbeat(){
   try{
     await fetch(`${SIG_URL}/heartbeat?role=d2`,{method:'POST'});
-    // Vérifier si RC est en ligne
     const r=await fetch(`${SIG_URL}/status`);
     if(r.ok){
       const s=await r.json();
@@ -347,7 +346,9 @@ async function sigHeartbeat(){
       _rcOnline=s.rc?.online||false;
       if(_rcOnline!==wasOnline) _rcSetStatus(_rcOnline,'Cloudflare');
     }
-  }catch(e){}
+  }catch(e){
+    setTimeout(()=>fetch(`${SIG_URL}/heartbeat?role=d2`,{method:'POST'}).catch(()=>{}), 2000);
+  }
 }
 
 let _rcPlaying=false;
@@ -464,13 +465,22 @@ function _updateOnAirBadgesD2(){
 }
 
 function initSignaling(){
-  // Heartbeat toutes les 10s
   sigHeartbeat();
-  setInterval(sigHeartbeat, 10000);
-  // Poll toutes les 2s
+  // Heartbeat toutes les 5s (tolérance mobile)
+  setInterval(sigHeartbeat, 5000);
   setInterval(sigPoll, 500);
-  // Signaler qu'on est prêt à RC
   sigSend({action:'ready',source:'D2'});
+  // Reprendre immédiatement après un retour en premier plan (mobile)
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible'){
+      sigHeartbeat();
+      sigPoll();
+    }
+  });
+  window.addEventListener('online',()=>{
+    sigHeartbeat();
+    sigPoll();
+  });
 }
 
 // ═══════════════════════════════════════════════════════
