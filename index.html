@@ -40,6 +40,12 @@
   .diff-progress-fill{background:#cc0000!important;transition:width .08s linear;}
   .table.is-radio tbody tr.row-active{background:#1a0000!important;border-left:4px solid #ff0000!important;border-top:1px solid #880000!important;border-bottom:1px solid #880000!important;}
   .table.is-radio tbody tr.row-active::before{background:#cc0000!important;}
+  .table.is-radio tbody tr.row-active::after{
+    content:'';position:absolute;top:0;bottom:0;
+    left:var(--out-pct,100%);width:3px;
+    background:#ff8800;z-index:4;pointer-events:none;
+    box-shadow:0 0 6px #ff8800;
+  }
   .onair-title{font-family:var(--display);font-size:22px;font-weight:700;color:var(--txt);letter-spacing:3px;}
   .onair-track-name{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:2px;color:var(--yellow);margin-left:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px;}
   .dot-live{display:inline-block;width:8px;height:8px;background:var(--red);border-radius:50%;animation:blink 1s step-start infinite;vertical-align:middle;margin-right:6px;}
@@ -392,7 +398,7 @@ function initSignaling(){
   sigHeartbeat();
   setInterval(sigHeartbeat, 10000);
   // Poll toutes les 2s
-  setInterval(sigPoll, 2000);
+  setInterval(sigPoll, 500);
   // Signaler qu'on est prêt à RC
   sigSend({action:'ready',source:'D2'});
 }
@@ -606,13 +612,22 @@ class Diffuser{
     if(!this.playing||!this.tracks.length)return;
     const i=this.ci;const t=this.tracks[i];if(!t||t.isMacro)return;
     const audio=this.audios[i];if(!audio)return;
-    const pos=audio.currentTime,outCue=this._outOf(i);
-    const prog=Math.max(0,Math.min(1,(pos-this._inOf(i))/(outCue-this._inOf(i)||1)));
+    const pos=audio.currentTime;
+    const inCue=this._inOf(i),outCue=this._outOf(i),fileDur=this.durs[i]||1;
+    const progFull=Math.max(0,Math.min(1,(pos-inCue)/(fileDur-inCue||1)));
     const tr=document.getElementById(this.ids.body)?.querySelector('tr.row-active');
-    if(tr)tr.style.setProperty('--prog',prog);
-    const cdEl=document.getElementById(this.ids.body+'-cd-'+i);if(cdEl)cdEl.textContent=fmtFull(Math.max(0,outCue-pos));
-    const pb=document.getElementById('d2-progress-fill');if(pb)pb.style.width=(prog*100).toFixed(2)+'%';
-    const micros=document.getElementById(this.ids.micros);if(micros)micros.textContent=fmtMs(pos-this._inOf(i));
+    if(tr){
+      tr.style.setProperty('--prog',progFull);
+      tr.style.setProperty('--out-pct',((outCue/fileDur)*100).toFixed(1)+'%');
+    }
+    const cdEl=document.getElementById(this.ids.body+'-cd-'+i);
+    if(cdEl){
+      const remToOut=outCue-pos;
+      if(remToOut>0){cdEl.textContent=fmtFull(remToOut);cdEl.style.color='#ef5350';}
+      else{cdEl.textContent='+ '+fmtFull(Math.abs(remToOut));cdEl.style.color='#ffa726';}
+    }
+    const pb=document.getElementById('d2-progress-fill');if(pb)pb.style.width=(progFull*100).toFixed(2)+'%';
+    const micros=document.getElementById(this.ids.micros);if(micros)micros.textContent=fmtMs(pos-inCue);
     paintStripFromVU();
   }
 
@@ -640,33 +655,37 @@ class Diffuser{
     const token=++this._playToken;audio.onended=null;
     if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}
     if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}
-    const inCue=this._inOf(i),outCue=this._outOf(i),chainDelay=Math.max(0,outCue-inCue);
+    const inCue=this._inOf(i),outCue=this._outOf(i),fileDur=this.durs[i]||0;
+    const chainDelay=Math.max(0,outCue-inCue);
     audio.currentTime=inCue;this.ci=i;
 
-    // Supprime la piste courante — elle ne jouera plus jamais
     const _removeCurrent=()=>{
-      audio.onended=null;audio.pause();
+      audio.onended=null;if(!audio.paused)audio.pause();
       const idx=this.tracks.indexOf(t);
       if(idx!==-1){if(t.file?.startsWith('blob:'))URL.revokeObjectURL(t.file);this.tracks.splice(idx,1);this.durs.splice(idx,1);this.audios.splice(idx,1);}
       this.ci=0;this._updateFdzCount();
     };
 
-    // Au point OUT : supprimer d'abord, enchaîner ensuite
+    // Point OUT = enchaînement, le son courant continue en fond
     this._outTimer=setTimeout(()=>{
       if(token!==this._playToken||!this.playing)return;
-      _removeCurrent();
-      this.render();
-      if(this.tracks.length)this._startNextAfterChain(token);
+      if(this.tracks.length>1) this._startNextAfterChain(token);
+      const remaining=Math.max(0,(fileDur-outCue))*1000;
+      this._removeTimer=setTimeout(()=>{
+        if(this.tracks.indexOf(t)!==-1) _removeCurrent();
+        this.render();
+      }, remaining+500);
     },chainDelay*1000);
 
-    // Sécurité : son fini avant outCue
     audio.onended=()=>{
       audio.onended=null;
-      if(token!==this._playToken)return;
-      if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}
-      _removeCurrent();
-      this.render();
-      if(this.tracks.length)this._startNextAfterChain(token);
+      if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}
+      const needsChain=this.tracks.indexOf(t)!==-1&&this.tracks.length>1;
+      if(this._outTimer){
+        clearTimeout(this._outTimer);this._outTimer=null;
+        if(token===this._playToken&&this.playing&&needsChain) this._startNextAfterChain(token);
+      }
+      _removeCurrent();this.render();
     };
 
     audio.play().then(()=>wireAudio(audio)).catch(e=>{audio.onended=null;if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}console.warn('play() error:',e);});
@@ -674,8 +693,8 @@ class Diffuser{
 
   _startNextAfterChain(token){
     if(token!==this._playToken||!this.playing)return;
-    if(!this.tracks.length)return;
-    this._startTrack(0); // tracks[0] est déjà la piste suivante
+    if(this.tracks.length<2)return;
+    this._startTrack(1);
   }
 
   _updateFdzCount(){
