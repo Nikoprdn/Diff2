@@ -132,7 +132,24 @@
   .wv-edit-btn{position:absolute;bottom:3px;right:3px;z-index:6;background:rgba(20,22,26,.85);border:1px solid #2e3238;color:#607d8b;font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:2px;cursor:pointer;letter-spacing:1px;}
   .wv-edit-btn:hover{border-color:#78909c;color:#b0bec5;}
 
-  /* Intro badge */
+  /* ── Voyants ON AIR (Diff2) ── */
+  .onair-badge-wrap{display:flex;gap:12px;padding:8px 14px;background:#0e1012;border-top:1px solid #222428;}
+  .onair-badge{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:6px;border:1px solid #2e3238;background:#151719;transition:all .2s;}
+  .onair-badge.on-air{border-color:#cc0000;background:#1a0000;}
+  .onair-badge.off-air{border-color:#2e3238;background:#151719;}
+  .onair-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;transition:all .2s;}
+  .onair-badge.on-air .onair-dot{background:#ff0000;box-shadow:0 0 8px #ff0000;animation:live-pulse .8s ease-in-out infinite;}
+  .onair-badge.off-air .onair-dot{background:#37474f;}
+  .onair-label{font-family:var(--mono);font-size:10px;letter-spacing:2px;font-weight:700;}
+  .onair-badge.on-air .onair-label{color:#ff2020;}
+  .onair-badge.off-air .onair-label{color:#37474f;}
+  .onair-state{font-family:var(--display);font-size:14px;font-weight:700;letter-spacing:2px;transition:all .2s;}
+  .onair-badge.on-air .onair-state{color:#ff2020;}
+  .onair-badge.off-air .onair-state{color:#37474f;}
+  /* Encart RC diffusion en cours */
+  .rc-now-playing{padding:8px 14px;background:#0e1012;border-top:1px solid #222428;display:flex;align-items:center;gap:10px;}
+  .rc-now-label{font-family:var(--mono);font-size:8px;color:#37474f;letter-spacing:3px;text-transform:uppercase;white-space:nowrap;}
+  .rc-now-track{font-family:var(--display);font-size:15px;font-weight:700;color:#455a64;letter-spacing:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .intro-badge{font-family:var(--mono);font-size:7px;background:#2a2000;color:#f5c400;border:1px solid #6a5000;border-radius:2px;padding:1px 4px;letter-spacing:1px;}
   .intro-countdown{font-family:var(--mono);font-size:22px;color:#f5c400;letter-spacing:2px;line-height:1;}
   .cd-sublabel{font-family:var(--mono);font-size:8px;letter-spacing:2px;}
@@ -238,6 +255,24 @@
     <div class="vu-strip-bar" style="background:#f5c400"></div><div class="vu-strip-bar" style="background:#f5c400"></div><div class="vu-strip-bar" style="background:#f5c400"></div>
     <div class="vu-strip-bar" style="background:#00d96a"></div><div class="vu-strip-bar" style="background:#00d96a"></div><div class="vu-strip-bar" style="background:#00d96a"></div><div class="vu-strip-bar" style="background:#00d96a"></div><div class="vu-strip-bar" style="background:#00d96a"></div><div class="vu-strip-bar" style="background:#00d96a"></div><div class="vu-strip-bar" style="background:#00d96a"></div><div class="vu-strip-bar" style="background:#00d96a"></div><div class="vu-strip-bar" style="background:#00d96a"></div><div class="vu-strip-bar" style="background:#00d96a"></div><div class="vu-strip-bar" style="background:#00d96a"></div>
   </div>
+  <!-- Encart RC : ce qui est diffusé sur Radio Console -->
+  <div class="rc-now-playing">
+    <span class="rc-now-label">RC ▶</span>
+    <span class="rc-now-track" id="rc-playing-track">Aucune diffusion</span>
+  </div>
+  <!-- Voyants ON AIR -->
+  <div class="onair-badge-wrap">
+    <div class="onair-badge off-air" id="badge-diffa-ext">
+      <div class="onair-dot"></div>
+      <span class="onair-label">DIFF A EXT</span>
+      <span class="onair-state" id="badge-diffa-ext-state">OFF AIR</span>
+    </div>
+    <div class="onair-badge off-air" id="badge-diffa">
+      <div class="onair-dot"></div>
+      <span class="onair-label">DIFF A</span>
+      <span class="onair-state" id="badge-diffa-state">OFF AIR</span>
+    </div>
+  </div>
 </div>
 
 </div>
@@ -315,6 +350,9 @@ async function sigHeartbeat(){
   }catch(e){}
 }
 
+let _rcPlaying=false;
+let _rcTrack='';
+
 function sigHandleMessage(msg){
   if(!msg||!msg.action) return;
   _rcSetStatus(true,'Cloudflare');
@@ -325,17 +363,35 @@ function sigHandleMessage(msg){
     case 'stop':
       if(D[0]&&D[0].playing) D[0].stopAll();
       break;
-    case 'd2-pong':
+    case 'd2-pong': case 'pong':
       _rcSetStatus(true,'Cloudflare');
       break;
-    // RC demande à Diff2 de lancer RACCRO EXT (pour faire jouer RC depuis Diff2)
-    case 'raccro-ext':
-      // Impossible depuis Diff2 — c'est Diff2 qui déclenche RC
+    case 'rc-status':
+      // RC envoie son statut à Diff2
+      _rcPlaying=!!msg.playing;
+      _rcTrack=msg.track||'';
+      _updateRcDisplay();
+      _updateOnAirBadgesD2();
       break;
     default:
       if(msg.action==='ping'||msg.action==='d2-ping'){
         sigSend({action:'pong',source:'D2'});
       }
+  }
+}
+
+function _updateRcDisplay(){
+  const el=document.getElementById('rc-playing-track');
+  if(!el)return;
+  if(_rcPlaying&&_rcTrack){
+    el.textContent='▶ '+_rcTrack;
+    el.style.color='#ef5350';
+  } else if(_rcPlaying){
+    el.textContent='▶ EN DIRECT';
+    el.style.color='#ef5350';
+  } else {
+    el.textContent='Aucune diffusion';
+    el.style.color='#455a64';
   }
 }
 
@@ -391,6 +447,20 @@ function _bindHandlesD2(wvId,trackIdx){
     });
   };
   bindOne(inH,'in');bindOne(outH,'out');
+}
+
+function _updateOnAirBadgesD2(){
+  const extOn=D[0]&&D[0].playing;
+  // DIFF A EXT (ce diffuseur)
+  const ba=document.getElementById('badge-diffa-ext');
+  const bas=document.getElementById('badge-diffa-ext-state');
+  if(ba){ba.className='onair-badge '+(extOn?'on-air':'off-air');}
+  if(bas){bas.textContent=extOn?'ON AIR':'OFF AIR';}
+  // DIFF A (Radio Console distant)
+  const bb=document.getElementById('badge-diffa');
+  const bbs=document.getElementById('badge-diffa-state');
+  if(bb){bb.className='onair-badge '+(_rcPlaying?'on-air':'off-air');}
+  if(bbs){bbs.textContent=_rcPlaying?'ON AIR':'OFF AIR';}
 }
 
 function initSignaling(){
@@ -604,18 +674,20 @@ class Diffuser{
     document.getElementById(this.ids.counter).textContent=this.tracks.length?`${this.ci+1}/${this.tracks.length}`:'0/0';
     let tot=0;this.tracks.forEach((_,i)=>tot+=this._playDur(i));
     document.getElementById(this.ids.total).textContent=fmtFull(tot);
-    const anyPlaying2=this.tracks.some((t2,j)=>!t2.isMacro&&this.audios[j]&&!this.audios[j].paused);
-    if(this.playing&&!anyPlaying2&&!this.tracks.some(t2=>!t2.isMacro)) this.playing=false;
+    const anyAudioPlaying=this.tracks.some((t2,j)=>!t2.isMacro&&this.audios[j]&&!this.audios[j].paused);
+    if(!anyAudioPlaying) this.playing=false;
     document.getElementById(this.ids.suffix).textContent=this.playing?'EN DIRECT':'A';
     const trackNameEl=document.getElementById('onair-track-0');
     if(trackNameEl){
-      const activeTrack=this.playing&&this.tracks.find((t2,j)=>!t2.isMacro&&this.audios[j]&&!this.audios[j].paused);
+      const activeTrack=anyAudioPlaying&&this.tracks.find((t2,j)=>!t2.isMacro&&this.audios[j]&&!this.audios[j].paused);
       trackNameEl.textContent=activeTrack?'— '+activeTrack.title:'';trackNameEl.style.opacity=activeTrack?'1':'0';
     }
     const hdr=document.getElementById('diff-header-0');const bar=document.getElementById('diff-onair-0');
     if(hdr)hdr.classList.toggle('is-live',this.playing);if(bar)bar.classList.toggle('is-live',this.playing);
     const card=hdr?.closest('.card');if(card)card.classList.toggle('diff-is-live',this.playing);
-    sigSend({action:'status',playing:this.playing,track:this.playing&&this.tracks.find((t2,j)=>!t2.isMacro&&this.audios[j]&&!this.audios[j].paused)?.title||''});
+    _updateOnAirBadgesD2();
+    const activeTitle=anyAudioPlaying?this.tracks.find((t2,j)=>!t2.isMacro&&this.audios[j]&&!this.audios[j].paused)?.title||'':'';
+    sigSend({action:'status',playing:this.playing,track:activeTitle});
   }
 
   tick(){
