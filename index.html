@@ -359,6 +359,18 @@ function sigHandleMessage(msg){
   _rcSetStatus(true,'Cloudflare');
   switch(msg.action){
     case 'play':
+      // play = jouer Marseille (Diff2 = diffuseur Marseille exclusif)
+      if(D[0]&&!D[0].playing) D[0].togglePlay();
+      break;
+    case 'play-city':
+      // Jouer seulement si le message cible Marseille (idx=0 ou city='marseille')
+      if(msg.idx===0||msg.city==='marseille'||msg.city==='MARSEILLE'){
+        if(D[0]&&!D[0].playing) D[0].togglePlay();
+      }
+      // play-all et autres villes : ignoré par Diff2
+      break;
+    case 'play-all':
+      // Diff2 est dédié à Marseille — on répond à play-all comme un play Marseille
       if(D[0]&&!D[0].playing) D[0].togglePlay();
       break;
     case 'stop':
@@ -368,17 +380,32 @@ function sigHandleMessage(msg){
       _rcSetStatus(true,'Cloudflare');
       break;
     case 'rc-status':
-      // RC envoie son statut à Diff2
       _rcPlaying=!!msg.playing;
       _rcTrack=msg.track||'';
       _updateRcDisplay();
       _updateOnAirBadgesD2();
+      break;
+    case 'track-list':
+      // RC reçoit la liste des pistes chargées dans D3/Marseille — afficher dans l'encart RC
+      if(msg.tracks&&msg.tracks.length) _updateRcTrackList(msg.tracks);
       break;
     default:
       if(msg.action==='ping'||msg.action==='d2-ping'){
         sigSend({action:'pong',source:'D2'});
       }
   }
+}
+
+function _updateRcTrackList(tracks){
+  // Afficher la playlist Marseille reçue de D3 dans l'encart RC
+  const el=document.getElementById('rc-playing-track');
+  if(!el) return;
+  if(tracks.length===1){
+    el.textContent=tracks[0].title||'—';
+  } else {
+    el.textContent=tracks.length+' pistes chargées';
+  }
+  el.style.color='#b0bec5';
 }
 
 function _updateRcDisplay(){
