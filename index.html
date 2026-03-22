@@ -336,6 +336,42 @@ async function _sh(){try{await sigHeartbeat();_ce=Math.max(0,_ce-1);}catch(e){_c
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){_ce=0;_pi=500;_sh();_sp();_startPolling();}});
 window.addEventListener('online',function(){_ce=0;_sh();_sp();_startPolling();});
 window.addEventListener('offline',function(){if(_pid)clearInterval(_pid);if(_hid)clearInterval(_hid);});
+
+function sigHandleMessage(msg){
+  if(!msg||!msg.action)return;
+  _rcSetStatus(true,'Cloudflare');
+  switch(msg.action){
+    case 'play':
+      if(D[0]&&!D[0].playing)D[0].togglePlay();
+      break;
+    case 'play-all':
+      if(D[0]&&!D[0].playing)D[0].togglePlay();
+      break;
+    case 'play-city':
+      if((msg.idx===0||msg.city==='marseille'||msg.city==='MARSEILLE')&&D[0]&&!D[0].playing)D[0].togglePlay();
+      break;
+    case 'stop':
+      if(D[0]&&D[0].playing)D[0].stopAll();
+      break;
+    case 'd2-pong':case 'pong':
+      _rcSetStatus(true,'Cloudflare');break;
+    case 'rc-status':
+      _rcPlaying=!!msg.playing;_rcTrack=msg.track||'';
+      _updateRcDisplay();_updateOnAirBadgesD2();break;
+    case 'track-list':
+      if(msg.tracks&&msg.tracks.length)_updateRcTrackList(msg.tracks);break;
+    default:
+      if(msg.action==='ping'||msg.action==='d2-ping')sigSend({action:'pong',source:'D2'});
+  }
+}
+
+function _updateRcTrackList(tracks){
+  const el=document.getElementById('rc-playing-track');
+  if(!el)return;
+  el.textContent=tracks.length===1?tracks[0].title||'—':tracks.length+' pistes chargées';
+  el.style.color='#b0bec5';
+}
+
 function initSignaling(){sigSend({action:'ready',source:'D2'});_sh();_startPolling();}
 
 // ═══════════════════════════════════════════════════════
