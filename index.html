@@ -330,12 +330,26 @@ function sigHandleMessage(msg){
   }
 }
 
-// ── Macro RACCRO EXT : envoyer play à RC ──
+// ── Macro RACCRO EXT : insère un pas dans la playlist ──
 function runMacroRaccroExt(){
-  sigSend({action:'raccro-ext',source:'D2'});
-  _flashMacroBtnD2('macro-raccro-ext');
-  const dot=document.getElementById('rc-status-dot');
-  if(dot){dot.style.background='#ffffff';setTimeout(()=>_rcSetStatus(_rcOnline,'Cloudflare'),300);}
+  const macroStep={
+    isMacro:true,
+    title:'RACCRO EXT',
+    color:'#2a3a4a',
+    inCue:0,outCue:null,
+    action:()=>{
+      sigSend({action:'raccro-ext',source:'D2'});
+      _flashMacroBtnD2('macro-raccro-ext');
+      const dot=document.getElementById('rc-status-dot');
+      if(dot){dot.style.background='#ffffff';setTimeout(()=>_rcSetStatus(_rcOnline,'Cloudflare'),300);}
+    }
+  };
+  D[0].tracks.push(macroStep);
+  D[0].durs.push(0);
+  D[0].audios.push(null);
+  D[0]._updateFdzCount();
+  D[0].render();
+  if(D[0].playing&&D[0].tracks.length===1) D[0]._startTrack(0);
 }
 function _flashMacroBtnD2(id){
   const btn=document.getElementById(id);if(!btn)return;
@@ -403,23 +417,23 @@ async function drawWaveform(canvas,file){
 }
 function drawWaveformFromData(canvas,data,startRatio=0,endRatio=1){
   const W=canvas.width,H=canvas.height;const c=canvas.getContext('2d');
-  c.fillStyle='#151719';c.fillRect(0,0,W,H);
-  c.strokeStyle='rgba(46,50,56,.8)';c.lineWidth=1;
-  [0.25,0.5,0.75].forEach(y=>{c.beginPath();c.moveTo(0,Math.round(H*y)+.5);c.lineTo(W,Math.round(H*y)+.5);c.stroke();});
+  // Fond gris ardoise plein pour Diff2
+  c.fillStyle='#8fa8b0';
+  c.fillRect(0,0,W,H);
   const start=Math.floor(startRatio*data.length),end=Math.floor(endRatio*data.length);
   const len=Math.max(1,end-start),step=Math.max(1,Math.floor(len/W));
-  const grad=c.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'rgba(120,144,156,0.06)');grad.addColorStop(0.5,'rgba(144,164,174,0.14)');grad.addColorStop(1,'rgba(120,144,156,0.06)');
-  c.fillStyle=grad;c.beginPath();c.moveTo(0,H/2);
-  for(let x=0;x<W;x++){let mx=0;for(let j=0;j<step;j++){const v=Math.abs(data[start+x*step+j]||0);if(v>mx)mx=v;}c.lineTo(x,H/2-mx*(H/2)*.95);}
-  for(let x=W-1;x>=0;x--){let mx=0;for(let j=0;j<step;j++){const v=Math.abs(data[start+x*step+j]||0);if(v>mx)mx=v;}c.lineTo(x,H/2+mx*(H/2)*.95);}
-  c.closePath();c.fill();
-  c.strokeStyle='rgba(176,190,197,0.75)';c.lineWidth=1;
   for(let x=0;x<W;x++){
-    let mn=0,mx=0;for(let j=0;j<step;j++){const v=data[start+x*step+j]||0;if(v<mn)mn=v;if(v>mx)mx=v;}
-    const y1=Math.round((1+mn)/2*H),y2=Math.round((1+mx)/2*H);
-    if(y2>y1){c.beginPath();c.moveTo(x+.5,y1);c.lineTo(x+.5,y2);c.stroke();}
+    let mn=0,mx=0;const base=start+x*step;
+    for(let j=0;j<step;j++){const v=data[base+j]||0;if(v<mn)mn=v;if(v>mx)mx=v;}
+    const amp=Math.max(Math.abs(mn),Math.abs(mx));
+    const y1=Math.round((1+mn)*H/2),y2=Math.round((1+mx)*H/2);
+    const h=Math.max(1,y2-y1);
+    const alpha=0.25+amp*0.75;
+    c.fillStyle=`rgba(20,28,32,${alpha.toFixed(2)})`;
+    c.fillRect(x,y1,1,h);
   }
+  c.fillStyle='rgba(40,60,70,0.2)';
+  c.fillRect(0,Math.floor(H/2),W,1);
 }
 function drawWaveformBg(canvas,data){
   const W=canvas.width||1200,H=canvas.height||96;const c=canvas.getContext('2d');c.clearRect(0,0,W,H);
@@ -488,22 +502,19 @@ class Diffuser{
       const wvId=`wv-d2-${i}`;const dur=this.durs[i]||1;
       const inPct=(this._inOf(i)/dur*100).toFixed(1);const outPct=Math.min(98,(this._outOf(i)/dur*100)).toFixed(1);
       const delBtn=t.pinned?'':`<button onclick="event.stopPropagation();diffRemoveTrack(0,${i})" style="background:transparent;border:none;color:#3a4050;cursor:pointer;font-size:11px;padding:0 4px;line-height:1" onmouseover="this.style.color='#e03020'" onmouseout="this.style.color='#3a4050'">✕</button>`;
-      if(isActive){
+      const isMacro=!!t.isMacro;
+      if(isActive && !isMacro){
         tr.innerHTML=`
           <canvas class="row-active-wv-bg" id="${wvId}-bg" width="1200" height="96"></canvas>
-          <div style="position:absolute;top:0;bottom:0;z-index:1;pointer-events:none;left:${inPct}%;width:2px;background:rgba(0,255,96,.5)"></div>
-          <div style="position:absolute;top:0;bottom:0;z-index:1;pointer-events:none;left:${outPct}%;width:2px;background:rgba(255,40,40,.5)"></div>
+          <div style="position:absolute;top:0;bottom:0;z-index:1;pointer-events:none;left:${inPct}%;width:2px;background:rgba(0,200,80,.5)"></div>
+          <div style="position:absolute;top:0;bottom:0;z-index:1;pointer-events:none;left:${outPct}%;width:2px;background:rgba(200,60,60,.5)"></div>
           <td class="cell-num is-playing" style="width:32px">▶</td>
           <td class="cell-time" style="width:72px"><span class="row-active-time">${hhmm}</span><span class="cell-sub">${sub}</span></td>
           <td class="cell-title" style="max-width:none;flex:1;padding-left:8px!important">${delBtn}
-            <div>
-              <div class="row-active-title">${t.title}</div>
-              <div class="row-active-cues">IN ${fmtMs(this._inOf(i))} &nbsp;·&nbsp; OUT ${fmtMs(this._outOf(i))}</div>
-            </div>
+            <div><div class="row-active-title">${t.title}</div>
+            <div class="row-active-cues">IN ${fmtMs(this._inOf(i))} &nbsp;·&nbsp; OUT ${fmtMs(this._outOf(i))}</div></div>
           </td>
-          <td class="cell-wv" style="width:50px;padding:4px 6px!important;text-align:center">
-            <span style="font-family:var(--mono);font-size:9px;color:var(--txt-mute)">EN COURS</span>
-          </td>
+          <td style="width:50px;padding:4px 6px!important;text-align:center;vertical-align:middle"><span style="font-family:var(--mono);font-size:9px;color:var(--txt-mute)">LIVE</span></td>
           <td class="cell-dur"><span class="row-active-dur">${fmtFull(this.durs[i]||0)}</span></td>
           <td class="cell-cd" style="min-width:120px;text-align:right;padding-right:12px">
             <span class="row-active-tc" id="${this.ids.body}-cd-${i}">${fmtFull(rem)}</span>
@@ -513,34 +524,66 @@ class Diffuser{
         tbody.appendChild(tr);
         const bgCv=document.getElementById(wvId+'-bg');
         if(bgCv&&this.durs[i]>0){bgCv.width=1200;bgCv.height=96;if(WV_DATA_CACHE[t.file])drawWaveformBg(bgCv,WV_DATA_CACHE[t.file]);}
-      }else{
+      } else if(isActive && isMacro){
+        tr.style.background='linear-gradient(90deg,#1e1800 0%,#141000 100%)';
+        tr.style.borderLeft='4px solid #ffa726';
         tr.innerHTML=`
-          <td class="cell-num">${i+1}</td>
-          <td class="cell-time"><span>${hhmm}</span><span class="cell-sub">${sub}</span></td>
-          <td class="cell-title" style="display:flex;align-items:center;gap:4px">${delBtn}<span class="cell-simple" title="${t.title}">${t.title}</span></td>
-          <td class="cell-wv" style="min-width:160px;padding:4px 8px!important;vertical-align:middle">
-            <div style="position:relative;height:40px;border-radius:3px;overflow:hidden">
-              <canvas id="${wvId}" width="400" height="40" style="display:block;width:100%;height:40px;border-radius:3px"></canvas>
-              <div id="${wvId}-pre" style="position:absolute;top:0;bottom:0;left:0;width:${inPct}%;background:rgba(0,0,0,.45);pointer-events:none"></div>
-              <div id="${wvId}-post" style="position:absolute;top:0;bottom:0;left:${outPct}%;right:0;background:rgba(0,0,0,.45);pointer-events:none"></div>
+          <td class="cell-num" style="color:#ffa726;font-size:18px">⚡</td>
+          <td class="cell-time" style="color:#ffa726;font-family:var(--mono);font-size:11px">ACTION</td>
+          <td colspan="4" style="padding:0 16px;vertical-align:middle">
+            <div style="font-family:var(--display);font-size:20px;font-weight:700;color:#ffa726;letter-spacing:3px">${t.title}</div>
+            <div style="font-family:var(--mono);font-size:9px;color:#5a3800;letter-spacing:2px;margin-top:2px">EN COURS D'EXÉCUTION…</div>
+          </td>
+          <td class="cell-bar"><span class="color-bar" style="background:#ffa726;height:56px"></span></td>`;
+        tbody.appendChild(tr);
+      } else if(isMacro){
+        tr.style.borderLeft='3px solid #2e2200';
+        tr.innerHTML=`
+          <td class="cell-num" style="color:#4a3800;font-size:14px">⚡</td>
+          <td style="font-family:var(--mono);font-size:10px;color:#3a2800;vertical-align:middle;padding:0 8px">MACRO</td>
+          <td colspan="3" style="padding:0 16px;vertical-align:middle">
+            <div style="display:flex;align-items:center;gap:8px">${delBtn}
+              <span style="font-family:var(--display);font-size:14px;font-weight:700;color:#6a5000;letter-spacing:2px">${t.title}</span>
+              <span style="font-family:var(--mono);font-size:8px;color:#3a2800;border:1px solid #3a2800;padding:1px 5px;border-radius:2px;letter-spacing:1px">→ À LA LECTURE</span>
+            </div>
+          </td>
+          <td style="color:#4a3800;font-family:var(--mono);font-size:10px;text-align:right;padding-right:10px;vertical-align:middle">ACTION</td>
+          <td class="cell-bar"><span class="color-bar" style="background:#2e2200"></span></td>`;
+        tbody.appendChild(tr);
+      } else {
+        const isNext=i===this.ci+1&&this.playing;
+        tr.innerHTML=`
+          <td style="width:32px;text-align:center;vertical-align:middle;padding:0">
+            <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:${isNext?'#66bb6a':'#455a64'}">${i+1}</div>
+          </td>
+          <td style="width:88px;vertical-align:middle;padding:0 8px">
+            <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:${isNext?'#66bb6a':'#b0bec5'};letter-spacing:1px">${hhmm}</div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--txt-mute);margin-top:1px">${fmtFull(this._playDur(i))}</div>
+          </td>
+          <td style="padding:0 8px;vertical-align:middle;max-width:200px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:6px">${delBtn}
+              <div>
+                <div style="font-family:var(--display);font-size:16px;font-weight:700;color:${isNext?'#66bb6a':'var(--txt)'};letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px" title="${t.title}">${t.title}</div>
+                <div style="font-family:var(--mono);font-size:9px;color:var(--txt-mute);margin-top:1px;letter-spacing:1px">IN ${fmtMs(this._inOf(i))} · OUT ${fmtMs(this._outOf(i))}</div>
+              </div>
+            </div>
+          </td>
+          <td style="padding:4px 8px;vertical-align:middle;min-width:220px">
+            <div style="position:relative;height:48px;border-radius:4px;overflow:hidden;box-shadow:0 0 0 1px rgba(144,164,174,0.2)">
+              <canvas id="${wvId}" width="600" height="48" style="display:block;width:100%;height:48px"></canvas>
+              <div id="${wvId}-pre" style="position:absolute;top:0;bottom:0;left:0;width:${inPct}%;background:rgba(0,0,0,.38);pointer-events:none"></div>
+              <div id="${wvId}-post" style="position:absolute;top:0;bottom:0;left:${outPct}%;right:0;background:rgba(0,0,0,.38);pointer-events:none"></div>
               <div id="${wvId}-in" class="wv-handle wv-handle-in" style="left:${inPct}%" data-wv="${wvId}" data-diff="0" data-track="${i}"></div>
               <div id="${wvId}-out" class="wv-handle wv-handle-out" style="left:${outPct}%" data-wv="${wvId}" data-diff="0" data-track="${i}"></div>
             </div>
           </td>
-          <td class="cell-dur" style="min-width:70px">
-            <span style="font-family:var(--mono);font-size:10px">${fmtFull(this.durs[i]||0)}</span>
+          <td style="width:70px;text-align:right;vertical-align:middle;padding:0 10px">
+            <div style="font-family:var(--mono);font-size:13px;color:${isNext?'#66bb6a':'#546e7a'};letter-spacing:1px">${fmtFull(this._playDur(i))}</div>
           </td>
-          <td class="cell-cd">${fmtFull(this._playDur(i))}</td>
-          <td class="cell-bar"><span class="color-bar" style="background:${t.color}"></span></td>`;
+          <td class="cell-bar"><span style="width:4px;height:56px;display:block;background:${t.color};border-radius:2px;opacity:.8"></span></td>`;
         tbody.appendChild(tr);
-        // Waveform immédiate
         const cv=document.getElementById(wvId);
-        if(cv){
-          cv.width=400;cv.height=40;
-          if(WV_DATA_CACHE[t.file]) drawWaveformFromData(cv,WV_DATA_CACHE[t.file],0,1);
-          else drawWaveform(cv,t.file);
-        }
-        // Poignées IN/OUT légères
+        if(cv){cv.width=600;cv.height=48;if(WV_DATA_CACHE[t.file])drawWaveformFromData(cv,WV_DATA_CACHE[t.file],0,1);else drawWaveform(cv,t.file);}
         _bindHandlesD2(wvId,i);
       }
     });
@@ -572,7 +615,24 @@ class Diffuser{
   }
 
   _startTrack(i){
-    const t=this.tracks[i];if(!t)return;const audio=this.audios[i];if(!audio)return;
+    const t=this.tracks[i];if(!t)return;
+    // ── Pas MACRO : exécuter et supprimer ──
+    if(t.isMacro){
+      this.render();
+      if(typeof t.action==='function') t.action();
+      const token=this._playToken;
+      setTimeout(()=>{
+        if(token!==this._playToken||!this.playing)return;
+        const idx=this.tracks.indexOf(t);
+        if(idx!==-1){this.tracks.splice(idx,1);this.durs.splice(idx,1);this.audios.splice(idx,1);}
+        this.ci=0;this._updateFdzCount();
+        if(this.tracks.length)this._startTrack(0);
+        else this.playing=false;
+        this.render();
+      },1500);
+      return;
+    }
+    const audio=this.audios[i];if(!audio)return;
     const token=++this._playToken;audio.onended=null;
     if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}
     if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}
