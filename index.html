@@ -642,49 +642,40 @@ class Diffuser{
     if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}
     const inCue=this._inOf(i),outCue=this._outOf(i),chainDelay=Math.max(0,outCue-inCue);
     audio.currentTime=inCue;this.ci=i;
-    const removeTrack=(tk)=>{
-      if(tk!==this._playToken)return;
+
+    // Supprime la piste courante — elle ne jouera plus jamais
+    const _removeCurrent=()=>{
       audio.onended=null;audio.pause();
       const idx=this.tracks.indexOf(t);
       if(idx!==-1){if(t.file?.startsWith('blob:'))URL.revokeObjectURL(t.file);this.tracks.splice(idx,1);this.durs.splice(idx,1);this.audios.splice(idx,1);}
-      this.ci=0;this._updateFdzCount();this.render();
+      this.ci=0;this._updateFdzCount();
     };
+
+    // Au point OUT : supprimer d'abord, enchaîner ensuite
     this._outTimer=setTimeout(()=>{
       if(token!==this._playToken||!this.playing)return;
-      this.ci=0;this.render();
+      _removeCurrent();
+      this.render();
       if(this.tracks.length)this._startNextAfterChain(token);
-      else this._removeTimer=setTimeout(()=>removeTrack(token),2000);
     },chainDelay*1000);
-    audio.onended=()=>{audio.onended=null;if(token!==this._playToken)return;removeTrack(token);};
+
+    // Sécurité : son fini avant outCue
+    audio.onended=()=>{
+      audio.onended=null;
+      if(token!==this._playToken)return;
+      if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}
+      _removeCurrent();
+      this.render();
+      if(this.tracks.length)this._startNextAfterChain(token);
+    };
+
     audio.play().then(()=>wireAudio(audio)).catch(e=>{audio.onended=null;if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}console.warn('play() error:',e);});
   }
 
   _startNextAfterChain(token){
     if(token!==this._playToken||!this.playing)return;
     if(!this.tracks.length)return;
-    const next=this.tracks[0];if(!next)return;
-    if(next.isMacro){this._startTrack(0);return;}
-    const nextAudio=this.audios[0];if(!nextAudio)return;
-    const nextToken=++this._playToken;nextAudio.onended=null;
-    if(this._outTimer){clearTimeout(this._outTimer);this._outTimer=null;}
-    if(this._removeTimer){clearTimeout(this._removeTimer);this._removeTimer=null;}
-    const nextIn=this._inOf(0),nextOut=this._outOf(0),nextChain=Math.max(0,nextOut-nextIn);
-    nextAudio.currentTime=nextIn;
-    const removeNext=(tk)=>{
-      if(tk!==this._playToken)return;
-      nextAudio.onended=null;nextAudio.pause();
-      const idx=this.tracks.indexOf(next);
-      if(idx!==-1){this.tracks.splice(idx,1);this.durs.splice(idx,1);this.audios.splice(idx,1);}
-      this.ci=0;this._updateFdzCount();this.render();
-    };
-    this._outTimer=setTimeout(()=>{
-      if(nextToken!==this._playToken||!this.playing)return;
-      this.ci=0;this.render();
-      if(this.tracks.length)this._startNextAfterChain(nextToken);
-      else this._removeTimer=setTimeout(()=>removeNext(nextToken),2000);
-    },nextChain*1000);
-    nextAudio.onended=()=>{nextAudio.onended=null;if(nextToken!==this._playToken)return;removeNext(nextToken);};
-    nextAudio.play().catch(e=>console.warn('play() next error:',e));
+    this._startTrack(0); // tracks[0] est déjà la piste suivante
   }
 
   _updateFdzCount(){
