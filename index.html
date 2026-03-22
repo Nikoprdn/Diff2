@@ -296,203 +296,47 @@ const WV_DATA_CACHE={};
 // ═══════════════════════════════════════════════════════
 // SIGNALING CLOUDFLARE — réception des commandes de RC
 // ═══════════════════════════════════════════════════════
-const SIG_URL  = 'https://radio-signaling.nicolas7lejeune.workers.dev';
-const SIG_ROLE = 'd2'; // ce côté = Diffuseur Externe
-
-let _rcOnline = false;
-
-function _rcSetStatus(online, method=''){
-  const dot = document.getElementById('rc-status-dot');
-  const lbl = document.getElementById('rc-status-lbl');
-  if(dot){
-    dot.style.background = online ? '#00d96a' : '#e03020';
-    dot.style.boxShadow  = online ? '0 0 8px #00d96a' : '0 0 8px #e03020';
-    dot.classList.toggle('connected', online);
-    dot.style.animation  = online ? 'none' : 'blink-ext .8s step-start infinite';
-  }
-  if(lbl){ lbl.textContent = online ? ('RC ● '+(method||'')) : 'RC ✗'; lbl.style.color = online ? '#00d96a' : '#e03020'; }
-  const dot2 = document.getElementById('sig-dot');
-  const txt  = document.getElementById('sig-txt');
-  const last = document.getElementById('sig-last');
-  if(dot2) dot2.classList.toggle('on', online);
-  if(txt)  txt.textContent  = online ? 'Cloudflare connecté' : 'En attente de RC…';
-  if(last) last.textContent = 'Dernier contact : '+nowClock();
+const SIG_URL='https://radio-signaling.nicolas7lejeune.workers.dev';
+let _rcOnline=false;
+function _rcSetStatus(online,method){
+  method=method||'';
+  const dot=document.getElementById('rc-status-dot');
+  const lbl=document.getElementById('rc-status-lbl');
+  const dot2=document.getElementById('sig-dot');
+  const txt=document.getElementById('sig-txt');
+  if(dot){dot.style.background=online?'#00d96a':'#e03020';dot.style.boxShadow=online?'0 0 8px #00d96a':'0 0 8px #e03020';dot.classList.toggle('connected',online);dot.style.animation=online?'none':'blink-ext .8s step-start infinite';}
+  if(lbl){lbl.textContent=online?'RC ●'+method:'RC ✗';lbl.style.color=online?'#00d96a':'#e03020';}
+  if(dot2)dot2.classList.toggle('on',online);
+  if(txt)txt.textContent=online?'Cloudflare connecté':'En attente de RC...';
 }
-
 async function sigSend(msg){
-  try{
-    await fetch(`${SIG_URL}/send?from=d2&to=rc`,{
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(msg)
-    });
-  }catch(e){ console.warn('[Sig] send error:',e.message); }
+  try{await fetch(SIG_URL+'/send?from=d2&to=rc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(msg)});}catch(e){}
 }
-
 async function sigPoll(){
-  try{
-    const r=await fetch(`${SIG_URL}/poll?role=d2`);
-    if(!r.ok) return;
-    const data=await r.json();
-    for(const msg of (data.messages||[])) sigHandleMessage(msg);
-  }catch(e){}
+  const r=await fetch(SIG_URL+'/poll?role=d2');
+  if(!r.ok)throw new Error('poll');
+  const data=await r.json();
+  for(const msg of(data.messages||[]))sigHandleMessage(msg);
 }
-
 async function sigHeartbeat(){
-  try{
-    await fetch(`${SIG_URL}/heartbeat?role=d2`,{method:'POST'});
-    const r=await fetch(`${SIG_URL}/status`);
-    if(r.ok){
-      const s=await r.json();
-      const wasOnline=_rcOnline;
-      _rcOnline=s.rc?.online||false;
-      if(_rcOnline!==wasOnline) _rcSetStatus(_rcOnline,'Cloudflare');
-    }
-  }catch(e){
-    setTimeout(()=>fetch(`${SIG_URL}/heartbeat?role=d2`,{method:'POST'}).catch(()=>{}), 2000);
-  }
+  await fetch(SIG_URL+'/heartbeat?role=d2',{method:'POST'});
+  const r=await fetch(SIG_URL+'/status');
+  if(!r.ok)throw new Error('status');
+  const s=await r.json();
+  const was=_rcOnline;_rcOnline=s.rc&&s.rc.online||false;
+  if(_rcOnline!==was)_rcSetStatus(_rcOnline,'Cloudflare');
 }
-
-let _rcPlaying=false;
-let _rcTrack='';
-
-function sigHandleMessage(msg){
-  if(!msg||!msg.action) return;
-  _rcSetStatus(true,'Cloudflare');
-  switch(msg.action){
-    case 'play':
-      // play = jouer Marseille (Diff2 = diffuseur Marseille exclusif)
-      if(D[0]&&!D[0].playing) D[0].togglePlay();
-      break;
-    case 'play-city':
-      // Jouer seulement si le message cible Marseille (idx=0 ou city='marseille')
-      if(msg.idx===0||msg.city==='marseille'||msg.city==='MARSEILLE'){
-        if(D[0]&&!D[0].playing) D[0].togglePlay();
-      }
-      // play-all et autres villes : ignoré par Diff2
-      break;
-    case 'play-all':
-      // Diff2 est dédié à Marseille — on répond à play-all comme un play Marseille
-      if(D[0]&&!D[0].playing) D[0].togglePlay();
-      break;
-    case 'stop':
-      if(D[0]&&D[0].playing) D[0].stopAll();
-      break;
-    case 'd2-pong': case 'pong':
-      _rcSetStatus(true,'Cloudflare');
-      break;
-    case 'rc-status':
-      _rcPlaying=!!msg.playing;
-      _rcTrack=msg.track||'';
-      _updateRcDisplay();
-      _updateOnAirBadgesD2();
-      break;
-    case 'track-list':
-      // RC reçoit la liste des pistes chargées dans D3/Marseille — afficher dans l'encart RC
-      if(msg.tracks&&msg.tracks.length) _updateRcTrackList(msg.tracks);
-      break;
-    default:
-      if(msg.action==='ping'||msg.action==='d2-ping'){
-        sigSend({action:'pong',source:'D2'});
-      }
-  }
+let _ce=0,_pi=500,_pid=null,_hid=null;
+function _startPolling(){if(_pid)clearInterval(_pid);if(_hid)clearInterval(_hid);_pid=setInterval(_sp,_pi);_hid=setInterval(_sh,5000);}
+async function _sp(){
+  try{await sigPoll();if(_ce>0){_ce=0;if(_pi!==500){_pi=500;_startPolling();}}}
+  catch(e){_ce++;if(_ce>=3&&_pi!==3000){_pi=3000;_startPolling();}}
 }
-
-function _updateRcTrackList(tracks){
-  // Afficher la playlist Marseille reçue de D3 dans l'encart RC
-  const el=document.getElementById('rc-playing-track');
-  if(!el) return;
-  if(tracks.length===1){
-    el.textContent=tracks[0].title||'—';
-  } else {
-    el.textContent=tracks.length+' pistes chargées';
-  }
-  el.style.color='#b0bec5';
-}
-
-function _updateRcDisplay(){
-  const el=document.getElementById('rc-playing-track');
-  if(!el)return;
-  if(_rcPlaying&&_rcTrack){
-    el.textContent='▶ '+_rcTrack;
-    el.style.color='#ef5350';
-  } else if(_rcPlaying){
-    el.textContent='▶ EN DIRECT';
-    el.style.color='#ef5350';
-  } else {
-    el.textContent='Aucune diffusion';
-    el.style.color='#455a64';
-  }
-}
-
-// ── Macro RACCRO EXT : insère un pas dans la playlist ──
-function runMacroRaccroExt(){
-  const macroStep={
-    isMacro:true,
-    title:'RACCRO EXT',
-    color:'#2a3a4a',
-    inCue:0,outCue:null,
-    action:(diffuser)=>{
-      sigSend({action:'raccro-ext',source:'D2'});
-      _flashMacroBtnD2('macro-raccro-ext');
-      const dot=document.getElementById('rc-status-dot');
-      if(dot){dot.style.background='#ffffff';setTimeout(()=>_rcSetStatus(_rcOnline,'Cloudflare'),300);}
-    }
-  };
-  D[0].tracks.push(macroStep);
-  D[0].durs.push(0);
-  D[0].audios.push(null);
-  D[0]._updateFdzCount();
-  D[0].render();
-}
-function _flashMacroBtnD2(id){
-  const btn=document.getElementById(id);if(!btn)return;
-  btn.style.background='#1e272b';
-  setTimeout(()=>btn.style.background='transparent',600);
-}
-
-// ── Poignées IN/OUT sur les lignes normales (Diff2) ──
-function _bindHandlesD2(wvId,trackIdx){
-  const wrap=document.querySelector(`#${wvId}`)?.parentElement;
-  const inH=document.getElementById(wvId+'-in');
-  const outH=document.getElementById(wvId+'-out');
-  if(!wrap||!inH||!outH)return;
-  const xToR=(clientX)=>{const rect=wrap.getBoundingClientRect();return Math.min(1,Math.max(0,(clientX-rect.left)/rect.width));};
-  const applyIn=(sec)=>{const dur=D[0].durs[trackIdx]||1;const pct=(sec/dur*100).toFixed(2);inH.style.left=pct+'%';const pre=document.getElementById(wvId+'-pre');if(pre)pre.style.width=pct+'%';};
-  const applyOut=(sec)=>{const dur=D[0].durs[trackIdx]||1;const pct=(sec/dur*100).toFixed(2);outH.style.left=pct+'%';const post=document.getElementById(wvId+'-post');if(post)post.style.left=pct+'%';};
-  const bindOne=(handle,type)=>{
-    let active=false;
-    handle.addEventListener('mousedown',e=>{e.stopPropagation();e.preventDefault();active=true;document.body.style.userSelect='none';},{passive:false});
-    document.addEventListener('mousemove',e=>{
-      if(!active)return;
-      const t=D[0].tracks[trackIdx];if(!t)return;
-      const dur=D[0].durs[trackIdx]||1,sec=xToR(e.clientX)*dur;
-      if(type==='in'){t.inCue=Math.max(0,Math.min(sec,(t.outCue??dur)-0.1));applyIn(t.inCue);}
-      else{t.outCue=Math.min(dur,Math.max(sec,(t.inCue||0)+0.1));applyOut(t.outCue);}
-    });
-    document.addEventListener('mouseup',()=>{
-      if(!active)return;active=false;document.body.style.userSelect='';
-      const cv=document.getElementById(wvId);const file=D[0].tracks[trackIdx]?.file;
-      if(cv&&file&&WV_DATA_CACHE[file])drawWaveformFromData(cv,WV_DATA_CACHE[file],0,1);
-    });
-  };
-  bindOne(inH,'in');bindOne(outH,'out');
-}
-
-function _updateOnAirBadgesD2(){
-  const extOn=D[0]&&D[0].playing;
-  // DIFF A EXT (ce diffuseur)
-  const ba=document.getElementById('badge-diffa-ext');
-  const bas=document.getElementById('badge-diffa-ext-state');
-  if(ba){ba.className='onair-badge '+(extOn?'on-air':'off-air');}
-  if(bas){bas.textContent=extOn?'ON AIR':'OFF AIR';}
-  // DIFF A (Radio Console distant)
-  const bb=document.getElementById('badge-diffa');
-  const bbs=document.getElementById('badge-diffa-state');
-  if(bb){bb.className='onair-badge '+(_rcPlaying?'on-air':'off-air');}
-  if(bbs){bbs.textContent=_rcPlaying?'ON AIR':'OFF AIR';}
-}
-
-
-function initSignaling(){sigSend({action:'ready',source:'D2'});_safeHeartbeat();_startPolling();}
+async function _sh(){try{await sigHeartbeat();_ce=Math.max(0,_ce-1);}catch(e){_ce++;}}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){_ce=0;_pi=500;_sh();_sp();_startPolling();}});
+window.addEventListener('online',function(){_ce=0;_sh();_sp();_startPolling();});
+window.addEventListener('offline',function(){if(_pid)clearInterval(_pid);if(_hid)clearInterval(_hid);});
+function initSignaling(){sigSend({action:'ready',source:'D2'});_sh();_startPolling();}
 
 // ═══════════════════════════════════════════════════════
 // UTILITAIRES
@@ -934,14 +778,15 @@ async function _safeHeartbeat(){
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){_consecutiveErrors=0;_currentPollInterval=_POLL_FAST;_safeHeartbeat();_safePoll();_startPolling();}});
 window.addEventListener('online',()=>{_consecutiveErrors=0;_safeHeartbeat();_safePoll();_startPolling();});
 window.addEventListener('offline',()=>{if(_pollIntervalId)clearInterval(_pollIntervalId);if(_hbIntervalId)clearInterval(_hbIntervalId);});
-// ── Fix AudioContext iOS ──
-let _audioUnlocked=false;
+
+document.addEventListener('click',_unlockAudio,{once:true,passive:true});
+// iOS AudioContext unlock
+let _aul=false;
 function _unlockAudio(){
-  if(_audioUnlocked)return;_audioUnlocked=true;
-  const ctx=typeof getCtx==='function'?getCtx():(typeof getCtxD3==='function'?getCtxD3():null);
-  if(!ctx)return;
-  if(ctx.state==='suspended')ctx.resume();
-  try{const b=ctx.createBuffer(1,1,22050);const s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);}catch(e){}
+  if(_aul)return;_aul=true;
+  var ctx=typeof getCtx==='function'?getCtx():(typeof getCtxD3==='function'?getCtxD3():null);
+  if(!ctx)return;if(ctx.state==='suspended')ctx.resume();
+  try{var b=ctx.createBuffer(1,1,22050);var s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);}catch(e){}
 }
 document.addEventListener('touchstart',_unlockAudio,{once:true,passive:true});
 document.addEventListener('click',_unlockAudio,{once:true,passive:true});
