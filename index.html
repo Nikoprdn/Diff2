@@ -3,298 +3,115 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cartwall — MA RADIO</title>
+<title>DIFF 2 — MA RADIO</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --mono: 'Share Tech Mono', monospace;
-  --display: 'Oswald', sans-serif;
-  --bg: #080d18;
-  --s1: #0d1428;
-  --s2: #111c38;
-  --border: #1e3060;
-  --cyan: #00d4f0;
-  --green: #00d96a;
-  --green-dk: #006630;
-  --yellow: #f5c400;
-  --orange: #f07800;
-  --red: #e03020;
-  --txt: #ddeeff;
-  --txt-dim: #5a7090;
-  --txt-mute: #3a5070;
+  --mono:'Share Tech Mono',monospace; --display:'Oswald',sans-serif;
+  --bg:#080d18; --s1:#0d1428; --s2:#111c38; --border:#1e3060;
+  --cyan:#00d4f0; --green:#00d96a; --yellow:#f5c400; --red:#e03020;
+  --txt:#ddeeff; --txt-dim:#5a7090; --txt-mute:#3a5070;
 }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden;}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* Navbar */
+.navbar{display:flex;align-items:center;justify-content:space-between;height:44px;background:var(--s1);border-bottom:1px solid var(--border);padding:0 1rem;flex-shrink:0;}
+.nav-brand{font-family:var(--display);font-size:18px;font-weight:700;color:var(--cyan);letter-spacing:2px;display:flex;align-items:center;gap:10px;}
+.nav-link{font-family:var(--mono);font-size:10px;color:var(--txt-dim);letter-spacing:1px;text-decoration:none;padding:3px 10px;border:1px solid var(--border);border-radius:2px;transition:all .15s;}
+.nav-link:hover{border-color:var(--cyan);color:var(--cyan);}
 
-html, body {
-  height: 100%;
-  background: var(--bg);
-  color: var(--txt);
-  font-family: var(--mono);
-  overflow: hidden;
+/* ON AIR badge */
+#onair-badge{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--display);font-size:13px;font-weight:700;letter-spacing:2px;
+  padding:4px 14px;border-radius:3px;
+  border:1px solid #1e3060;background:transparent;
+  color:var(--txt-mute);transition:all .3s;
 }
+#onair-badge.live{
+  border-color:#8a1010;background:rgba(120,8,8,.25);color:#ff5050;
+  box-shadow:0 0 12px rgba(220,30,30,.2);
+}
+#onair-dot{width:8px;height:8px;border-radius:50%;background:#3a5070;flex-shrink:0;transition:all .3s;}
+#onair-badge.live #onair-dot{background:#ff3030;animation:blink .8s ease-in-out infinite;}
+#onair-title{font-family:var(--mono);font-size:10px;color:var(--txt-mute);letter-spacing:1px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#onair-badge.live #onair-title{color:#ff8080;}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px #ff3030;}50%{opacity:.5;}}
 
-/* ── Navbar ── */
-.navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 44px;
-  background: var(--s1);
-  border-bottom: 1px solid var(--border);
-  padding: 0 1rem;
-  flex-shrink: 0;
-}
-.nav-brand {
-  font-family: var(--display);
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--cyan);
-  letter-spacing: 2px;
-}
-.nav-link {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--txt-dim);
-  letter-spacing: 1px;
-  text-decoration: none;
-  padding: 4px 12px;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  transition: all .15s;
-}
-.nav-link:hover { border-color: var(--cyan); color: var(--cyan); }
+/* Layout */
+.page{display:flex;flex-direction:column;height:100vh;}
+.main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px;overflow:hidden;}
 
-/* ── Layout ── */
-.page {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
+/* Cartwall grid */
+.cw-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  grid-template-rows:repeat(4,minmax(80px,1fr));
+  gap:8px;
+  width:100%;flex:1;min-height:0;
 }
+.cw-cell{
+  background:var(--s1);border:1px solid var(--border);border-radius:6px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:5px;cursor:pointer;position:relative;overflow:hidden;
+  transition:border-color .12s,background .1s;user-select:none;padding:8px;min-height:80px;
+}
+.cw-cell.empty{border-style:dashed;border-color:#1a2840;}
+.cw-cell.empty:hover{border-color:var(--cyan);background:#0a1428;}
+.cw-cell.loaded{border-color:#1e3a60;}
+.cw-cell.loaded:hover{border-color:var(--cyan);background:#0c1830;}
+.cw-cell.playing{background:#0e0408;border-color:var(--red);box-shadow:0 0 12px rgba(224,48,32,.2),inset 0 0 20px rgba(224,48,32,.05);}
+.cw-cell.drag-over{border-color:var(--cyan)!important;background:#0a1e30!important;border-style:solid!important;}
+.cw-progress{position:absolute;bottom:0;left:0;right:0;height:4px;background:var(--border);}
+.cw-progress-bar{height:100%;width:0%;background:var(--red);border-radius:0 2px 2px 0;transition:width .1s linear;}
+.cw-num{position:absolute;top:5px;left:7px;font-family:var(--mono);font-size:9px;color:var(--txt-mute);}
+.cw-cell.playing .cw-num{color:var(--red);}
+.cw-play-indicator{position:absolute;top:5px;right:7px;font-size:8px;color:var(--red);display:none;letter-spacing:1px;}
+.cw-cell.playing .cw-play-indicator{display:block;animation:blink .6s step-start infinite;}
+.cw-title{font-family:var(--display);font-size:15px;font-weight:700;color:var(--txt);letter-spacing:1px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;padding:0 4px;line-height:1.2;}
+.cw-cell.playing .cw-title{color:#ff8080;}
+.cw-timing{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--cyan);letter-spacing:1px;line-height:1;text-shadow:0 0 10px rgba(0,212,240,.3);}
+.cw-cell.playing .cw-timing{color:var(--red);text-shadow:0 0 10px rgba(224,48,32,.4);}
+.cw-dur{font-family:var(--mono);font-size:8px;color:var(--txt-mute);}
+.cw-empty-icon{font-size:20px;color:#1a2840;transition:color .12s;}
+.cw-cell.empty:hover .cw-empty-icon{color:var(--cyan);}
+.cw-empty-lbl{font-family:var(--mono);font-size:8px;color:#1a2840;letter-spacing:2px;text-transform:uppercase;transition:color .12s;}
+.cw-cell.empty:hover .cw-empty-lbl{color:var(--txt-mute);}
 
-.cartwall-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 12px;
-  gap: 10px;
-  overflow: hidden;
-}
-
-.cartwall-title {
-  font-family: var(--display);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--txt-mute);
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-/* ── Grille 4×4 ── */
-.cw-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(4, 1fr);
-  gap: 8px;
-  flex: 1;
-  min-height: 0;
-}
-
-/* ── Case cartwall ── */
-.cw-cell {
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: border-color .15s, background .1s;
-  user-select: none;
-  padding: 8px;
-}
-
-.cw-cell.empty {
-  border-style: dashed;
-  border-color: #1a2840;
-  cursor: default;
-}
-
-.cw-cell.empty:hover {
-  border-color: var(--cyan);
-  background: #0a1428;
-  cursor: pointer;
-}
-
-.cw-cell.loaded {
-  border-color: #1e3a60;
-  cursor: pointer;
-}
-
-.cw-cell.loaded:hover {
-  border-color: var(--cyan);
-  background: #0c1830;
-}
-
-.cw-cell.playing {
-  background: #0e0408;
-  border-color: var(--red);
-  box-shadow: 0 0 12px rgba(224,48,32,.2), inset 0 0 20px rgba(224,48,32,.05);
-}
-
-.cw-cell.drag-over {
-  border-color: var(--cyan) !important;
-  background: #0a1e30 !important;
-  border-style: solid !important;
-}
-
-/* Barre de progression */
-.cw-progress {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--border);
-}
-.cw-progress-bar {
-  height: 100%;
-  width: 0%;
-  background: var(--red);
-  transition: width .1s linear;
-  border-radius: 0 2px 2px 0;
-}
-.cw-cell.playing .cw-progress-bar { background: var(--red); }
-
-/* Contenu vide */
-.cw-empty-icon {
-  font-size: 22px;
-  color: #1a2840;
-  transition: color .15s;
-}
-.cw-cell.empty:hover .cw-empty-icon { color: var(--cyan); }
-.cw-empty-lbl {
-  font-family: var(--mono);
-  font-size: 8px;
-  color: #1a2840;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  transition: color .15s;
-}
-.cw-cell.empty:hover .cw-empty-lbl { color: var(--txt-mute); }
-
-/* Contenu chargé */
-.cw-num {
-  position: absolute;
-  top: 6px; left: 8px;
-  font-family: var(--mono);
-  font-size: 9px;
-  color: var(--txt-mute);
-  letter-spacing: 1px;
-}
-.cw-cell.playing .cw-num { color: var(--red); }
-
-.cw-play-indicator {
-  position: absolute;
-  top: 6px; right: 8px;
-  font-size: 9px;
-  color: var(--red);
-  display: none;
-}
-.cw-cell.playing .cw-play-indicator { display: block; animation: blink .6s step-start infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-
-.cw-title {
-  font-family: var(--display);
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--txt);
-  letter-spacing: 1px;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-  padding: 0 6px;
-  text-shadow: 0 1px 6px rgba(0,0,0,.8);
-  line-height: 1.2;
-}
-.cw-cell.playing .cw-title { color: #ff8080; }
-
-.cw-timing {
-  font-family: var(--mono);
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--cyan);
-  letter-spacing: 1px;
-  line-height: 1;
-  text-shadow: 0 0 12px rgba(0,212,240,.35);
-}
-.cw-cell.playing .cw-timing { color: var(--red); text-shadow: 0 0 12px rgba(224,48,32,.4); }
-
-.cw-dur {
-  font-family: var(--mono);
-  font-size: 9px;
-  color: var(--txt-mute);
-  letter-spacing: 1px;
-}
-
-/* Input file caché */
-.cw-file-input { display: none; }
-
-/* ── Context menu ── */
-#cw-ctx {
-  display: none;
-  position: fixed;
-  background: #02040e;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.6);
-  z-index: 9999;
-  min-width: 160px;
-  overflow: hidden;
-}
-#cw-ctx.open { display: block; }
-.ctx-item {
-  padding: 9px 14px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 1px;
-  color: var(--txt-dim);
-  cursor: pointer;
-  border-bottom: 1px solid #0a1428;
-  transition: background .08s, color .08s;
-}
-.ctx-item:last-child { border-bottom: none; }
-.ctx-item:hover { background: #0a1830; color: var(--txt); }
-.ctx-item.danger:hover { background: #200808; color: var(--red); }
+/* Context menu */
+#cw-ctx{display:none;position:fixed;background:#02040e;border:1px solid var(--border);border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:9999;min-width:160px;overflow:hidden;}
+#cw-ctx.open{display:block;}
+.ctx-item{padding:9px 14px;font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--txt-dim);cursor:pointer;border-bottom:1px solid #0a1428;transition:background .08s,color .08s;}
+.ctx-item:last-child{border-bottom:none;}
+.ctx-item:hover{background:#0a1830;color:var(--txt);}
+.ctx-item.danger:hover{background:#200808;color:var(--red);}
 </style>
 </head>
 <body>
-
 <div class="page">
 
-  <!-- Navbar -->
   <nav class="navbar">
-    <span class="nav-brand">
-      <svg width="18" height="18" viewBox="0 0 32 32" fill="none" style="margin-right:8px;vertical-align:middle">
+    <div class="nav-brand">
+      <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
         <circle cx="16" cy="16" r="14" stroke="#00d4f0" stroke-width="1.5"/>
         <circle cx="16" cy="16" r="6"  stroke="#00d4f0" stroke-width="1.5"/>
         <circle cx="16" cy="16" r="2"  fill="#00d4f0"/>
-      </svg>MA RADIO · CARTWALL
-    </span>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <span style="font-family:var(--mono);font-size:10px;color:var(--txt-mute);letter-spacing:1px;">1 clic = play/stop · clic droit = supprimer</span>
-      <a href="console_final.html" class="nav-link">← DIFFUSEUR</a>
+      </svg>
+      MA RADIO · DIFF 2
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <!-- Indicateur DIFF A ON AIR -->
+      <div id="onair-badge">
+        <div id="onair-dot"></div>
+        <span>DIFF A</span>
+        <span id="onair-title">—</span>
+      </div>
+      <a href="https://nikoprdn.github.io/Radio-Console/" target="_blank" class="nav-link">⬡ CONSOLE</a>
     </div>
   </nav>
 
-  <!-- Cartwall -->
-  <div class="cartwall-area">
-    <div class="cartwall-title">Cartwall — 16 cases</div>
+  <div class="main">
     <div class="cw-grid" id="cw-grid"></div>
   </div>
 
@@ -305,271 +122,154 @@ html, body {
   <div class="ctx-item" id="ctx-load">⊕ Charger un son</div>
   <div class="ctx-item danger" id="ctx-delete">✕ Supprimer le son</div>
 </div>
-
-<!-- Input file global -->
-<input type="file" class="cw-file-input" id="cw-file-input" accept="audio/*">
+<input type="file" id="cw-file-input" accept="audio/*" style="display:none">
 
 <script>
-// ── État global ──
-const CW_COUNT = 16;
-const cells = []; // { el, audio, file, title, dur, playing, raf }
+// ══════════════════════════════════════════════════════════════
+// INDICATEUR ON AIR — écoute BroadcastChannel + localStorage
+// ══════════════════════════════════════════════════════════════
+const badge      = document.getElementById('onair-badge');
+const onairTitle = document.getElementById('onair-title');
+let _onairTimeout = null;
 
-let ctxTarget = null; // index de la case ciblée par le clic droit
-
-// ── Formatage ──
-const fmt2 = n => String(Math.floor(n)).padStart(2, '0');
-const fmtTime = s => {
-  s = Math.max(0, s || 0);
-  const m = Math.floor(s / 60), sec = s % 60;
-  return fmt2(m) + ':' + (sec < 10 ? '0' : '') + sec.toFixed(1);
-};
-const fmtDur = s => {
-  s = Math.max(0, Math.round(s || 0));
-  return fmt2(Math.floor(s/60)) + ':' + fmt2(s % 60);
-};
-
-// ── Créer les 16 cases ──
-const grid = document.getElementById('cw-grid');
-
-for (let i = 0; i < CW_COUNT; i++) {
-  const cell = {
-    idx: i,
-    el: null,
-    audio: null,
-    file: null,
-    title: null,
-    dur: 0,
-    playing: false,
-    raf: null,
-  };
-
-  const el = document.createElement('div');
-  el.className = 'cw-cell empty';
-  el.dataset.idx = i;
-  el.innerHTML = buildEmpty(i);
-
-  // Drag & drop
-  el.ondragover = e => { e.preventDefault(); el.classList.add('drag-over'); };
-  el.ondragleave = () => el.classList.remove('drag-over');
-  el.ondrop = e => {
-    e.preventDefault();
-    el.classList.remove('drag-over');
-    const f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith('audio/')) loadSound(i, f);
-  };
-
-  // Clic gauche : play / stop / charger si vide
-  el.onclick = e => {
-    if (e.button !== 0) return;
-    if (cell.audio) togglePlay(i);
-    else openFilePicker(i);
-  };
-
-  // Clic droit : menu contextuel
-  el.oncontextmenu = e => {
-    e.preventDefault();
-    showCtxMenu(i, e.clientX, e.clientY);
-  };
-
-  grid.appendChild(el);
-  cell.el = el;
-  cells.push(cell);
-}
-
-function buildEmpty(i) {
-  return `
-    <div class="cw-num">${String(i+1).padStart(2,'0')}</div>
-    <div class="cw-empty-icon">⊕</div>
-    <div class="cw-empty-lbl">Glisser un son</div>
-    <div class="cw-progress"><div class="cw-progress-bar" id="cwp-${i}"></div></div>`;
-}
-
-function buildLoaded(i) {
-  const c = cells[i];
-  const durStr = c.dur > 0 ? fmtDur(c.dur) : '--:--';
-  return `
-    <div class="cw-num">${String(i+1).padStart(2,'0')}</div>
-    <div class="cw-play-indicator">● AIR</div>
-    <div class="cw-title">${c.title}</div>
-    <div class="cw-timing" id="cwt-${i}">${durStr}</div>
-    <div class="cw-dur" id="cwd-${i}">${durStr}</div>
-    <div class="cw-progress"><div class="cw-progress-bar" id="cwp-${i}"></div></div>`;
-}
-
-// ── Charger un son ──
-function loadSound(idx, file) {
-  const c = cells[idx];
-  if (c.audio) { c.audio.pause(); c.audio = null; }
-  if (c.raf) { cancelAnimationFrame(c.raf); c.raf = null; }
-  if (c.file && c.file.startsWith('blob:')) URL.revokeObjectURL(c.file);
-
-  c.file = URL.createObjectURL(file);
-  c.title = file.name.replace(/\.[^/.]+$/, '');
-  c.playing = false;
-  c.dur = 0;
-
-  // ── Afficher le titre IMMÉDIATEMENT, sans attendre loadedmetadata ──
-  c.el.className = 'cw-cell loaded';
-  c.el.innerHTML = buildLoaded(idx);
-  rebindDrop(idx);
-
-  const audio = new Audio(c.file);
-  audio.preload = 'metadata';
-  c.audio = audio;
-
-  audio.addEventListener('loadedmetadata', () => {
-    c.dur = audio.duration || 0;
-    // Mettre à jour uniquement le timing, pas tout reconstruire
-    const tEl = document.getElementById(`cwt-${idx}`);
-    if (tEl) tEl.textContent = fmtDur(c.dur);
-    const dEl = document.getElementById(`cwd-${idx}`);
-    if (dEl) dEl.textContent = fmtDur(c.dur);
-  });
-
-  audio.addEventListener('ended', () => {
-    c.playing = false;
-    c.el.classList.remove('playing');
-    c.el.classList.add('loaded');
-    if (c.raf) { cancelAnimationFrame(c.raf); c.raf = null; }
-    audio.currentTime = 0;
-    updateTiming(idx);
-  });
-}
-
-function rebindDrop(idx) {
-  const c = cells[idx];
-  const el = c.el;
-  // Nettoyer les anciens listeners en remplaçant le nœud (clone)
-  // On ne peut pas facilement retirer les listeners anonymes,
-  // donc on réassigne directement via les attributs onclick
-  el.ondragover = e => { e.preventDefault(); el.classList.add('drag-over'); };
-  el.ondragleave = () => el.classList.remove('drag-over');
-  el.ondrop = e => {
-    e.preventDefault(); el.classList.remove('drag-over');
-    const f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith('audio/')) loadSound(idx, f);
-  };
-  el.onclick = e => {
-    if (e.button !== 0) return;
-    if (c.audio) togglePlay(idx);
-    else openFilePicker(idx);
-  };
-  el.oncontextmenu = e => {
-    e.preventDefault();
-    showCtxMenu(idx, e.clientX, e.clientY);
-  };
-}
-
-// ── Play / Stop ──
-function togglePlay(idx) {
-  const c = cells[idx];
-  if (!c.audio) return;
-
-  if (c.playing) {
-    // Stop
-    c.audio.pause();
-    c.audio.currentTime = 0;
-    c.playing = false;
-    c.el.classList.remove('playing');
-    c.el.classList.add('loaded');
-    if (c.raf) { cancelAnimationFrame(c.raf); c.raf = null; }
-    updateTiming(idx);
+function updateOnAir(state){
+  if(!state) return;
+  if(state.playing){
+    badge.classList.add('live');
+    onairTitle.textContent = state.title ? '· ' + state.title : '';
   } else {
-    // Play
-    c.audio.currentTime = 0;
-    c.audio.play().catch(() => {});
-    c.playing = true;
-    c.el.classList.add('playing');
-    c.el.classList.remove('loaded');
+    badge.classList.remove('live');
+    onairTitle.textContent = '—';
+  }
+  // Si pas de heartbeat dans 5s → considérer hors ligne
+  clearTimeout(_onairTimeout);
+  _onairTimeout = setTimeout(()=>{ badge.classList.remove('live'); onairTitle.textContent='—'; }, 5000);
+}
+
+// BroadcastChannel (même origine)
+try{
+  const bc = new BroadcastChannel('radio_onair');
+  bc.onmessage = e => updateOnAir(e.data);
+}catch(e){}
+
+// Polling localStorage (cross-tab, même origine)
+setInterval(()=>{
+  try{
+    const raw = localStorage.getItem('radio_onair');
+    if(raw){
+      const state = JSON.parse(raw);
+      if(Date.now() - state.ts < 5000) updateOnAir(state);
+      else { badge.classList.remove('live'); onairTitle.textContent='—'; }
+    }
+  }catch(e){}
+}, 1000);
+
+// ══════════════════════════════════════════════════════════════
+// CARTWALL
+// ══════════════════════════════════════════════════════════════
+const CW_COUNT = 16;
+const cells = [];
+let ctxTarget = null;
+
+const fmt2 = n => String(Math.floor(Math.max(0,n))).padStart(2,'0');
+const fmtTime = s => { s=Math.max(0,s||0); return fmt2(Math.floor(s/60))+':'+(s%60<10?'0':'')+s.toFixed(1); };
+const fmtDur  = s => { s=Math.max(0,Math.round(s||0)); return fmt2(Math.floor(s/60))+':'+fmt2(s%60); };
+
+function buildEmpty(i){ return `<div class="cw-num">${String(i+1).padStart(2,'0')}</div><div class="cw-empty-icon">⊕</div><div class="cw-empty-lbl">Glisser un son</div><div class="cw-progress"><div class="cw-progress-bar" id="cwp-${i}"></div></div>`; }
+function buildLoaded(i){ const c=cells[i]; const d=c.dur>0?fmtDur(c.dur):'--:--'; return `<div class="cw-num">${String(i+1).padStart(2,'0')}</div><div class="cw-play-indicator">● AIR</div><div class="cw-title">${c.title}</div><div class="cw-timing" id="cwt-${i}">${d}</div><div class="cw-dur" id="cwd-${i}">${d}</div><div class="cw-progress"><div class="cw-progress-bar" id="cwp-${i}"></div></div>`; }
+
+const grid = document.getElementById('cw-grid');
+for(let i=0;i<CW_COUNT;i++){
+  const c={idx:i,el:null,audio:null,file:null,title:null,dur:0,playing:false,raf:null};
+  const el=document.createElement('div');
+  el.className='cw-cell empty'; el.dataset.idx=i;
+  el.innerHTML=buildEmpty(i);
+  grid.appendChild(el);
+  c.el=el; cells.push(c);
+  rebind(i);
+}
+
+function rebind(idx){
+  const c=cells[idx], el=c.el;
+  el.ondragover=e=>{e.preventDefault();el.classList.add('drag-over');};
+  el.ondragleave=()=>el.classList.remove('drag-over');
+  el.ondrop=e=>{e.preventDefault();el.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('audio/'))loadSound(idx,f);};
+  el.onclick=e=>{if(e.button!==0)return;if(c.audio)togglePlay(idx);else openPicker(idx);};
+  el.oncontextmenu=e=>{e.preventDefault();showCtx(idx,e.clientX,e.clientY);};
+}
+
+function loadSound(idx,file){
+  const c=cells[idx];
+  if(c.audio){c.audio.pause();c.audio=null;}
+  if(c.raf){cancelAnimationFrame(c.raf);c.raf=null;}
+  if(c.file&&c.file.startsWith('blob:'))URL.revokeObjectURL(c.file);
+  c.file=URL.createObjectURL(file); c.title=file.name.replace(/\.[^/.]+$/,''); c.playing=false; c.dur=0;
+  c.el.className='cw-cell loaded'; c.el.innerHTML=buildLoaded(idx); rebind(idx);
+  const a=new Audio(c.file); a.preload='metadata'; c.audio=a;
+  a.addEventListener('loadedmetadata',()=>{
+    c.dur=a.duration||0;
+    const t=document.getElementById('cwt-'+idx); if(t) t.textContent=fmtDur(c.dur);
+    const d=document.getElementById('cwd-'+idx); if(d) d.textContent=fmtDur(c.dur);
+  });
+  a.addEventListener('ended',()=>{c.playing=false;c.el.classList.remove('playing');c.el.classList.add('loaded');if(c.raf){cancelAnimationFrame(c.raf);c.raf=null;}a.currentTime=0;updateTiming(idx);});
+}
+
+function togglePlay(idx){
+  const c=cells[idx]; if(!c.audio)return;
+  if(c.playing){
+    c.audio.pause();c.audio.currentTime=0;c.playing=false;
+    c.el.classList.remove('playing');c.el.classList.add('loaded');
+    if(c.raf){cancelAnimationFrame(c.raf);c.raf=null;}updateTiming(idx);
+  } else {
+    c.audio.currentTime=0;c.audio.play().catch(()=>{});
+    c.playing=true;c.el.classList.add('playing');c.el.classList.remove('loaded');
     startRaf(idx);
   }
 }
 
-function startRaf(idx) {
-  const c = cells[idx];
-  if (c.raf) cancelAnimationFrame(c.raf);
-  const tick = () => {
-    if (!c.playing || !c.audio) return;
-    updateTiming(idx);
-    c.raf = requestAnimationFrame(tick);
-  };
-  c.raf = requestAnimationFrame(tick);
+function startRaf(idx){
+  const c=cells[idx]; if(c.raf)cancelAnimationFrame(c.raf);
+  const tick=()=>{if(!c.playing||!c.audio)return;updateTiming(idx);c.raf=requestAnimationFrame(tick);};
+  c.raf=requestAnimationFrame(tick);
 }
 
-function updateTiming(idx) {
-  const c = cells[idx];
-  if (!c.audio) return;
-  const pos = c.audio.currentTime;
-  const dur = c.dur || 0;
-  const rem = Math.max(0, dur - pos);
-
-  const tEl = document.getElementById(`cwt-${idx}`);
-  if (tEl) tEl.textContent = fmtTime(c.playing ? rem : dur);
-
-  const pEl = document.getElementById(`cwp-${idx}`);
-  if (pEl) pEl.style.width = dur > 0 ? ((pos / dur) * 100).toFixed(2) + '%' : '0%';
+function updateTiming(idx){
+  const c=cells[idx]; if(!c.audio)return;
+  const pos=c.audio.currentTime,dur=c.dur||0,rem=Math.max(0,dur-pos);
+  const t=document.getElementById('cwt-'+idx); if(t) t.textContent=fmtTime(c.playing?rem:dur);
+  const p=document.getElementById('cwp-'+idx); if(p) p.style.width=dur>0?((pos/dur)*100).toFixed(2)+'%':'0%';
 }
 
-// ── Supprimer un son ──
-function deleteSound(idx) {
-  const c = cells[idx];
-  if (c.audio) { c.audio.pause(); c.audio = null; }
-  if (c.raf) { cancelAnimationFrame(c.raf); c.raf = null; }
-  if (c.file && c.file.startsWith('blob:')) URL.revokeObjectURL(c.file);
-  c.file = null; c.title = null; c.dur = 0; c.playing = false;
-  c.el.className = 'cw-cell empty';
-  c.el.innerHTML = buildEmpty(idx);
-  rebindDrop(idx);
+function deleteSound(idx){
+  const c=cells[idx];
+  if(c.audio){c.audio.pause();c.audio=null;}
+  if(c.raf){cancelAnimationFrame(c.raf);c.raf=null;}
+  if(c.file&&c.file.startsWith('blob:'))URL.revokeObjectURL(c.file);
+  c.file=null;c.title=null;c.dur=0;c.playing=false;
+  c.el.className='cw-cell empty';c.el.innerHTML=buildEmpty(idx);rebind(idx);
 }
 
-// ── File picker ──
-const fileInput = document.getElementById('cw-file-input');
-let filePickerTarget = null;
-
-function openFilePicker(idx) {
-  filePickerTarget = idx;
-  fileInput.value = '';
-  fileInput.click();
+function openPicker(idx){
+  window._cwPick=idx;
+  const inp=document.getElementById('cw-file-input');inp.value='';inp.click();
 }
-
-fileInput.addEventListener('change', () => {
-  if (filePickerTarget !== null && fileInput.files[0]) {
-    loadSound(filePickerTarget, fileInput.files[0]);
-    filePickerTarget = null;
-  }
+document.getElementById('cw-file-input').addEventListener('change',function(){
+  if(window._cwPick!==undefined&&this.files[0]){loadSound(window._cwPick,this.files[0]);window._cwPick=undefined;}
 });
 
-// ── Context menu ──
-const ctxMenu = document.getElementById('cw-ctx');
-const ctxLoad = document.getElementById('ctx-load');
-const ctxDelete = document.getElementById('ctx-delete');
-
-function showCtxMenu(idx, x, y) {
-  ctxTarget = idx;
-  const c = cells[idx];
-  ctxDelete.style.display = c.audio ? 'block' : 'none';
-  ctxMenu.style.left = Math.min(x, window.innerWidth - 180) + 'px';
-  ctxMenu.style.top = Math.min(y, window.innerHeight - 100) + 'px';
+// Context menu
+const ctxMenu=document.getElementById('cw-ctx');
+function showCtx(idx,x,y){
+  ctxTarget=idx;
+  document.getElementById('ctx-delete').style.display=cells[idx].audio?'block':'none';
+  ctxMenu.style.left=Math.min(x,window.innerWidth-180)+'px';
+  ctxMenu.style.top=Math.min(y,window.innerHeight-100)+'px';
   ctxMenu.classList.add('open');
 }
-
-ctxLoad.addEventListener('click', () => {
-  if (ctxTarget !== null) openFilePicker(ctxTarget);
-  ctxMenu.classList.remove('open');
-});
-
-ctxDelete.addEventListener('click', () => {
-  if (ctxTarget !== null) deleteSound(ctxTarget);
-  ctxMenu.classList.remove('open');
-});
-
-document.addEventListener('click', e => {
-  if (!ctxMenu.contains(e.target)) ctxMenu.classList.remove('open');
-});
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') ctxMenu.classList.remove('open');
-});
+document.getElementById('ctx-load').onclick=()=>{if(ctxTarget!==null)openPicker(ctxTarget);ctxMenu.classList.remove('open');};
+document.getElementById('ctx-delete').onclick=()=>{if(ctxTarget!==null)deleteSound(ctxTarget);ctxMenu.classList.remove('open');};
+document.addEventListener('click',e=>{if(!ctxMenu.contains(e.target))ctxMenu.classList.remove('open');});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')ctxMenu.classList.remove('open');});
 </script>
 </body>
 </html>
