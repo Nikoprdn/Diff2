@@ -70,8 +70,6 @@ button{cursor:pointer}
 .app-name{font-family:var(--font-display);font-weight:700;font-size:15px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);
   padding-left:14px;margin-left:4px;border-left:2px solid var(--line);align-self:stretch;display:flex;align-items:center}
 .top-right{display:flex;align-items:center;gap:14px}
-.badge{font-family:var(--font-display);font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:4px 9px;border-radius:6px;border:1.5px solid var(--line);color:var(--muted)}
-.badge.demo{border-color:var(--ink-2);color:var(--ink-2)}
 .now{display:flex;align-items:baseline;gap:8px;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
 .now small{font-family:var(--font-display);font-size:12px;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
 
@@ -182,6 +180,17 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
 .pill.gap{background:var(--panel);color:var(--ink-2);border:1px solid var(--line)}
 .ev-time{font-weight:600;font-variant-numeric:tabular-nums}
 .ev-dur{color:var(--muted);min-width:0}
+.extraits{display:flex;flex-direction:column;gap:8px}
+.xt-list{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:var(--r);background:var(--panel-2);overflow:hidden}
+.xt-list li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 12px}
+.xt-list li+li{border-top:1px solid var(--line)}
+.xt-list .chip{grid-row:auto;width:22px;height:22px}
+.xt-main{min-width:0;display:flex;flex-direction:column;gap:2px}
+.xt-title{font-weight:700;font-size:15px}
+.xt-meta{font-size:13.5px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.xt-why{font-size:12.5px;color:var(--muted)}
+.xt-act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.sw.rep{width:2px;height:12px;border-radius:0;background:var(--ink);opacity:.6}
 .empty-msg{margin:0;padding:12px 14px;border:1.5px dashed var(--line);border-radius:var(--r);color:var(--muted);font-size:14px}
 
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:min(92vw,560px);
@@ -202,6 +211,8 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   .app-name{display:none}
 }
 @media (max-width:520px){
+  .xt-list li{grid-template-columns:auto minmax(0,1fr)}
+  .xt-act{grid-column:2;justify-content:flex-start}
   .lockup{height:50px}
   .transport{gap:5px}
   .tbtn{height:42px;min-width:40px;padding:0 7px;font-size:14px}
@@ -234,12 +245,11 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
       <span id="station" hidden></span>
     </div>
     <div class="top-right">
-      <span class="badge" id="modeBadge">Serveur</span>
       <span class="now" title="Heure locale"><small>Il est</small><span id="nowClock">--:--:--</span></span>
     </div>
   </header>
 
-  <p class="note" id="demoNote" hidden><strong>Mode démonstration.</strong> Les enregistrements, niveaux et sons de la pige sont simulés ici ; le bouton <strong>Direct</strong> lit les vrais flux de la radio. Installée sur votre serveur avec le fichier <code>config.json</code>, la même page lit les vrais fichiers de pige.</p>
+  <p class="note" id="setupNote" hidden></p>
 
   <aside class="side" aria-label="Sources">
     <section><h2 class="label">Départs</h2><div class="srcs" id="srcDepart"></div></section>
@@ -306,12 +316,17 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
         <button class="btn" id="dToday">Aujourd'hui</button>
       </div>
       <div class="hours" id="hours"></div>
-      <div class="legend"><span><i class="sw ok"></i>enregistré</span><span><i class="sw gap"></i>pas d'enregistrement</span><span><i class="sw sil"></i>blanc (silence)</span></div>
+      <div class="legend"><span><i class="sw ok"></i>enregistré</span><span><i class="sw gap"></i>pas d'enregistrement</span><span><i class="sw sil"></i>blanc (silence)</span><span><i class="sw rep"></i>jingle reconnu</span></div>
     </section>
 
     <section class="events" aria-label="Blancs et coupures">
       <div class="events-head"><h2 class="label">Blancs et coupures du jour</h2><span class="events-sub" id="evSub"></span></div>
       <div id="events"></div>
+    </section>
+
+    <section class="extraits" aria-label="Extraits automatiques">
+      <div class="events-head"><h2 class="label">Extraits automatiques</h2><span class="events-sub">Découpés quand un jingle est reconnu ou à heure fixe</span></div>
+      <div id="extraits"></div>
     </section>
   </main>
 </div>
@@ -329,8 +344,8 @@ const store = {
 };
 
 /* ---------- Configuration ---------- */
-const DEMO_CONFIG = {
-  station: 'Radio Monaco (démo)',
+const DEFAULT_CONFIG = {
+  station: 'Radio Monaco',
   baseUrl: '/pige/',
   bitrateKbps: 128,
   retentionDays: 35,
@@ -339,11 +354,10 @@ const DEMO_CONFIG = {
     { id: 'montecarlo',  name: 'Monte-Carlo',   group: 'depart',   note: 'Antenne principale', color: '#e4032e', stream: 'https://radiomonaco.ice.infomaniak.ch/radiomonaco-128.mp3' },
     { id: 'paris',       name: 'Paris',         group: 'depart',   note: 'Antenne Paris',      color: '#e4032e', stream: 'https://radiomonacoparis.ice.infomaniak.ch/radiomonacoparis-320.aac' },
     { id: 'mixdj',       name: '100 % Mix DJ',  group: 'webradio', note: 'Webradio',           color: '#f59c00', stream: 'https://streamingp.shoutcast.com/radio-monaco-mixdj-aac' },
-    { id: 'nightmood',   name: 'Night Mood',    group: 'webradio', note: 'Webradio',           color: '#8a5aa1', stream: 'https://streamingp.shoutcast.com/radio-monaco-nightmood-aac' },
-    { id: 'easterntime', name: 'Eastern Time',  group: 'webradio', note: 'New York',           color: '#005ea1', stream: '' }
+    { id: 'nightmood',   name: 'Night Mood',    group: 'webradio', note: 'Webradio',           color: '#8a5aa1', stream: 'https://streamingp.shoutcast.com/radio-monaco-nightmood-aac' }
   ]
 };
-let cfg = DEMO_CONFIG, mode = 'demo';
+let cfg = DEFAULT_CONFIG;
 
 const st = { src: null, day: null, pos: 0, seg: null, playing: false, rate: 1, vol: 0.8 };
 let dragPos = null;
@@ -381,77 +395,6 @@ function slotsOf(day){
 }
 function slotAt(ms){ const sl = slotsOf(localDay(ms)); return sl.find(s => ms >= s.start && ms < s.end) || sl[sl.length-1]; }
 
-/* ---------- Démo : programme simulé ---------- */
-function mulberry32(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-function hashStr(s){ let h = 2166136261; for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-function noise(seed, i){ let x = Math.imul((seed ^ i) >>> 0, 2654435761); x ^= x >>> 15; x = Math.imul(x, 2246822519); x ^= x >>> 13; return ((x >>> 0) % 10000) / 10000; }
-
-const DEMO_PROG = { montecarlo:['antenne',0], paris:['antenne',2400], mixdj:['w1',0], nightmood:['w2',0], easterntime:['w3',0] };
-const blockCache = new Map();
-function hourBlocks(prog, hs){
-  const key = prog + '@' + hs;
-  let b = blockCache.get(key); if (b) return b;
-  const r = mulberry32(hashStr(key)); b = []; let t = 0;
-  const add = (type, len) => { len = Math.round(len); b.push({ type, s: t, e: Math.min(3600, t + len), seed: (r() * 1e9) | 0, gain: (r() - .5) * 4, root: Math.floor(r() * 5) }); t += len; };
-  const isAntenne = prog === 'antenne';
-  add('jingle', 7 + r() * 4);
-  if (isAntenne) add('talk', 80 + r() * 90);
-  let ad1 = false, ad2 = false;
-  while (t < 3600){
-    if (!ad1 && t > 840){ ad1 = true; if (isAntenne){ add('jingle', 5); add('ad', 110 + r() * 80); add('jingle', 5); } continue; }
-    if (!ad2 && t > 2640){ ad2 = true; if (isAntenne){ add('jingle', 5); add('ad', 110 + r() * 80); add('jingle', 5); } continue; }
-    if (r() < (isAntenne ? .25 : .06)) add('talk', 20 + r() * 60);
-    add('music', 150 + r() * 110);
-    if (r() < .45) add('jingle', 3 + r() * 5);
-  }
-  blockCache.set(key, b);
-  if (blockCache.size > 800) blockCache.delete(blockCache.keys().next().value);
-  return b;
-}
-function progAt(prog, ms){
-  const hs = Math.floor(ms / HOUR) * HOUR, s = (ms - hs) / 1000, bl = hourBlocks(prog, hs);
-  let b = bl[bl.length - 1];
-  for (const x of bl){ if (s >= x.s && s < x.e){ b = x; break; } }
-  return { b, into: s - b.s, left: b.e - s };
-}
-function progDb(prog, ms){
-  const { b, into, left } = progAt(prog, ms), n = noise(b.seed, Math.floor(ms / 1000));
-  let db;
-  switch (b.type){
-    case 'music': { db = -15 + b.gain + Math.sin(into / 23) * 2.5 + (n - .5) * 3; const edge = Math.min(into, left); if (edge < 3) db -= (3 - edge) * 9; break; }
-    case 'talk': db = -21 + b.gain * .5 + (n - .5) * 9; if (n < .07) db = -36; break;
-    case 'ad': db = -12.5 + (n - .5) * 2.5; break;
-    default: db = -11 + (n - .5) * 2;
-  }
-  return Math.max(-60, Math.min(-3, db));
-}
-const H0 = Math.floor(Date.now() / HOUR) * HOUR;
-const DEMO_SIL = {
-  montecarlo:   [[H0 - 2*HOUR + 23*60e3 + 10e3, 38e3]],
-  mixdj: [[H0 - 9*HOUR + 41*60e3 + 2e3, 22e3]]
-};
-const DEMO_GAPS = { nightmood: [[H0 - 5*HOUR + 23*60e3, H0 - 5*HOUR + 23*60e3 + 41e3]] };
-const DEMO_MISSING = { easterntime: [H0 - 30*HOUR] };
-function demoSilent(src, ms){ for (const [a, l] of (DEMO_SIL[src] || [])) if (ms >= a && ms < a + l) return true; return false; }
-function demoDb(src, ms){
-  if (demoSilent(src, ms)) return -99;
-  const [prog, delay] = DEMO_PROG[src] || ['w1', 0];
-  return progDb(prog, ms - delay);
-}
-function segName(start){ const d = new Date(start); return `${pad(d.getUTCHours())}-${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}.mp3`; }
-function demoSegs(src, a, b){
-  const now = Date.now() - 1500, from = Math.max(a - HOUR, retentionStart()), out = [];
-  for (let h = Math.floor(from / HOUR) * HOUR; h < Math.min(b, now); h += HOUR){
-    if ((DEMO_MISSING[src] || []).includes(h)) continue;
-    let parts = [[h, Math.min(h + HOUR, now)]];
-    for (const [g1, g2] of (DEMO_GAPS[src] || [])){
-      if (g1 >= h && g1 < h + HOUR){ parts = []; if (g1 > h) parts.push([h, Math.min(g1, now)]); if (g2 < now) parts.push([g2, Math.min(h + HOUR, now)]); }
-    }
-    for (const [s, e] of parts){ if (e <= s) continue; const name = segName(s); out.push({ start: s, end: e, dur: (e - s) / 1000, name, url: `demo:${src}/${utcDay(s)}/${name}`, demo: true }); }
-  }
-  return out;
-}
-
 /* ---------- Données ---------- */
 const dayCache = new Map();   // src|jour -> { at, promise, segs }
 const peaksCache = new Map(); // url -> { data }
@@ -479,6 +422,13 @@ async function listDir(src, uday){
     segs.push({ start, name: e.name, url: dir + e.name, peaksUrl: names.has(js) ? dir + js : null,
       estDur: e.size ? e.size * 8 / ((cfg.bitrateKbps || 128) * 1000) : null });
   }
+  if (names.has('reperes.json')){
+    try {
+      const r = await fetch(dir + 'reperes.json', { cache: 'no-store' });
+      const j = r.ok ? await r.json() : [];
+      segs.reperes = (Array.isArray(j) ? j : []).map(x => ({ t: x.t * 1000, nom: x.nom || x.j, score: x.score }));
+    } catch(e){}
+  }
   return segs;
 }
 function finalize(segs, a, b){
@@ -487,13 +437,11 @@ function finalize(segs, a, b){
   const now = Date.now();
   segs.forEach((s, i) => {
     const pk = peaksCache.get(s.url);
-    if (pk && pk.data && !s.demo) s.dur = pk.data.n;
-    if (!s.demo){
-      const hourEnd = Math.floor(s.start / HOUR) * HOUR + HOUR;
-      let end = s.dur ? s.start + s.dur * 1000 : s.estDur ? s.start + s.estDur * 1000 : hourEnd;
-      if (segs[i+1]) end = Math.min(end, segs[i+1].start);
-      s.end = Math.min(end, now, s.start + 2 * HOUR);
-    }
+    if (pk && pk.data) s.dur = pk.data.n;
+    const hourEnd = Math.floor(s.start / HOUR) * HOUR + HOUR;
+    let end = s.dur ? s.start + s.dur * 1000 : s.estDur ? s.start + s.estDur * 1000 : hourEnd;
+    if (segs[i+1]) end = Math.min(end, segs[i+1].start);
+    s.end = Math.min(end, now, s.start + 2 * HOUR);
   });
   return segs.filter(s => s.end > a && s.start < b);
 }
@@ -501,19 +449,19 @@ function ensureDay(src, day, force = false){
   const key = src + '|' + day, c = dayCache.get(key);
   const recent = dayBounds(day)[1] > Date.now() - HOUR;
   if (c && !force && !(recent && Date.now() - c.at > 60e3)) return c.promise;
-  const entry = { at: Date.now(), segs: c ? c.segs : null };
+  const entry = { at: Date.now(), segs: c ? c.segs : null, marks: c ? c.marks : [] };
   entry.promise = (async () => {
     const [a, b] = dayBounds(day);
-    let segs;
-    if (mode === 'demo') segs = demoSegs(src, a, b);
-    else {
-      const days = new Set();
-      for (let t = a - HOUR; t < b; t += HOUR) days.add(utcDay(t));
-      days.add(utcDay(b - 1));
-      segs = (await Promise.all([...days].map(u => listDir(src, u)))).flat();
-    }
+    let segs, marks = [];
+    const days = new Set();
+    for (let t = a - HOUR; t < b; t += HOUR) days.add(utcDay(t));
+    days.add(utcDay(b - 1));
+    const lists = await Promise.all([...days].map(u => listDir(src, u)));
+    segs = lists.flat();
+    marks = lists.flatMap(l => l.reperes || []);
     segs = finalize(segs, a, b);
     entry.segs = segs;
+    entry.marks = marks.filter(m => m.t >= a && m.t < b).sort((x, y) => x.t - y.t);
     if (st.seg && st.src === src){ const same = segs.find(s => s.url === st.seg.url); if (same) st.seg = same; }
     return segs;
   })();
@@ -521,6 +469,35 @@ function ensureDay(src, day, force = false){
   return entry.promise;
 }
 const segsSync = (src, day) => { const c = dayCache.get(src + '|' + day); return c ? c.segs : null; };
+const marksSync = (src, day) => { const c = dayCache.get(src + '|' + day); return c ? c.marks || [] : []; };
+
+/* ---------- Extraits automatiques ---------- */
+let extraits = null;
+async function loadExtraits(){
+  try {
+    const r = await fetch((cfg.baseUrl || '/pige/').replace(/\/?$/, '/') + 'extraits/index.json', { cache: 'no-store' });
+    extraits = r.ok ? await r.json() : [];
+    if (!Array.isArray(extraits)) extraits = [];
+  } catch(e){ extraits = []; }
+  renderExtraits();
+}
+function renderExtraits(){
+  const box = $('extraits');
+  if (!extraits){ box.innerHTML = '<p class="empty-msg">Chargement…</p>'; return; }
+  if (!extraits.length){ box.innerHTML = '<p class="empty-msg">Aucun extrait pour l\'instant. Ils apparaissent ici dès qu\'une règle de découpe se déclenche sur le serveur.</p>'; return; }
+  const base = (cfg.baseUrl || '/pige/').replace(/\/?$/, '/');
+  box.innerHTML = '<ol class="xt-list">' + extraits.slice(0, 30).map((x, i) => {
+    const s = srcObj(x.source), d0 = x.debut * 1000, d1 = x.fin * 1000;
+    const jour = new Date(d0).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+    const why = [x.detection && x.detection.debut ? 'Début : ' + x.detection.debut : '', x.detection && x.detection.fin ? 'Fin : ' + x.detection.fin : ''].filter(Boolean).join(' · ');
+    return `<li style="--c:${srcColor(s)}">
+      <svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg>
+      <div class="xt-main"><span class="xt-title">${esc(x.titre || x.nom)}</span>
+        <span class="xt-meta">${esc(s.name || x.source)} · ${esc(jour)} · ${fmtClock(d0)} → ${fmtClock(d1)} · ${fmtDur(x.duree)}${x.incomplet ? ' <span class="pill sil">Incomplet</span>' : ''}</span>
+        ${why ? `<span class="xt-why">${esc(why)}</span>` : ''}</div>
+      <div class="xt-act"><button class="btn" data-x="${i}">Écouter</button>${x.fichier ? `<a class="btn" href="${esc(base + x.fichier)}" download>Télécharger</a>` : ''}</div></li>`;
+  }).join('') + '</ol>';
+}
 
 function buildPeaks(arr){
   const n = arr.length, db = new Int8Array(n);
@@ -540,18 +517,6 @@ function silencesOf(seg, p){
 let renderQueued = false;
 function queueRender(){ if (renderQueued) return; renderQueued = true; requestAnimationFrame(() => { renderQueued = false; renderData(); }); }
 function peaksFor(seg){
-  if (seg.demo){
-    const n = Math.floor((seg.end - seg.start) / 1000), key = seg.url + '|' + n;
-    let c = peaksCache.get(key);
-    if (!c){
-      const db = new Int8Array(n), src = seg.url.slice(5).split('/')[0];
-      for (let i = 0; i < n; i++) db[i] = Math.round(demoDb(src, seg.start + i * 1000));
-      c = { data: { n, db } }; c.data.sil = silencesOf(seg, c.data);
-      peaksCache.set(key, c);
-      if (peaksCache.size > 400) peaksCache.delete(peaksCache.keys().next().value);
-    }
-    return c.data;
-  }
   const c = peaksCache.get(seg.url);
   if (c) return c.data;
   if (!seg.peaksUrl) return null;
@@ -592,60 +557,9 @@ const srv = {
   setVol(v){ audio.volume = v; }
 };
 audio.addEventListener('ended', () => onEnded());
-audio.addEventListener('pause', () => { if (mode === 'server' && st.playing && !audio.ended && !seeking) setPlaying(false); });
+audio.addEventListener('pause', () => { if (st.playing && !audio.ended && !seeking) setPlaying(false); });
 
-const synth = {
-  ctx: null, base: 0, baseCtx: 0, running: false,
-  init(){
-    if (this.ctx) return;
-    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-    const ctx = this.ctx = new AC();
-    this.master = ctx.createGain(); this.master.gain.value = st.vol * .3; this.master.connect(ctx.destination);
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400; lp.connect(this.master);
-    this.musicG = ctx.createGain(); this.musicG.gain.value = 0; this.musicG.connect(lp);
-    this.oscs = [0, 1, 2].map(() => { const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = 220; o.connect(this.musicG); o.start(); return o; });
-    const len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    const ns = ctx.createBufferSource(); ns.buffer = buf; ns.loop = true;
-    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 650; bp.Q.value = 1.4;
-    const am = ctx.createGain(); am.gain.value = .5;
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 4.3; const lfoG = ctx.createGain(); lfoG.gain.value = .5; lfo.connect(lfoG); lfoG.connect(am.gain); lfo.start();
-    this.talkG = ctx.createGain(); this.talkG.gain.value = 0;
-    ns.connect(bp); bp.connect(am); am.connect(this.talkG); this.talkG.connect(this.master); ns.start();
-    setInterval(() => this.tick(), 60);
-  },
-  load(seg, abs){ this.base = abs; this.baseCtx = this.ctx ? this.ctx.currentTime : 0; },
-  pos(){ return this.running && this.ctx ? this.base + (this.ctx.currentTime - this.baseCtx) * 1000 * st.rate : this.base; },
-  play(){ this.init(); if (!this.ctx) return Promise.reject(); this.ctx.resume(); this.base = this.pos(); this.baseCtx = this.ctx.currentTime; this.running = true; return Promise.resolve(); },
-  pause(){ this.base = this.pos(); this.running = false; },
-  setRate(){ if (this.ctx){ this.base = this.pos(); this.baseCtx = this.ctx.currentTime; } },
-  setVol(v){ if (this.master) this.master.gain.setTargetAtTime(v * .3, this.ctx.currentTime, .05); },
-  tick(){
-    const ctx = this.ctx, t = ctx.currentTime;
-    let mus = 0, talk = 0;
-    if (this.running && st.seg){
-      const p = this.pos();
-      if (p >= st.seg.end){ onEnded(); }
-      else {
-        const src = st.src, db = demoDb(src, p), lvl = db <= -90 ? 0 : Math.pow(10, db / 20) * 2.2;
-        const [prog, delay] = DEMO_PROG[src] || ['w1', 0];
-        const { b, into } = progAt(prog, p - delay);
-        const roots = [196, 220, 246.94, 261.63, 293.66];
-        const step = Math.floor(into / 3.2) % 4, prog4 = [0, 5, 7, 3][step];
-        let f = roots[b.root] * Math.pow(2, prog4 / 12);
-        if (b.type === 'jingle') f *= 2;
-        const ratios = [1, 1.25, 1.5];
-        this.oscs.forEach((o, i) => o.frequency.setTargetAtTime(f * ratios[i], t, .04));
-        if (b.type === 'music' || b.type === 'jingle') mus = lvl;
-        else if (b.type === 'talk') talk = lvl * 1.4;
-        else { mus = lvl * .6; talk = lvl; }
-      }
-    }
-    this.musicG.gain.setTargetAtTime(mus, t, .05);
-    this.talkG.gain.setTargetAtTime(talk, t, .05);
-  }
-};
-const media = () => mode === 'demo' ? synth : srv;
+const media = () => srv;
 
 /* ---------- Direct : lecture du flux de la source ---------- */
 const live = { on: false, ready: false };
@@ -717,11 +631,9 @@ async function seek(abs, o = {}){
       else if (autoplay) toast(`Aucun enregistrement à ${fmtClock(abs)} pour ${srcName(st.src)}.`);
       renderData(); return;
     }
-    if (mode === 'server'){
-      const ok = await srv.load(seg, abs, o.force);
-      if (tok !== seekTok) return;
-      if (!ok){ toast(`Impossible de lire ${seg.name}. Vérifiez que le fichier est accessible sur le serveur.`); setPlaying(false); renderData(); return; }
-    } else synth.load(seg, abs);
+    const ok = await srv.load(seg, abs, o.force);
+    if (tok !== seekTok) return;
+    if (!ok){ toast(`Impossible de lire ${seg.name}. Vérifiez que le fichier est accessible sur le serveur.`); setPlaying(false); renderData(); return; }
     if (autoplay) await startPlay(); else media().pause();
     renderData();
   } finally { if (tok === seekTok) seeking = false; }
@@ -737,7 +649,6 @@ function setIcons(){
   $('bPlay').setAttribute('aria-label', v ? 'Pause' : 'Lecture');
 }
 function togglePlay(){
-  if (mode === 'demo'){ synth.init(); if (synth.ctx) synth.ctx.resume(); }
   if (live.on){ stopLive(); renderData(); return; }
   if (st.playing){ media().pause(); setPlaying(false); return; }
   if (!st.seg) seek(st.pos, { autoplay: true });
@@ -748,7 +659,7 @@ async function onEnded(){
   if (endedBusy || !st.seg) return; endedBusy = true;
   try {
     const t = st.seg.end, live = t > Date.now() - 3 * 60e3;
-    await seek(t, { autoplay: true, snapTo: t + 3 * HOUR, refresh: live, force: live && mode === 'server', fromEnded: true });
+    await seek(t, { autoplay: true, snapTo: t + 3 * HOUR, refresh: live, force: live, fromEnded: true });
   } finally { endedBusy = false; }
 }
 const curPos = () => live.on ? Date.now() : dragPos ?? (st.seg ? media().pos() : st.pos);
@@ -775,13 +686,13 @@ function selectSource(id){
   if (id === st.src) return;
   st.src = id; store.set('src', id);
   if (live.on){
-    st.seg = null; if (mode === 'server') srv.url = null;
+    st.seg = null; srv.url = null;
     renderSources();
     if (srcObj(id).stream) startLive(); else { stopLive(); toast(`Pas de flux direct pour ${srcObj(id).name || id}.`); st.pos = Date.now(); renderData(); }
     return;
   }
   const keep = curPos();
-  st.seg = null; if (mode === 'server') srv.url = null;
+  st.seg = null; srv.url = null;
   renderSources();
   seek(keep, { autoplay: st.playing });
 }
@@ -834,7 +745,7 @@ function renderDeck(){
   $('deckSrc').textContent = src ? src.name : '—';
   $('deckDate').textContent = longDate(st.day);
   const dl = $('dl');
-  if (mode === 'server' && st.seg){
+  if (st.seg){
     dl.hidden = false; dl.href = st.seg.url;
     dl.download = `${st.src}_${localDay(st.seg.start)}_${fmtClock(st.seg.start).replace(/:/g, '')}.mp3`;
   } else dl.hidden = true;
@@ -932,7 +843,7 @@ const cv = $('wave'), cx = cv.getContext('2d');
 let colors = {}, hatch = null;
 function readColors(){
   const cs = getComputedStyle(document.documentElement), g = k => cs.getPropertyValue(k).trim();
-  colors = { wave: g('--wave'), played: g('--accent'), rec: g('--rec'), recSoft: g('--rec-soft'), muted: g('--muted'), line: g('--line'), hatch: g('--hatch'), ink: g('--ink'), accent: g('--accent') };
+  colors = { wave: g('--wave'), played: g('--accent'), rec: g('--rec'), recSoft: g('--rec-soft'), muted: g('--muted'), line: g('--line'), hatch: g('--hatch'), ink: g('--ink'), accent: g('--accent'), panel: g('--panel-2') };
   const pc = document.createElement('canvas'); pc.width = pc.height = 8;
   const px = pc.getContext('2d'); px.strokeStyle = colors.hatch; px.lineWidth = 2;
   px.beginPath(); px.moveTo(-2, 10); px.lineTo(10, -2); px.moveTo(6, 10); px.lineTo(10, 6); px.moveTo(-2, 2); px.lineTo(2, -2); px.stroke();
@@ -992,6 +903,23 @@ function drawWave(){
     const hh = Math.max(1, Math.pow(Math.max(0, (mx + 60) / 57), 1.4) * amp);
     cx.fillRect(x, mid - hh, bw, hh * 2);
   }
+  // jingles reconnus
+  const marks = marksSync(st.src, localDay(sl.start)).filter(m => m.t >= sl.start && m.t < sl.end);
+  cx.font = '600 11px Barlow, system-ui, sans-serif'; cx.textAlign = 'left';
+  let lastRight = -1e9, row = 0;
+  for (const m of marks){
+    const x = Math.round(X(m.t)) + .5;
+    cx.strokeStyle = colors.ink; cx.globalAlpha = .55; cx.setLineDash([2, 3]);
+    cx.beginPath(); cx.moveTo(x, top); cx.lineTo(x, bot); cx.stroke(); cx.setLineDash([]); cx.globalAlpha = 1;
+    const tw = cx.measureText(m.nom).width + 10;
+    let lx = x + 3; if (lx + tw > w) lx = x - 3 - tw;
+    row = lx < lastRight + 4 ? 1 - row : 0;
+    const ly = bot - 18 - row * 19;
+    cx.fillStyle = colors.ink; cx.fillRect(lx, ly, tw, 16);
+    cx.fillStyle = colors.panel; cx.fillText(m.nom, lx + 5, ly + 8.5);
+    lastRight = Math.max(lastRight, lx + tw);
+  }
+  cx.font = '600 11.5px Barlow, system-ui, sans-serif';
   // direct
   if (now > sl.start && now < sl.end){
     const x = Math.round(X(now)) + .5; cx.strokeStyle = colors.rec; cx.setLineDash([3, 3]); cx.beginPath(); cx.moveTo(x, top); cx.lineTo(x, bot); cx.stroke(); cx.setLineDash([]);
@@ -1045,11 +973,22 @@ function bind(){
   $('bPrevH').onclick = () => stepHour(-1); $('bNextH').onclick = () => stepHour(1);
   document.querySelector('.side').addEventListener('click', e => { const b = e.target.closest('.src'); if (b) selectSource(b.dataset.id); });
   $('hours').addEventListener('click', e => { const b = e.target.closest('.hour'); if (!b || b.disabled) return; const sl = slotsOf(st.day)[+b.dataset.i]; if (sl) seek(sl.start); });
-  $('events').addEventListener('click', e => { const b = e.target.closest('button[data-t]'); if (!b) return; const t = +b.dataset.t; if (mode === 'demo'){ synth.init(); } seek(t - 5000, { autoplay: true, snapTo: t + 3 * HOUR }); });
+  $('extraits').addEventListener('click', e => {
+    const b = e.target.closest('button[data-x]'); if (!b || !extraits) return;
+    const x = extraits[+b.dataset.x]; if (!x) return;
+    if (x.source !== st.src && cfg.sources.some(s => s.id === x.source)){
+      if (live.on) stopLive();
+      st.src = x.source; store.set('src', x.source); st.seg = null; srv.url = null;
+      renderSources();
+    }
+    seek(x.debut * 1000, { autoplay: true, snapTo: x.debut * 1000 + HOUR });
+    window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  });
+  $('events').addEventListener('click', e => { const b = e.target.closest('button[data-t]'); if (!b) return; const t = +b.dataset.t; seek(t - 5000, { autoplay: true, snapTo: t + 3 * HOUR }); });
   $('rates').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
-    if (mode === 'demo') synth.setRate(); st.rate = +b.dataset.r; media().setRate(st.rate);
-    if (mode === 'server') audio.defaultPlaybackRate = st.rate;
+    st.rate = +b.dataset.r; media().setRate(st.rate);
+    audio.defaultPlaybackRate = st.rate;
     [...$('rates').children].forEach(x => x.setAttribute('aria-pressed', x === b));
   });
   $('vol').value = st.vol;
@@ -1098,29 +1037,35 @@ function frame(ts){
   }
   requestAnimationFrame(frame);
 }
+async function checkPige(){
+  const base = (cfg.baseUrl || '/pige/').replace(/\/?$/, '/');
+  let ok = false;
+  try { const r = await fetch(base, { cache: 'no-store' }); ok = r.ok; } catch(e){}
+  const n = $('setupNote');
+  n.hidden = ok;
+  if (!ok) n.innerHTML = `<strong>Pige introuvable.</strong> La page ne trouve pas les enregistrements à l'adresse <code>${esc(base)}</code>. Le bouton Direct fonctionne ; pour réécouter les heures passées, l'enregistreur doit tourner sur le serveur et <code>baseUrl</code> dans <code>config.json</code> doit pointer vers ses fichiers.`;
+}
 async function refreshToday(){
   const today = localDay(Date.now());
   await Promise.all(cfg.sources.map(s => ensureDay(s.id, today, true)));
   renderSources();
   if (st.day === today) renderData();
+  loadExtraits();
 }
 
 /* ---------- Démarrage ---------- */
 async function init(){
   try {
     const r = await fetch('config.json', { cache: 'no-store' });
-    if (r.ok){ const j = await r.json(); if (j && Array.isArray(j.sources) && j.sources.length){ cfg = Object.assign({}, DEMO_CONFIG, j); mode = 'server'; } }
+    if (r.ok){ const j = await r.json(); if (j && Array.isArray(j.sources) && j.sources.length){ cfg = Object.assign({}, DEFAULT_CONFIG, j); } }
   } catch(e){}
   $('station').textContent = cfg.station || '';
-  $('modeBadge').textContent = mode === 'demo' ? 'Démo' : 'Serveur';
-  $('modeBadge').classList.toggle('demo', mode === 'demo');
-  $('demoNote').hidden = mode !== 'demo';
   st.vol = store.get('vol', .8);
   const saved = store.get('src', null), hash = parseHash();
   st.src = (hash && cfg.sources.some(s => s.id === hash.src) && hash.src) || (cfg.sources.some(s => s.id === saved) ? saved : cfg.sources[0].id);
   const start = hash ? hash.t : slotAt(Date.now()).start;
   st.pos = start; st.day = localDay(start);
-  readColors(); bind(); renderSources(); renderData();
+  readColors(); bind(); renderSources(); renderData(); renderExtraits(); checkPige();
   setInterval(() => { $('nowClock').textContent = fmtClock(Date.now()); }, 1000);
   $('nowClock').textContent = fmtClock(Date.now());
   await seek(start, { autoplay: false });
