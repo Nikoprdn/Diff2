@@ -24,6 +24,7 @@
   --accent-text:color-mix(in srgb, var(--accent) 82%, #000);
   --tag:var(--accent);
   --rec:#e4032e; --rec-soft:#fbdde3; --focus:#005ea1;
+  --vu-g:#93c01f; --vu-a:#f59c00; --vu-r:#e4032e;   /* vu-mètres : vert Feel Good, orange Mix DJ, rouge Monte-Carlo */
   --font-display:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --font-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --r:10px;
@@ -56,7 +57,7 @@ button{cursor:pointer}
 .num{font-variant-numeric:tabular-nums}
 
 .app{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:16px 40px;display:grid;gap:18px;
-  grid-template-columns:240px minmax(0,1fr);grid-template-areas:"top top" "note note" "side main"}
+  grid-template-columns:240px minmax(0,1fr);grid-template-areas:"top top" "mon mon" "note note" "side main"}
 
 /* Bandeau logo */
 .top{grid-area:top;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-block:2px 14px;border-bottom:1px solid var(--line)}
@@ -72,6 +73,36 @@ button{cursor:pointer}
 .top-right{display:flex;align-items:center;gap:14px}
 .now{display:flex;align-items:baseline;gap:8px;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
 .now small{font-family:var(--font-display);font-size:12px;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+
+/* Surveillance des flux */
+.monitor{grid-area:mon;display:flex;flex-direction:column;gap:8px}
+.mon-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.mon-sum{font-size:13.5px;font-weight:600;color:var(--muted)}
+.mon-sum.alerte{color:var(--rec)}
+.mon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.mon{display:flex;flex-direction:column;gap:8px;text-align:left;padding:10px 12px 8px;background:var(--panel-2);border:1.5px solid var(--line);border-radius:var(--r);min-width:0}
+.mon:hover{border-color:var(--ink-2)}
+.mon[aria-pressed="true"]{box-shadow:inset 0 3px 0 var(--c)}
+.mon-top{display:flex;align-items:center;gap:8px;min-width:0}
+.mon-top .chip{grid-row:auto;width:20px;height:20px;flex:none}
+.mon-name{font-weight:700;font-size:15.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mon-st{font-family:var(--font-display);font-weight:700;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:5px;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
+.mon.ok .mon-st{color:var(--ink-2)}
+.mon.ok .mon-st .dot{background:var(--vu-g)}
+.vu{display:grid;grid-template-columns:10px minmax(0,1fr);gap:3px 6px;align-items:center}
+.vu-ch{font-size:10px;font-weight:700;color:var(--muted);line-height:1}
+.vu-bar{position:relative;height:9px;border-radius:2px;background:var(--panel);overflow:hidden}
+.vu-fill{position:absolute;inset:0;background:linear-gradient(90deg,var(--vu-g) 0 80%,var(--vu-a) 80% 90%,var(--vu-r) 90%);clip-path:inset(0 calc(100% - var(--v, 0%)) 0 0)}
+.vu-bar::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 5px,var(--panel-2) 5px 6.5px)}
+.vu-peak{position:absolute;top:0;bottom:0;width:2px;left:var(--p, 0%);margin-left:-2px;background:var(--ink);opacity:.75;z-index:1}
+.vu-scale{grid-column:2;position:relative;height:11px;font-size:9.5px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.vu-scale span{position:absolute;top:0;transform:translateX(-50%)}
+.vu-scale span:last-child{transform:translateX(-100%)}
+.mon.off .vu{opacity:.35}
+.mon.alerte{border-color:var(--rec);animation:alarme 1s steps(1,end) infinite}
+.mon.alerte .mon-st{color:var(--rec)}
+.mon.alerte .mon-st .dot{background:var(--rec)}
+@keyframes alarme{50%{background:var(--rec-soft)}}
 
 .note{grid-area:note;margin:0;background:var(--panel);border-left:4px solid var(--ink-2);border-radius:6px;padding:10px 14px;font-size:14px}
 .note strong{font-weight:700}
@@ -197,7 +228,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   background:var(--monaco);color:#fff;padding:10px 14px;border-radius:10px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:10;word-break:break-word}
 
 @media (max-width:860px){
-  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "note" "side" "main"}
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "mon" "note" "side" "main"}
   .side{flex-direction:row;flex-wrap:wrap;gap:12px}
   .side section{flex:1 1 220px;min-width:0}
   .side-help{display:none}
@@ -223,6 +254,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   .keys{display:none}
   .tc{align-items:flex-start}
 }
+@media (prefers-reduced-motion:reduce){.mon.alerte{animation:none;background:var(--rec-soft)}}
 @media (prefers-reduced-motion:reduce){.src-state.on .dot,.tbtn.live .dot{animation:none!important}.lk-acc,.lk-tag,.deck,.tbtn.play{transition:none}}
 </style>
 </head>
@@ -248,6 +280,11 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
       <span class="now" title="Heure locale"><small>Il est</small><span id="nowClock">--:--:--</span></span>
     </div>
   </header>
+
+  <section class="monitor" aria-label="Surveillance des flux">
+    <div class="mon-head"><h2 class="label">Surveillance des flux</h2><span class="mon-sum" id="monSum" role="status">Connexion à la mesure…</span></div>
+    <div class="mon-grid" id="monGrid"></div>
+  </section>
 
   <p class="note" id="setupNote" hidden></p>
 
@@ -716,6 +753,7 @@ function renderSources(){
   $('srcWeb').innerHTML = html('webradio') || '<p class="side-help">Aucune webradio configurée.</p>';
   renderLive();
   applyAccent();
+  document.querySelectorAll('.mon').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === st.src));
 }
 const BRAND_RED = '#e4032e';
 const srcColor = s => /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : BRAND_RED;
@@ -972,6 +1010,7 @@ function bind(){
   $('bP10').onclick = () => nudge(10);  $('bP30').onclick = () => nudge(30);
   $('bPrevH').onclick = () => stepHour(-1); $('bNextH').onclick = () => stepHour(1);
   document.querySelector('.side').addEventListener('click', e => { const b = e.target.closest('.src'); if (b) selectSource(b.dataset.id); });
+  $('monGrid').addEventListener('click', e => { const b = e.target.closest('.mon'); if (b) selectSource(b.dataset.id); });
   $('hours').addEventListener('click', e => { const b = e.target.closest('.hour'); if (!b || b.disabled) return; const sl = slotsOf(st.day)[+b.dataset.i]; if (sl) seek(sl.start); });
   $('extraits').addEventListener('click', e => {
     const b = e.target.closest('button[data-x]'); if (!b || !extraits) return;
@@ -1028,7 +1067,68 @@ function bind(){
 
 /* Boucle d'affichage */
 let lastDraw = 0;
+/* ---------- Surveillance des flux (niveaux en direct envoyés par le programme de pige) ---------- */
+const mon = { data: null, at: 0, vu: false, es: null, cards: [], last: 0, retry: 0 };
+const TITRE = document.title;
+const vuPct = db => Math.max(0, Math.min(100, (db + 60) / 60 * 100));
+function buildMonitor(){
+  const scale = [[-40, '−40'], [-20, '−20'], [-12, '−12'], [-6, '−6'], [0, '0']].map(([d, t]) => `<span style="left:${vuPct(d).toFixed(1)}%">${t}</span>`).join('');
+  const bar = ch => `<span class="vu-ch">${ch}</span><span class="vu-bar"><i class="vu-fill"></i><i class="vu-peak"></i></span>`;
+  $('monGrid').innerHTML = cfg.sources.map(s => `<button class="mon off" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" aria-pressed="${s.id === st.src}" title="Écouter ${esc(s.name)} dans la pige">
+    <span class="mon-top"><svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="mon-name">${esc(s.name)}</span><span class="mon-st"><i class="dot"></i><span class="mon-txt">…</span></span></span>
+    <span class="vu" aria-hidden="true">${bar('G')}${bar('D')}<span class="vu-scale">${scale}</span></span></button>`).join('');
+  mon.cards = [...$('monGrid').querySelectorAll('.mon')].map(el => ({
+    id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.vu-fill'), peaks: el.querySelectorAll('.vu-peak'),
+    d: [-99, -99], pk: [-99, -99], pt: [0, 0], cls: '', label: ''
+  }));
+}
+function connectMonitor(){
+  if (!window.EventSource) return;
+  const url = (cfg.apiUrl || '/api/').replace(/\/?$/, '/') + 'surveillance';
+  try { mon.es = new EventSource(url); } catch(e){ return; }
+  mon.es.onmessage = e => { try { mon.data = JSON.parse(e.data); mon.at = performance.now(); mon.vu = true; } catch(err){} };
+  mon.es.onerror = () => {
+    if (mon.es && mon.es.readyState === 2){ mon.es = null; clearTimeout(mon.retry); mon.retry = setTimeout(connectMonitor, 15000); }
+  };
+}
+function fmtSilence(sec){ return `${Math.floor(sec / 60)}:${pad(sec % 60)}`; }
+function monFrame(now){
+  const dt = Math.min(0.1, (now - (mon.last || now)) / 1000); mon.last = now;
+  const fresh = mon.data && now - mon.at < 3000;
+  const alertes = [];
+  for (const c of mon.cards){
+    const src = fresh ? mon.data.sources[c.id] : null;
+    let cls, label;
+    if (!fresh){ cls = 'off'; label = mon.vu ? 'Pas de mesure' : '—'; }
+    else if (!src){ cls = 'off'; label = 'Non surveillé'; }
+    else if (src.etat === 'coupe'){ cls = 'alerte'; label = 'Flux coupé'; alertes.push(`${srcName(c.id)} : flux coupé`); }
+    else if (src.etat === 'blanc'){ cls = 'alerte'; label = `Blanc ${fmtSilence(src.silence)}`; alertes.push(`${srcName(c.id)} : blanc depuis ${fmtSilence(src.silence)}`); }
+    else { cls = 'ok'; label = 'En onde'; }
+    if (cls !== c.cls){ c.el.classList.remove('ok', 'off', 'alerte'); c.el.classList.add(cls); c.cls = cls; }
+    if (label !== c.label){ c.txt.textContent = label; c.label = label; }
+    const target = [src && src.etat !== 'coupe' ? src.l : -99, src && src.etat !== 'coupe' ? src.r : -99];
+    for (let i = 0; i < 2; i++){
+      c.d[i] = target[i] > c.d[i] ? target[i] : Math.max(target[i], c.d[i] - 24 * dt);   // montée immédiate, retombée douce
+      if (c.d[i] >= c.pk[i]){ c.pk[i] = c.d[i]; c.pt[i] = now; }
+      else if (now - c.pt[i] > 1500) c.pk[i] = Math.max(c.d[i], c.pk[i] - 20 * dt);       // crête maintenue 1,5 s
+      c.fills[i].style.setProperty('--v', vuPct(c.d[i]).toFixed(1) + '%');
+      const p = vuPct(c.pk[i]);
+      c.peaks[i].style.setProperty('--p', p.toFixed(1) + '%');
+      c.peaks[i].style.opacity = p > 1 ? '' : '0';
+    }
+  }
+  const sum = $('monSum');
+  let txt, alert = alertes.length > 0;
+  if (!fresh) txt = mon.vu ? 'Le programme de pige ne répond plus : mesure interrompue.' : 'Mesure en direct indisponible : ouvrez la page depuis le programme de pige.';
+  else if (alert) txt = (alertes.length > 1 ? `${alertes.length} alertes · ` : 'Alerte · ') + alertes.join(' · ');
+  else txt = `${mon.cards.length} flux en onde`;
+  if (sum.textContent !== txt){ sum.textContent = txt; sum.classList.toggle('alerte', alert || (mon.vu && !fresh)); }
+  const titre = alert ? `(!) ${alertes[0]} · ${TITRE}` : TITRE;
+  if (document.title !== titre) document.title = titre;
+}
+
 function frame(ts){
+  monFrame(ts);
   if (live.on && ts - lastDraw > 500){ lastDraw = ts; renderTime(); drawWave(); }
   else if (st.seg && dragPos == null && st.playing){
     st.pos = media().pos();
@@ -1037,13 +1137,16 @@ function frame(ts){
   }
   requestAnimationFrame(frame);
 }
+let pigeVue = false;
 async function checkPige(){
   const base = (cfg.baseUrl || '/pige/').replace(/\/?$/, '/');
   let ok = false;
   try { const r = await fetch(base, { cache: 'no-store' }); ok = r.ok; } catch(e){}
   const n = $('setupNote');
   n.hidden = ok;
-  if (!ok) n.innerHTML = `<strong>Pige introuvable.</strong> La page ne trouve pas les enregistrements à l'adresse <code>${esc(base)}</code>. Le bouton Direct fonctionne ; pour réécouter les heures passées, l'enregistreur doit tourner sur le serveur et <code>baseUrl</code> dans <code>config.json</code> doit pointer vers ses fichiers.`;
+  if (ok) pigeVue = true;
+  else if (pigeVue) n.innerHTML = `<strong>Le programme de pige ne répond plus.</strong> Vérifiez que la machine est allumée et que la pige tourne. Cette page se remettra à jour d'elle-même dès son retour.`;
+  else n.innerHTML = `<strong>Pige introuvable.</strong> La page ne trouve pas les enregistrements à l'adresse <code>${esc(base)}</code>. Le bouton Direct fonctionne ; pour réécouter les heures passées, le programme de pige doit tourner et <code>baseUrl</code> dans <code>config.json</code> doit pointer vers ses fichiers.`;
 }
 async function refreshToday(){
   const today = localDay(Date.now());
@@ -1051,6 +1154,7 @@ async function refreshToday(){
   renderSources();
   if (st.day === today) renderData();
   loadExtraits();
+  checkPige();
 }
 
 /* ---------- Démarrage ---------- */
@@ -1065,7 +1169,9 @@ async function init(){
   st.src = (hash && cfg.sources.some(s => s.id === hash.src) && hash.src) || (cfg.sources.some(s => s.id === saved) ? saved : cfg.sources[0].id);
   const start = hash ? hash.t : slotAt(Date.now()).start;
   st.pos = start; st.day = localDay(start);
+  buildMonitor();
   readColors(); bind(); renderSources(); renderData(); renderExtraits(); checkPige();
+  connectMonitor();
   setInterval(() => { $('nowClock').textContent = fmtClock(Date.now()); }, 1000);
   $('nowClock').textContent = fmtClock(Date.now());
   await seek(start, { autoplay: false });
