@@ -1,275 +1,1020 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DIFF 2 — MA RADIO</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Console de pige</title>
+<meta name="description" content="Écoute de la pige radio heure par heure : départs et webradios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-:root {
-  --mono:'Share Tech Mono',monospace; --display:'Oswald',sans-serif;
-  --bg:#080d18; --s1:#0d1428; --s2:#111c38; --border:#1e3060;
-  --cyan:#00d4f0; --green:#00d96a; --yellow:#f5c400; --red:#e03020;
-  --txt:#ddeeff; --txt-dim:#5a7090; --txt-mute:#3a5070;
+/* Layout : une régie. Colonne des sources à gauche, console de lecture en haut à droite,
+   grille des heures du jour dessous, puis le relevé des blancs et coupures. */
+:root{
+  --bg:#e8ebee; --panel:#f7f8f9; --panel-2:#ffffff; --ink:#151a21; --muted:#596371; --line:#cdd3da;
+  --accent:#a95f00; --accent-soft:#f3e1c3; --on-accent:#ffffff;
+  --wave:#8b95a3; --played:#b86a00; --rec:#c9302a; --rec-soft:#f5d6d3; --ok:#1f7a4a; --hatch:#c1c8d0; --focus:#1d5fd1;
+  --font-display:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:6px;
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden;}
-
-/* Navbar */
-.navbar{display:flex;align-items:center;justify-content:space-between;height:44px;background:var(--s1);border-bottom:1px solid var(--border);padding:0 1rem;flex-shrink:0;}
-.nav-brand{font-family:var(--display);font-size:18px;font-weight:700;color:var(--cyan);letter-spacing:2px;display:flex;align-items:center;gap:10px;}
-.nav-link{font-family:var(--mono);font-size:10px;color:var(--txt-dim);letter-spacing:1px;text-decoration:none;padding:3px 10px;border:1px solid var(--border);border-radius:2px;transition:all .15s;}
-.nav-link:hover{border-color:var(--cyan);color:var(--cyan);}
-
-/* ON AIR badge */
-#onair-badge{
-  display:flex;align-items:center;gap:8px;
-  font-family:var(--display);font-size:13px;font-weight:700;letter-spacing:2px;
-  padding:4px 14px;border-radius:3px;
-  border:1px solid #1e3060;background:transparent;
-  color:var(--txt-mute);transition:all .3s;
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101317; --panel:#181c22; --panel-2:#1e232a; --ink:#e5e8ec; --muted:#929bab; --line:#2a3039;
+    --accent:#f0a23a; --accent-soft:#3a2a13; --on-accent:#1a1105;
+    --wave:#5a6576; --played:#f0a23a; --rec:#ff6158; --rec-soft:#3b1b19; --ok:#4cc38a; --hatch:#2d333c; --focus:#7aa7ff;
+    color-scheme:dark;
+  }
 }
-#onair-badge.live{
-  border-color:#8a1010;background:rgba(120,8,8,.25);color:#ff5050;
-  box-shadow:0 0 12px rgba(220,30,30,.2);
+:root[data-theme="dark"]{
+  --bg:#101317; --panel:#181c22; --panel-2:#1e232a; --ink:#e5e8ec; --muted:#929bab; --line:#2a3039;
+  --accent:#f0a23a; --accent-soft:#3a2a13; --on-accent:#1a1105;
+  --wave:#5a6576; --played:#f0a23a; --rec:#ff6158; --rec-soft:#3b1b19; --ok:#4cc38a; --hatch:#2d333c; --focus:#7aa7ff;
+  color-scheme:dark;
 }
-#onair-dot{width:8px;height:8px;border-radius:50%;background:#3a5070;flex-shrink:0;transition:all .3s;}
-#onair-badge.live #onair-dot{background:#ff3030;animation:blink .8s ease-in-out infinite;}
-#onair-title{font-family:var(--mono);font-size:10px;color:var(--txt-mute);letter-spacing:1px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-#onair-badge.live #onair-title{color:#ff8080;}
-@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px #ff3030;}50%{opacity:.5;}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--font-body);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 
-/* Layout */
-.page{display:flex;flex-direction:column;height:100vh;}
-.main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px;overflow:hidden;}
+.app{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:14px 40px;display:grid;gap:16px;
+  grid-template-columns:232px minmax(0,1fr);grid-template-areas:"top top" "note note" "side main"}
+.top{grid-area:top;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding-block:4px 10px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;gap:12px;min-width:0}
+.logo{font-family:var(--font-display);font-weight:700;font-size:26px;letter-spacing:.06em;line-height:1}
+.station{font-family:var(--font-display);font-weight:500;font-size:20px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-right{display:flex;align-items:center;gap:12px}
+.badge{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:4px;border:1px solid var(--line);color:var(--muted)}
+.badge.demo{border-color:var(--accent);color:var(--accent)}
+.now{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:15px;font-variant-numeric:tabular-nums}
+.now small{font-family:var(--font-display);font-size:13px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
 
-/* Cartwall grid */
-.cw-grid{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  grid-template-rows:repeat(4,minmax(80px,1fr));
-  gap:8px;
-  width:100%;flex:1;min-height:0;
+.note{grid-area:note;background:var(--accent-soft);border-radius:var(--r);padding:10px 14px;font-size:13.5px;max-width:none}
+.note strong{font-weight:600}
+
+.label{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0}
+
+/* Sources */
+.side{grid-area:side;display:flex;flex-direction:column;gap:18px;min-width:0}
+.side section{display:flex;flex-direction:column;gap:8px}
+.srcs{display:flex;flex-direction:column;gap:4px}
+.src{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;text-align:left;
+  background:transparent;border:1px solid transparent;border-radius:var(--r);padding:8px 10px}
+.src:hover{background:var(--panel)}
+.src[aria-pressed="true"]{background:var(--panel-2);border-color:var(--line);box-shadow:inset 3px 0 0 var(--accent)}
+.src-name{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-note{grid-column:1;font-size:12px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-state{grid-column:2;grid-row:1 / span 2;font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.08em;
+  display:flex;align-items:center;gap:5px;color:var(--muted)}
+.src-state.on{color:var(--rec)}
+.src-state.off{color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.src-state.on .dot{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.side-help{font-size:12.5px;color:var(--muted)}
+
+/* Console */
+.main{grid-area:main;display:flex;flex-direction:column;gap:16px;min-width:0}
+.deck{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:16px 18px 14px;display:flex;flex-direction:column;gap:12px}
+.deck-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.deck-src{font-family:var(--font-display);font-weight:600;font-size:22px;line-height:1.1}
+.deck-date{color:var(--muted);font-size:13.5px}
+.tc{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.tc-main{font-family:var(--font-mono);font-weight:500;font-size:clamp(30px,6vw,44px);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.tc-sub{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tc-sub.warn{color:var(--rec)}
+
+.wave-wrap{position:relative;height:132px;border-radius:var(--r);background:var(--panel);border:1px solid var(--line);touch-action:none}
+#wave{display:block;width:100%;height:100%;cursor:pointer;border-radius:var(--r)}
+.tip{position:absolute;top:-30px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-family:var(--font-mono);
+  font-size:12px;padding:3px 7px;border-radius:4px;pointer-events:none;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.transport{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap}
+.tbtn{height:44px;min-width:44px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);
+  display:inline-flex;align-items:center;justify-content:center;gap:4px;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums}
+.tbtn:hover{border-color:var(--muted)}
+.tbtn:active{transform:translateY(1px)}
+.tbtn svg{width:20px;height:20px;fill:currentColor}
+.tbtn.play{width:64px;height:56px;border-radius:12px;background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tbtn.play svg{width:26px;height:26px}
+.tbtn.hstep{font-size:14px;color:var(--muted)}
+
+.deck-foot{display:flex;align-items:center;justify-content:space-between;gap:10px 18px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px}
+.group{display:flex;align-items:center;gap:8px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:5px 9px;font-family:var(--font-mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+input[type="range"]{accent-color:var(--accent);width:110px}
+.goto input{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 10px;font-size:13px;text-decoration:none;color:var(--ink);display:inline-flex;align-items:center}
+.btn:hover{border-color:var(--muted)}
+.keys{margin:0;font-size:12px;color:var(--muted);text-align:center}
+kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--panel)}
+
+/* Jour */
+.day{display:flex;flex-direction:column;gap:10px}
+.day-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.day-title{font-family:var(--font-display);font-weight:600;font-size:20px;margin-right:auto;text-transform:capitalize}
+.day-head input{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+.hours{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}
+.hour{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:7px 7px 6px;text-align:left;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+.hour:hover{border-color:var(--muted)}
+.hour .h{font-family:var(--font-display);font-weight:600;font-size:21px;line-height:1;font-variant-numeric:tabular-nums}
+.hour .h small{font-size:12px;color:var(--muted);margin-left:1px}
+.hour .bar{position:relative;height:6px;border-radius:3px;background:repeating-linear-gradient(135deg,var(--hatch) 0 3px,transparent 3px 6px);overflow:hidden}
+.hour .bar i{position:absolute;top:0;bottom:0;background:var(--ok);opacity:.85}
+.hour .bar b{position:absolute;top:0;bottom:0;min-width:3px;background:var(--rec)}
+.hour .st{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hour.future{opacity:.45;cursor:default}
+.hour.future .bar{background:var(--line)}
+.hour.live .st{color:var(--rec);font-weight:600}
+.hour.empty .st{color:var(--rec)}
+.hour.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:var(--accent-soft)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:16px;height:6px;border-radius:3px;display:inline-block}
+.sw.ok{background:var(--ok)}
+.sw.gap{background:repeating-linear-gradient(135deg,var(--hatch) 0 3px,transparent 3px 6px);border:1px solid var(--line)}
+.sw.sil{background:var(--rec)}
+
+/* Relevé */
+.events{display:flex;flex-direction:column;gap:8px}
+.events-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.events-sub{font-size:12.5px;color:var(--muted)}
+.ev-list{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:var(--r);background:var(--panel-2);overflow:hidden}
+.ev-list li{display:grid;grid-template-columns:86px 92px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 12px}
+.ev-list li+li{border-top:1px solid var(--line)}
+.pill{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.08em;text-transform:uppercase;border-radius:4px;padding:2px 7px;text-align:center}
+.pill.sil{background:var(--rec-soft);color:var(--rec)}
+.pill.gap{background:var(--panel);color:var(--muted);border:1px solid var(--line)}
+.ev-time{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.ev-dur{color:var(--muted);min-width:0}
+.empty-msg{margin:0;padding:12px 14px;border:1px dashed var(--line);border-radius:var(--r);color:var(--muted);font-size:13px}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:min(92vw,560px);
+  background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:8px;font-size:13.5px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:10;word-break:break-word}
+
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "note" "side" "main"}
+  .side{flex-direction:row;flex-wrap:wrap;gap:12px}
+  .side section{flex:1 1 220px;min-width:0}
+  .side-help{display:none}
+  .srcs{flex-direction:row;flex-wrap:wrap;gap:6px}
+  .src{border-color:var(--line);padding:6px 10px;gap:8px}
+  .src-note{display:none}
+  .src-state{grid-row:1}
+  .hours{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .hour .st{font-size:10.5px}
 }
-.cw-cell{
-  background:var(--s1);border:1px solid var(--border);border-radius:6px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:5px;cursor:pointer;position:relative;overflow:hidden;
-  transition:border-color .12s,background .1s;user-select:none;padding:8px;min-height:80px;
+@media (max-width:520px){
+  .transport{gap:5px}
+  .tbtn{height:42px;min-width:40px;padding:0 7px;font-size:14px}
+  .tbtn.play{width:56px;height:50px}
+  .tbtn.hstep span{display:none}
+  .ev-list li{grid-template-columns:76px minmax(0,1fr) auto;}
+  .ev-list .ev-dur{grid-column:2;grid-row:2}
+  .keys{display:none}
+  .tc{align-items:flex-start}
 }
-.cw-cell.empty{border-style:dashed;border-color:#1a2840;}
-.cw-cell.empty:hover{border-color:var(--cyan);background:#0a1428;}
-.cw-cell.loaded{border-color:#1e3a60;}
-.cw-cell.loaded:hover{border-color:var(--cyan);background:#0c1830;}
-.cw-cell.playing{background:#0e0408;border-color:var(--red);box-shadow:0 0 12px rgba(224,48,32,.2),inset 0 0 20px rgba(224,48,32,.05);}
-.cw-cell.drag-over{border-color:var(--cyan)!important;background:#0a1e30!important;border-style:solid!important;}
-.cw-progress{position:absolute;bottom:0;left:0;right:0;height:4px;background:var(--border);}
-.cw-progress-bar{height:100%;width:0%;background:var(--red);border-radius:0 2px 2px 0;transition:width .1s linear;}
-.cw-num{position:absolute;top:5px;left:7px;font-family:var(--mono);font-size:9px;color:var(--txt-mute);}
-.cw-cell.playing .cw-num{color:var(--red);}
-.cw-play-indicator{position:absolute;top:5px;right:7px;font-size:8px;color:var(--red);display:none;letter-spacing:1px;}
-.cw-cell.playing .cw-play-indicator{display:block;animation:blink .6s step-start infinite;}
-.cw-title{font-family:var(--display);font-size:15px;font-weight:700;color:var(--txt);letter-spacing:1px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;padding:0 4px;line-height:1.2;}
-.cw-cell.playing .cw-title{color:#ff8080;}
-.cw-timing{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--cyan);letter-spacing:1px;line-height:1;text-shadow:0 0 10px rgba(0,212,240,.3);}
-.cw-cell.playing .cw-timing{color:var(--red);text-shadow:0 0 10px rgba(224,48,32,.4);}
-.cw-dur{font-family:var(--mono);font-size:8px;color:var(--txt-mute);}
-.cw-empty-icon{font-size:20px;color:#1a2840;transition:color .12s;}
-.cw-cell.empty:hover .cw-empty-icon{color:var(--cyan);}
-.cw-empty-lbl{font-family:var(--mono);font-size:8px;color:#1a2840;letter-spacing:2px;text-transform:uppercase;transition:color .12s;}
-.cw-cell.empty:hover .cw-empty-lbl{color:var(--txt-mute);}
-
-/* Context menu */
-#cw-ctx{display:none;position:fixed;background:#02040e;border:1px solid var(--border);border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:9999;min-width:160px;overflow:hidden;}
-#cw-ctx.open{display:block;}
-.ctx-item{padding:9px 14px;font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--txt-dim);cursor:pointer;border-bottom:1px solid #0a1428;transition:background .08s,color .08s;}
-.ctx-item:last-child{border-bottom:none;}
-.ctx-item:hover{background:#0a1830;color:var(--txt);}
-.ctx-item.danger:hover{background:#200808;color:var(--red);}
+@media (prefers-reduced-motion:reduce){.src-state.on .dot{animation:none}}
 </style>
 </head>
 <body>
-<div class="page">
-
-  <nav class="navbar">
-    <div class="nav-brand">
-      <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-        <circle cx="16" cy="16" r="14" stroke="#00d4f0" stroke-width="1.5"/>
-        <circle cx="16" cy="16" r="6"  stroke="#00d4f0" stroke-width="1.5"/>
-        <circle cx="16" cy="16" r="2"  fill="#00d4f0"/>
-      </svg>
-      MA RADIO · DIFF 2
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="logo">PIGE</span><span class="station" id="station">Radio</span></div>
+    <div class="top-right">
+      <span class="badge" id="modeBadge">Serveur</span>
+      <span class="now" title="Heure locale"><small>Il est</small><span id="nowClock">--:--:--</span></span>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <!-- Indicateur DIFF A ON AIR -->
-      <div id="onair-badge">
-        <div id="onair-dot"></div>
-        <span>DIFF A</span>
-        <span id="onair-title">—</span>
+  </header>
+
+  <p class="note" id="demoNote" hidden><strong>Mode démonstration.</strong> Les enregistrements, niveaux et sons sont simulés ici. Installée sur votre serveur avec le fichier <code>config.json</code>, la même page lit les vrais fichiers de pige.</p>
+
+  <aside class="side" aria-label="Sources">
+    <section><h2 class="label">Départs</h2><div class="srcs" id="srcDepart"></div></section>
+    <section><h2 class="label">Webradios</h2><div class="srcs" id="srcWeb"></div></section>
+    <p class="side-help">Changer de source garde la même heure : pratique pour comparer Monte-Carlo et Paris au même instant.</p>
+  </aside>
+
+  <main class="main">
+    <section class="deck" aria-label="Lecteur">
+      <div class="deck-head">
+        <div>
+          <div class="deck-src" id="deckSrc">—</div>
+          <div class="deck-date" id="deckDate">—</div>
+        </div>
+        <div class="tc">
+          <span class="tc-main" id="tcMain">--:--:--</span>
+          <span class="tc-sub" id="tcSub">&nbsp;</span>
+        </div>
       </div>
-      <a href="https://nikoprdn.github.io/Radio-Console/" target="_blank" class="nav-link">⬡ CONSOLE</a>
-    </div>
-  </nav>
 
-  <div class="main">
-    <div class="cw-grid" id="cw-grid"></div>
-  </div>
+      <div class="wave-wrap" id="waveWrap">
+        <canvas id="wave" tabindex="0" role="slider" aria-label="Position dans l'heure" aria-valuemin="0" aria-valuemax="3600" aria-valuenow="0"></canvas>
+        <div class="tip" id="tip" hidden></div>
+      </div>
 
+      <div class="transport">
+        <button class="tbtn hstep" id="bPrevH" title="Heure précédente (Page ↑)" aria-label="Heure précédente">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg><span>Heure</span></button>
+        <button class="tbtn" id="bM30" title="Reculer de 30 s (Maj + ←)">−30 s</button>
+        <button class="tbtn" id="bM10" title="Reculer de 10 s (←)">−10 s</button>
+        <button class="tbtn play" id="bPlay" aria-label="Lecture" title="Lecture / pause (Espace)">
+          <svg viewBox="0 0 24 24" aria-hidden="true" id="icoPlay"><path d="M7 4.5v15l13-7.5z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" id="icoPause" hidden><path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z"/></svg>
+        </button>
+        <button class="tbtn" id="bP10" title="Avancer de 10 s (→)">+10 s</button>
+        <button class="tbtn" id="bP30" title="Avancer de 30 s (Maj + →)">+30 s</button>
+        <button class="tbtn hstep" id="bNextH" title="Heure suivante (Page ↓)" aria-label="Heure suivante">
+          <span>Heure</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+      </div>
+
+      <div class="deck-foot">
+        <div class="group"><span class="label">Vitesse</span>
+          <div class="seg" id="rates" role="group" aria-label="Vitesse de lecture">
+            <button data-r="1" aria-pressed="true">1×</button><button data-r="1.25" aria-pressed="false">1,25×</button><button data-r="1.5" aria-pressed="false">1,5×</button><button data-r="2" aria-pressed="false">2×</button>
+          </div>
+        </div>
+        <label class="group" for="vol"><span class="label">Volume</span><input type="range" id="vol" min="0" max="1" step="0.01" value="0.8"></label>
+        <form class="group goto" id="gotoForm"><label class="label" for="gotoTime">Aller à</label><input type="time" id="gotoTime" step="1" required><button class="btn" type="submit">OK</button></form>
+        <div class="group">
+          <a class="btn" id="dl" hidden>Télécharger le fichier</a>
+          <button class="btn" type="button" id="copyLink">Copier le lien</button>
+        </div>
+      </div>
+      <p class="keys"><kbd>Espace</kbd> lecture · <kbd>←</kbd> <kbd>→</kbd> 10 s · <kbd>Maj</kbd>+<kbd>←</kbd> <kbd>→</kbd> 30 s · <kbd>Page ↑</kbd> <kbd>Page ↓</kbd> heure</p>
+    </section>
+
+    <section class="day" aria-label="Heures du jour">
+      <div class="day-head">
+        <h2 class="day-title" id="dayTitle">—</h2>
+        <button class="btn" id="dPrev" aria-label="Jour précédent">‹ Veille</button>
+        <input type="date" id="dayInput" aria-label="Choisir le jour">
+        <button class="btn" id="dNext" aria-label="Jour suivant">Lendemain ›</button>
+        <button class="btn" id="dToday">Aujourd'hui</button>
+      </div>
+      <div class="hours" id="hours"></div>
+      <div class="legend"><span><i class="sw ok"></i>enregistré</span><span><i class="sw gap"></i>pas d'enregistrement</span><span><i class="sw sil"></i>blanc (silence)</span></div>
+    </section>
+
+    <section class="events" aria-label="Blancs et coupures">
+      <div class="events-head"><h2 class="label">Blancs et coupures du jour</h2><span class="events-sub" id="evSub"></span></div>
+      <div id="events"></div>
+    </section>
+  </main>
 </div>
-
-<!-- Context menu -->
-<div id="cw-ctx">
-  <div class="ctx-item" id="ctx-load">⊕ Charger un son</div>
-  <div class="ctx-item danger" id="ctx-delete">✕ Supprimer le son</div>
-</div>
-<input type="file" id="cw-file-input" accept="audio/*" style="display:none">
+<div class="toast" id="toast" role="status" hidden></div>
 
 <script>
-// ══════════════════════════════════════════════════════════════
-// INDICATEUR ON AIR — écoute BroadcastChannel + localStorage
-// ══════════════════════════════════════════════════════════════
-const badge      = document.getElementById('onair-badge');
-const onairTitle = document.getElementById('onair-title');
-let _onairTimeout = null;
+(() => {
+'use strict';
+const HOUR = 3600e3;
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+const store = {
+  get(k, d){ try { const v = localStorage.getItem('pige.' + k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem('pige.' + k, JSON.stringify(v)); } catch(e){} }
+};
 
-function updateOnAir(state){
-  if(!state) return;
-  if(state.playing){
-    badge.classList.add('live');
-    onairTitle.textContent = state.title ? '· ' + state.title : '';
-  } else {
-    badge.classList.remove('live');
-    onairTitle.textContent = '—';
-  }
-  // Si pas de heartbeat dans 5s → considérer hors ligne
-  clearTimeout(_onairTimeout);
-  _onairTimeout = setTimeout(()=>{ badge.classList.remove('live'); onairTitle.textContent='—'; }, 5000);
+/* ---------- Configuration ---------- */
+const DEMO_CONFIG = {
+  station: 'Radio Monaco (démo)',
+  baseUrl: '/pige/',
+  bitrateKbps: 128,
+  retentionDays: 35,
+  silence: { thresholdDb: -50, minSeconds: 10 },
+  sources: [
+    { id: 'montecarlo',  name: 'Monte-Carlo',   group: 'depart',   note: 'Antenne principale' },
+    { id: 'paris',       name: 'Paris',         group: 'depart',   note: 'Antenne Paris' },
+    { id: 'mixdj',       name: '100 % Mix DJ',  group: 'webradio', note: 'Webradio' },
+    { id: 'nightmood',   name: 'Night Mood',    group: 'webradio', note: 'Webradio' },
+    { id: 'easterntime', name: 'Eastern Time',  group: 'webradio', note: 'Webradio' }
+  ]
+};
+let cfg = DEMO_CONFIG, mode = 'demo';
+
+const st = { src: null, day: null, pos: 0, seg: null, playing: false, rate: 1, vol: 0.8 };
+let dragPos = null;
+
+/* ---------- Dates ---------- */
+const utcDay = ms => { const d = new Date(ms); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`; };
+const localDay = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+function dayBounds(day){ const [y,m,d] = day.split('-').map(Number); return [new Date(y,m-1,d).getTime(), new Date(y,m-1,d+1).getTime()]; }
+function shiftDay(day, n){ const [y,m,d] = day.split('-').map(Number); return localDay(new Date(y,m-1,d+n).getTime()); }
+const fmtClock = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+function fmtDur(sec){
+  sec = Math.round(sec);
+  if (sec < 60) return `${sec} s`;
+  const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
+  return h ? `${h} h ${pad(m)}` : `${m} min ${pad(s)} s`;
 }
+const longDate = day => { const [y,m,d] = day.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' }); };
+function dayName(day){
+  const today = localDay(Date.now());
+  if (day === today) return "Aujourd'hui";
+  if (day === shiftDay(today, -1)) return 'Hier';
+  const [y,m,d] = day.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+}
+function retentionStart(){ return dayBounds(shiftDay(localDay(Date.now()), -(cfg.retentionDays || 35)))[0]; }
 
-// BroadcastChannel (même origine)
-try{
-  const bc = new BroadcastChannel('radio_onair');
-  bc.onmessage = e => updateOnAir(e.data);
-}catch(e){}
+function slotsOf(day){
+  const [a, b] = dayBounds(day), out = [], seen = {};
+  for (let t = a; t < b; t += HOUR){
+    const h = new Date(t).getHours(), lab = pad(h);
+    seen[lab] = (seen[lab] || 0) + 1;
+    out.push({ start: t, end: Math.min(t + HOUR, b), h, label: lab, bis: seen[lab] > 1 });
+  }
+  return out;
+}
+function slotAt(ms){ const sl = slotsOf(localDay(ms)); return sl.find(s => ms >= s.start && ms < s.end) || sl[sl.length-1]; }
 
-// Polling localStorage (cross-tab, même origine)
-setInterval(()=>{
-  try{
-    const raw = localStorage.getItem('radio_onair');
-    if(raw){
-      const state = JSON.parse(raw);
-      if(Date.now() - state.ts < 5000) updateOnAir(state);
-      else { badge.classList.remove('live'); onairTitle.textContent='—'; }
+/* ---------- Démo : programme simulé ---------- */
+function mulberry32(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hashStr(s){ let h = 2166136261; for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function noise(seed, i){ let x = Math.imul((seed ^ i) >>> 0, 2654435761); x ^= x >>> 15; x = Math.imul(x, 2246822519); x ^= x >>> 13; return ((x >>> 0) % 10000) / 10000; }
+
+const DEMO_PROG = { montecarlo:['antenne',0], paris:['antenne',2400], mixdj:['w1',0], nightmood:['w2',0], easterntime:['w3',0] };
+const blockCache = new Map();
+function hourBlocks(prog, hs){
+  const key = prog + '@' + hs;
+  let b = blockCache.get(key); if (b) return b;
+  const r = mulberry32(hashStr(key)); b = []; let t = 0;
+  const add = (type, len) => { len = Math.round(len); b.push({ type, s: t, e: Math.min(3600, t + len), seed: (r() * 1e9) | 0, gain: (r() - .5) * 4, root: Math.floor(r() * 5) }); t += len; };
+  const isAntenne = prog === 'antenne';
+  add('jingle', 7 + r() * 4);
+  if (isAntenne) add('talk', 80 + r() * 90);
+  let ad1 = false, ad2 = false;
+  while (t < 3600){
+    if (!ad1 && t > 840){ ad1 = true; if (isAntenne){ add('jingle', 5); add('ad', 110 + r() * 80); add('jingle', 5); } continue; }
+    if (!ad2 && t > 2640){ ad2 = true; if (isAntenne){ add('jingle', 5); add('ad', 110 + r() * 80); add('jingle', 5); } continue; }
+    if (r() < (isAntenne ? .25 : .06)) add('talk', 20 + r() * 60);
+    add('music', 150 + r() * 110);
+    if (r() < .45) add('jingle', 3 + r() * 5);
+  }
+  blockCache.set(key, b);
+  if (blockCache.size > 800) blockCache.delete(blockCache.keys().next().value);
+  return b;
+}
+function progAt(prog, ms){
+  const hs = Math.floor(ms / HOUR) * HOUR, s = (ms - hs) / 1000, bl = hourBlocks(prog, hs);
+  let b = bl[bl.length - 1];
+  for (const x of bl){ if (s >= x.s && s < x.e){ b = x; break; } }
+  return { b, into: s - b.s, left: b.e - s };
+}
+function progDb(prog, ms){
+  const { b, into, left } = progAt(prog, ms), n = noise(b.seed, Math.floor(ms / 1000));
+  let db;
+  switch (b.type){
+    case 'music': { db = -15 + b.gain + Math.sin(into / 23) * 2.5 + (n - .5) * 3; const edge = Math.min(into, left); if (edge < 3) db -= (3 - edge) * 9; break; }
+    case 'talk': db = -21 + b.gain * .5 + (n - .5) * 9; if (n < .07) db = -36; break;
+    case 'ad': db = -12.5 + (n - .5) * 2.5; break;
+    default: db = -11 + (n - .5) * 2;
+  }
+  return Math.max(-60, Math.min(-3, db));
+}
+const H0 = Math.floor(Date.now() / HOUR) * HOUR;
+const DEMO_SIL = {
+  montecarlo:   [[H0 - 2*HOUR + 23*60e3 + 10e3, 38e3]],
+  mixdj: [[H0 - 9*HOUR + 41*60e3 + 2e3, 22e3]]
+};
+const DEMO_GAPS = { nightmood: [[H0 - 5*HOUR + 23*60e3, H0 - 5*HOUR + 23*60e3 + 41e3]] };
+const DEMO_MISSING = { easterntime: [H0 - 30*HOUR] };
+function demoSilent(src, ms){ for (const [a, l] of (DEMO_SIL[src] || [])) if (ms >= a && ms < a + l) return true; return false; }
+function demoDb(src, ms){
+  if (demoSilent(src, ms)) return -99;
+  const [prog, delay] = DEMO_PROG[src] || ['w1', 0];
+  return progDb(prog, ms - delay);
+}
+function segName(start){ const d = new Date(start); return `${pad(d.getUTCHours())}-${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}.mp3`; }
+function demoSegs(src, a, b){
+  const now = Date.now() - 1500, from = Math.max(a - HOUR, retentionStart()), out = [];
+  for (let h = Math.floor(from / HOUR) * HOUR; h < Math.min(b, now); h += HOUR){
+    if ((DEMO_MISSING[src] || []).includes(h)) continue;
+    let parts = [[h, Math.min(h + HOUR, now)]];
+    for (const [g1, g2] of (DEMO_GAPS[src] || [])){
+      if (g1 >= h && g1 < h + HOUR){ parts = []; if (g1 > h) parts.push([h, Math.min(g1, now)]); if (g2 < now) parts.push([g2, Math.min(h + HOUR, now)]); }
     }
-  }catch(e){}
-}, 1000);
-
-// ══════════════════════════════════════════════════════════════
-// CARTWALL
-// ══════════════════════════════════════════════════════════════
-const CW_COUNT = 16;
-const cells = [];
-let ctxTarget = null;
-
-const fmt2 = n => String(Math.floor(Math.max(0,n))).padStart(2,'0');
-const fmtTime = s => { s=Math.max(0,s||0); return fmt2(Math.floor(s/60))+':'+(s%60<10?'0':'')+s.toFixed(1); };
-const fmtDur  = s => { s=Math.max(0,Math.round(s||0)); return fmt2(Math.floor(s/60))+':'+fmt2(s%60); };
-
-function buildEmpty(i){ return `<div class="cw-num">${String(i+1).padStart(2,'0')}</div><div class="cw-empty-icon">⊕</div><div class="cw-empty-lbl">Glisser un son</div><div class="cw-progress"><div class="cw-progress-bar" id="cwp-${i}"></div></div>`; }
-function buildLoaded(i){ const c=cells[i]; const d=c.dur>0?fmtDur(c.dur):'--:--'; return `<div class="cw-num">${String(i+1).padStart(2,'0')}</div><div class="cw-play-indicator">● AIR</div><div class="cw-title">${c.title}</div><div class="cw-timing" id="cwt-${i}">${d}</div><div class="cw-dur" id="cwd-${i}">${d}</div><div class="cw-progress"><div class="cw-progress-bar" id="cwp-${i}"></div></div>`; }
-
-const grid = document.getElementById('cw-grid');
-for(let i=0;i<CW_COUNT;i++){
-  const c={idx:i,el:null,audio:null,file:null,title:null,dur:0,playing:false,raf:null};
-  const el=document.createElement('div');
-  el.className='cw-cell empty'; el.dataset.idx=i;
-  el.innerHTML=buildEmpty(i);
-  grid.appendChild(el);
-  c.el=el; cells.push(c);
-  rebind(i);
-}
-
-function rebind(idx){
-  const c=cells[idx], el=c.el;
-  el.ondragover=e=>{e.preventDefault();el.classList.add('drag-over');};
-  el.ondragleave=()=>el.classList.remove('drag-over');
-  el.ondrop=e=>{e.preventDefault();el.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('audio/'))loadSound(idx,f);};
-  el.onclick=e=>{if(e.button!==0)return;if(c.audio)togglePlay(idx);else openPicker(idx);};
-  el.oncontextmenu=e=>{e.preventDefault();showCtx(idx,e.clientX,e.clientY);};
-}
-
-function loadSound(idx,file){
-  const c=cells[idx];
-  if(c.audio){c.audio.pause();c.audio=null;}
-  if(c.raf){cancelAnimationFrame(c.raf);c.raf=null;}
-  if(c.file&&c.file.startsWith('blob:'))URL.revokeObjectURL(c.file);
-  c.file=URL.createObjectURL(file); c.title=file.name.replace(/\.[^/.]+$/,''); c.playing=false; c.dur=0;
-  c.el.className='cw-cell loaded'; c.el.innerHTML=buildLoaded(idx); rebind(idx);
-  const a=new Audio(c.file); a.preload='metadata'; c.audio=a;
-  a.addEventListener('loadedmetadata',()=>{
-    c.dur=a.duration||0;
-    const t=document.getElementById('cwt-'+idx); if(t) t.textContent=fmtDur(c.dur);
-    const d=document.getElementById('cwd-'+idx); if(d) d.textContent=fmtDur(c.dur);
-  });
-  a.addEventListener('ended',()=>{c.playing=false;c.el.classList.remove('playing');c.el.classList.add('loaded');if(c.raf){cancelAnimationFrame(c.raf);c.raf=null;}a.currentTime=0;updateTiming(idx);});
-}
-
-function togglePlay(idx){
-  const c=cells[idx]; if(!c.audio)return;
-  if(c.playing){
-    c.audio.pause();c.audio.currentTime=0;c.playing=false;
-    c.el.classList.remove('playing');c.el.classList.add('loaded');
-    if(c.raf){cancelAnimationFrame(c.raf);c.raf=null;}updateTiming(idx);
-  } else {
-    c.audio.currentTime=0;c.audio.play().catch(()=>{});
-    c.playing=true;c.el.classList.add('playing');c.el.classList.remove('loaded');
-    startRaf(idx);
+    for (const [s, e] of parts){ if (e <= s) continue; const name = segName(s); out.push({ start: s, end: e, dur: (e - s) / 1000, name, url: `demo:${src}/${utcDay(s)}/${name}`, demo: true }); }
   }
+  return out;
 }
 
-function startRaf(idx){
-  const c=cells[idx]; if(c.raf)cancelAnimationFrame(c.raf);
-  const tick=()=>{if(!c.playing||!c.audio)return;updateTiming(idx);c.raf=requestAnimationFrame(tick);};
-  c.raf=requestAnimationFrame(tick);
+/* ---------- Données ---------- */
+const dayCache = new Map();   // src|jour -> { at, promise, segs }
+const peaksCache = new Map(); // url -> { data }
+
+async function listDir(src, uday){
+  const base = (cfg.baseUrl || '/pige/').replace(/\/?$/, '/');
+  const dir = `${base}${encodeURIComponent(src)}/${uday}/`;
+  let text;
+  try { const r = await fetch(dir, { cache: 'no-store' }); if (!r.ok) return []; text = await r.text(); } catch(e){ return []; }
+  let entries = [];
+  try {
+    const j = JSON.parse(text);
+    if (Array.isArray(j)) entries = j.filter(e => e.type !== 'directory').map(e => ({ name: e.name, size: e.size }));
+  } catch(e){
+    const re = /href="([^"?#]+)"/g; let m;
+    while ((m = re.exec(text))) entries.push({ name: decodeURIComponent(m[1].split('/').pop()), size: null });
+  }
+  const names = new Set(entries.map(e => e.name));
+  const [Y, M, D] = uday.split('-').map(Number);
+  const segs = [];
+  for (const e of entries){
+    const m = /^(\d{2})-(\d{2})(\d{2})\.mp3$/.exec(e.name || ''); if (!m) continue;
+    const start = Date.UTC(Y, M-1, D, +m[1], +m[2], +m[3]);
+    const js = e.name.replace(/\.mp3$/, '.json');
+    segs.push({ start, name: e.name, url: dir + e.name, peaksUrl: names.has(js) ? dir + js : null,
+      estDur: e.size ? e.size * 8 / ((cfg.bitrateKbps || 128) * 1000) : null });
+  }
+  return segs;
+}
+function finalize(segs, a, b){
+  const seen = new Set();
+  segs = segs.filter(s => !seen.has(s.url) && seen.add(s.url)).sort((x, y) => x.start - y.start);
+  const now = Date.now();
+  segs.forEach((s, i) => {
+    const pk = peaksCache.get(s.url);
+    if (pk && pk.data && !s.demo) s.dur = pk.data.n;
+    if (!s.demo){
+      const hourEnd = Math.floor(s.start / HOUR) * HOUR + HOUR;
+      let end = s.dur ? s.start + s.dur * 1000 : s.estDur ? s.start + s.estDur * 1000 : hourEnd;
+      if (segs[i+1]) end = Math.min(end, segs[i+1].start);
+      s.end = Math.min(end, now, s.start + 2 * HOUR);
+    }
+  });
+  return segs.filter(s => s.end > a && s.start < b);
+}
+function ensureDay(src, day, force = false){
+  const key = src + '|' + day, c = dayCache.get(key);
+  const recent = dayBounds(day)[1] > Date.now() - HOUR;
+  if (c && !force && !(recent && Date.now() - c.at > 60e3)) return c.promise;
+  const entry = { at: Date.now(), segs: c ? c.segs : null };
+  entry.promise = (async () => {
+    const [a, b] = dayBounds(day);
+    let segs;
+    if (mode === 'demo') segs = demoSegs(src, a, b);
+    else {
+      const days = new Set();
+      for (let t = a - HOUR; t < b; t += HOUR) days.add(utcDay(t));
+      days.add(utcDay(b - 1));
+      segs = (await Promise.all([...days].map(u => listDir(src, u)))).flat();
+    }
+    segs = finalize(segs, a, b);
+    entry.segs = segs;
+    if (st.seg && st.src === src){ const same = segs.find(s => s.url === st.seg.url); if (same) st.seg = same; }
+    return segs;
+  })();
+  dayCache.set(key, entry);
+  return entry.promise;
+}
+const segsSync = (src, day) => { const c = dayCache.get(src + '|' + day); return c ? c.segs : null; };
+
+function buildPeaks(arr){
+  const n = arr.length, db = new Int8Array(n);
+  for (let i = 0; i < n; i++){ const v = Number(arr[i]); db[i] = Number.isFinite(v) ? Math.max(-99, Math.min(0, Math.round(v))) : -99; }
+  return { n, db };
+}
+function silencesOf(seg, p){
+  const thr = cfg.silence?.thresholdDb ?? -50, min = cfg.silence?.minSeconds ?? 10, out = [];
+  let run = -1;
+  for (let i = 0; i <= p.n; i++){
+    const quiet = i < p.n && p.db[i] < thr;
+    if (quiet && run < 0) run = i;
+    if (!quiet && run >= 0){ if (i - run >= min) out.push([seg.start + run * 1000, seg.start + i * 1000]); run = -1; }
+  }
+  return out;
+}
+let renderQueued = false;
+function queueRender(){ if (renderQueued) return; renderQueued = true; requestAnimationFrame(() => { renderQueued = false; renderData(); }); }
+function peaksFor(seg){
+  if (seg.demo){
+    const n = Math.floor((seg.end - seg.start) / 1000), key = seg.url + '|' + n;
+    let c = peaksCache.get(key);
+    if (!c){
+      const db = new Int8Array(n), src = seg.url.slice(5).split('/')[0];
+      for (let i = 0; i < n; i++) db[i] = Math.round(demoDb(src, seg.start + i * 1000));
+      c = { data: { n, db } }; c.data.sil = silencesOf(seg, c.data);
+      peaksCache.set(key, c);
+      if (peaksCache.size > 400) peaksCache.delete(peaksCache.keys().next().value);
+    }
+    return c.data;
+  }
+  const c = peaksCache.get(seg.url);
+  if (c) return c.data;
+  if (!seg.peaksUrl) return null;
+  const entry = { data: null }; peaksCache.set(seg.url, entry);
+  fetch(seg.peaksUrl, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
+    if (!j || !Array.isArray(j.rms)) return;
+    const d = buildPeaks(j.rms); d.sil = silencesOf(seg, d); entry.data = d;
+    seg.dur = d.n; seg.end = Math.min(seg.end, seg.start + d.n * 1000) || seg.end;
+    queueRender();
+  }).catch(() => { peaksCache.delete(seg.url); });
+  return null;
+}
+function dbAt(seg, ms){
+  const p = peaksFor(seg); if (!p) return null;
+  const i = Math.floor((ms - seg.start) / 1000); return i >= 0 && i < p.n ? p.db[i] : null;
 }
 
-function updateTiming(idx){
-  const c=cells[idx]; if(!c.audio)return;
-  const pos=c.audio.currentTime,dur=c.dur||0,rem=Math.max(0,dur-pos);
-  const t=document.getElementById('cwt-'+idx); if(t) t.textContent=fmtTime(c.playing?rem:dur);
-  const p=document.getElementById('cwp-'+idx); if(p) p.style.width=dur>0?((pos/dur)*100).toFixed(2)+'%':'0%';
+/* ---------- Moteurs audio ---------- */
+const audio = new Audio(); audio.preload = 'auto';
+const srv = {
+  url: null,
+  load(seg, abs, force){
+    return new Promise(res => {
+      const go = () => { try { audio.currentTime = Math.max(0, (abs - seg.start) / 1000); } catch(e){} res(true); };
+      if (this.url === seg.url && !force && audio.readyState >= 1) return go();
+      this.url = seg.url;
+      const clean = () => { audio.removeEventListener('loadedmetadata', ok); audio.removeEventListener('error', ko); };
+      const ok = () => { clean(); go(); }, ko = () => { clean(); this.url = null; res(false); };
+      audio.addEventListener('loadedmetadata', ok); audio.addEventListener('error', ko);
+      audio.src = force ? seg.url + (seg.url.includes('?') ? '&' : '?') + 'r=' + Date.now() : seg.url;
+      audio.defaultPlaybackRate = st.rate; audio.playbackRate = st.rate; audio.volume = st.vol;
+    });
+  },
+  pos(){ return st.seg ? st.seg.start + audio.currentTime * 1000 : st.pos; },
+  play(){ return audio.play(); },
+  pause(){ audio.pause(); },
+  setRate(r){ audio.playbackRate = r; },
+  setVol(v){ audio.volume = v; }
+};
+audio.addEventListener('ended', () => onEnded());
+audio.addEventListener('pause', () => { if (mode === 'server' && st.playing && !audio.ended && !seeking) setPlaying(false); });
+
+const synth = {
+  ctx: null, base: 0, baseCtx: 0, running: false,
+  init(){
+    if (this.ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    const ctx = this.ctx = new AC();
+    this.master = ctx.createGain(); this.master.gain.value = st.vol * .3; this.master.connect(ctx.destination);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400; lp.connect(this.master);
+    this.musicG = ctx.createGain(); this.musicG.gain.value = 0; this.musicG.connect(lp);
+    this.oscs = [0, 1, 2].map(() => { const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = 220; o.connect(this.musicG); o.start(); return o; });
+    const len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const ns = ctx.createBufferSource(); ns.buffer = buf; ns.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 650; bp.Q.value = 1.4;
+    const am = ctx.createGain(); am.gain.value = .5;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 4.3; const lfoG = ctx.createGain(); lfoG.gain.value = .5; lfo.connect(lfoG); lfoG.connect(am.gain); lfo.start();
+    this.talkG = ctx.createGain(); this.talkG.gain.value = 0;
+    ns.connect(bp); bp.connect(am); am.connect(this.talkG); this.talkG.connect(this.master); ns.start();
+    setInterval(() => this.tick(), 60);
+  },
+  load(seg, abs){ this.base = abs; this.baseCtx = this.ctx ? this.ctx.currentTime : 0; },
+  pos(){ return this.running && this.ctx ? this.base + (this.ctx.currentTime - this.baseCtx) * 1000 * st.rate : this.base; },
+  play(){ this.init(); if (!this.ctx) return Promise.reject(); this.ctx.resume(); this.base = this.pos(); this.baseCtx = this.ctx.currentTime; this.running = true; return Promise.resolve(); },
+  pause(){ this.base = this.pos(); this.running = false; },
+  setRate(){ if (this.ctx){ this.base = this.pos(); this.baseCtx = this.ctx.currentTime; } },
+  setVol(v){ if (this.master) this.master.gain.setTargetAtTime(v * .3, this.ctx.currentTime, .05); },
+  tick(){
+    const ctx = this.ctx, t = ctx.currentTime;
+    let mus = 0, talk = 0;
+    if (this.running && st.seg){
+      const p = this.pos();
+      if (p >= st.seg.end){ onEnded(); }
+      else {
+        const src = st.src, db = demoDb(src, p), lvl = db <= -90 ? 0 : Math.pow(10, db / 20) * 2.2;
+        const [prog, delay] = DEMO_PROG[src] || ['w1', 0];
+        const { b, into } = progAt(prog, p - delay);
+        const roots = [196, 220, 246.94, 261.63, 293.66];
+        const step = Math.floor(into / 3.2) % 4, prog4 = [0, 5, 7, 3][step];
+        let f = roots[b.root] * Math.pow(2, prog4 / 12);
+        if (b.type === 'jingle') f *= 2;
+        const ratios = [1, 1.25, 1.5];
+        this.oscs.forEach((o, i) => o.frequency.setTargetAtTime(f * ratios[i], t, .04));
+        if (b.type === 'music' || b.type === 'jingle') mus = lvl;
+        else if (b.type === 'talk') talk = lvl * 1.4;
+        else { mus = lvl * .6; talk = lvl; }
+      }
+    }
+    this.musicG.gain.setTargetAtTime(mus, t, .05);
+    this.talkG.gain.setTargetAtTime(talk, t, .05);
+  }
+};
+const media = () => mode === 'demo' ? synth : srv;
+
+/* ---------- Navigation ---------- */
+let seekTok = 0, seeking = false;
+async function seek(abs, o = {}){
+  const tok = ++seekTok;
+  const autoplay = o.autoplay ?? st.playing;
+  const day = localDay(abs);
+  seeking = true;
+  try {
+    const segs = await ensureDay(st.src, day, !!o.refresh);
+    if (tok !== seekTok) return;
+    let seg = segs.find(s => abs >= s.start && abs < s.end);
+    if (!seg){
+      const limit = o.snapTo ?? slotAt(abs).end;
+      let nx = segs.find(s => s.start > abs && s.start < limit);
+      if (!nx && limit > dayBounds(day)[1]){
+        const segs2 = await ensureDay(st.src, shiftDay(day, 1));
+        if (tok !== seekTok) return;
+        nx = segs2.find(s => s.start > abs && s.start < limit);
+      }
+      if (nx){
+        if (nx.start - abs > 2000) toast(`Pas d'enregistrement à ${fmtClock(abs)}. Lecture reprise à ${fmtClock(nx.start)}.`);
+        abs = nx.start; seg = nx;
+      }
+    }
+    st.pos = abs; st.seg = seg || null;
+    if (localDay(abs) !== st.day){ st.day = localDay(abs); renderData(); }
+    if (!seg){
+      media().pause(); setPlaying(false);
+      if (o.fromEnded) toast(abs > Date.now() - 5 * 60e3 ? 'Vous avez rattrapé le direct : la suite n\'est pas encore enregistrée.' : `Plus d'enregistrement après ${fmtClock(abs)}.`);
+      else if (autoplay) toast(`Aucun enregistrement à ${fmtClock(abs)} pour ${srcName(st.src)}.`);
+      renderData(); return;
+    }
+    if (mode === 'server'){
+      const ok = await srv.load(seg, abs, o.force);
+      if (tok !== seekTok) return;
+      if (!ok){ toast(`Impossible de lire ${seg.name}. Vérifiez que le fichier est accessible sur le serveur.`); setPlaying(false); renderData(); return; }
+    } else synth.load(seg, abs);
+    if (autoplay) await startPlay(); else media().pause();
+    renderData();
+  } finally { if (tok === seekTok) seeking = false; }
+}
+async function startPlay(){
+  try { await media().play(); setPlaying(true); }
+  catch(e){ setPlaying(false); }
+}
+function setPlaying(v){
+  st.playing = v;
+  $('icoPlay').hidden = v; $('icoPause').hidden = !v;
+  $('bPlay').setAttribute('aria-label', v ? 'Pause' : 'Lecture');
+}
+function togglePlay(){
+  if (mode === 'demo'){ synth.init(); if (synth.ctx) synth.ctx.resume(); }
+  if (st.playing){ media().pause(); setPlaying(false); return; }
+  if (!st.seg) seek(st.pos, { autoplay: true });
+  else startPlay();
+}
+let endedBusy = false;
+async function onEnded(){
+  if (endedBusy || !st.seg) return; endedBusy = true;
+  try {
+    const t = st.seg.end, live = t > Date.now() - 3 * 60e3;
+    await seek(t, { autoplay: true, snapTo: t + 3 * HOUR, refresh: live, force: live && mode === 'server', fromEnded: true });
+  } finally { endedBusy = false; }
+}
+const curPos = () => dragPos ?? (st.seg ? media().pos() : st.pos);
+function nudge(sec){ seek(curPos() + sec * 1000, { snapTo: curPos() + sec * 1000 + HOUR }); }
+function stepHour(dir){
+  const s = slotAt(curPos());
+  if (dir > 0){ const t = s.end; if (t > Date.now()){ toast('Cette heure n\'est pas encore enregistrée.'); return; } seek(t); }
+  else { const t = curPos() - s.start > 3000 ? s.start : slotAt(s.start - 1).start; seek(t); }
+}
+function goDay(day){
+  if (day > localDay(Date.now())) return;
+  if (dayBounds(day)[1] <= retentionStart()){ toast(`La pige est conservée ${cfg.retentionDays} jours : ce jour n'est plus disponible.`); return; }
+  const p = new Date(curPos()), [y, m, d] = day.split('-').map(Number);
+  let t = new Date(y, m-1, d, p.getHours(), p.getMinutes(), p.getSeconds()).getTime();
+  if (t > Date.now()) t = slotAt(Date.now()).start;
+  seek(t);
+}
+function selectSource(id){
+  if (id === st.src) return;
+  st.src = id; store.set('src', id);
+  const keep = curPos();
+  st.seg = null; if (mode === 'server') srv.url = null;
+  renderSources();
+  seek(keep, { autoplay: st.playing });
+}
+const srcName = id => (cfg.sources.find(s => s.id === id) || {}).name || id;
+
+/* ---------- Rendu ---------- */
+function renderSources(){
+  const today = localDay(Date.now()), now = Date.now();
+  const html = grp => cfg.sources.filter(s => (s.group || 'depart') === grp).map(s => {
+    const segs = segsSync(s.id, today);
+    let cls = '', txt = '…';
+    if (segs){
+      const last = segs[segs.length - 1];
+      if (last && last.end > now - 4 * 60e3){ cls = 'on'; txt = 'REC'; } else { cls = 'off'; txt = 'ARRÊT'; }
+    }
+    return `<button class="src" data-id="${esc(s.id)}" aria-pressed="${s.id === st.src}">
+      <span class="src-name">${esc(s.name)}</span><span class="src-state ${cls}" title="${cls === 'on' ? 'Enregistrement en cours' : cls === 'off' ? 'Aucun fichier récent : vérifier l\'enregistreur' : ''}"><i class="dot"></i>${txt}</span>
+      ${s.note ? `<span class="src-note">${esc(s.note)}</span>` : ''}</button>`;
+  }).join('');
+  $('srcDepart').innerHTML = html('depart') || '<p class="side-help">Aucun départ configuré.</p>';
+  $('srcWeb').innerHTML = html('webradio') || '<p class="side-help">Aucune webradio configurée.</p>';
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]); }
+
+function renderData(){
+  renderDeck(); renderHours(); renderEvents(); drawWave();
+  const today = localDay(Date.now());
+  $('dayTitle').textContent = dayName(st.day);
+  $('dayInput').value = st.day; $('dayInput').max = today; $('dayInput').min = localDay(retentionStart() + 1);
+  $('dNext').disabled = st.day >= today;
+}
+function renderDeck(){
+  const src = cfg.sources.find(s => s.id === st.src);
+  $('deckSrc').textContent = src ? src.name : '—';
+  $('deckDate').textContent = longDate(st.day);
+  const dl = $('dl');
+  if (mode === 'server' && st.seg){
+    dl.hidden = false; dl.href = st.seg.url;
+    dl.download = `${st.src}_${localDay(st.seg.start)}_${fmtClock(st.seg.start).replace(/:/g, '')}.mp3`;
+  } else dl.hidden = true;
+  renderTime();
+}
+let lastSlot = null;
+function renderTime(){
+  const p = curPos(), s = slotAt(p), off = Math.max(0, Math.floor((p - s.start) / 1000));
+  $('tcMain').textContent = fmtClock(p);
+  const sub = $('tcSub');
+  const segs = segsSync(st.src, st.day) || [];
+  const inRec = segs.some(x => p >= x.start && p < x.end);
+  if (!inRec && dayCacheReady()){ sub.textContent = 'Pas d\'enregistrement à cet instant'; sub.classList.add('warn'); }
+  else {
+    const live = Date.now() - p;
+    sub.textContent = `${pad(Math.floor(off / 60))}:${pad(off % 60)} dans la tranche ${s.label} h${s.bis ? ' bis' : ''}` + (live < 10 * 60e3 ? ` · direct −${fmtDur(live / 1000)}` : '');
+    sub.classList.remove('warn');
+  }
+  const cv = $('wave');
+  cv.setAttribute('aria-valuenow', off);
+  cv.setAttribute('aria-valuetext', fmtClock(p));
+  if (lastSlot !== s.start){ lastSlot = s.start; renderHours(); }
+}
+const dayCacheReady = () => !!segsSync(st.src, st.day);
+
+function renderHours(){
+  const day = st.day, segs = segsSync(st.src, day), now = Date.now(), p = curPos();
+  const html = slotsOf(day).map((sl, i) => {
+    const len = sl.end - sl.start, elapsedEnd = Math.min(sl.end, now);
+    let cls = 'hour', stTxt = '', bar = '', detail = '';
+    if (sl.start >= now){ cls += ' future'; stTxt = 'à venir'; }
+    else if (!segs){ stTxt = '…'; }
+    else {
+      let cov = 0;
+      for (const s of segs){
+        const a = Math.max(s.start, sl.start), b = Math.min(s.end, sl.end);
+        if (b > a){ cov += b - a; bar += `<i style="left:${((a - sl.start) / len * 100).toFixed(2)}%;width:${((b - a) / len * 100).toFixed(2)}%"></i>`; }
+        const pk = peaksFor(s);
+        if (pk && pk.sil) for (const [x, y] of pk.sil){
+          const a2 = Math.max(x, sl.start), b2 = Math.min(y, sl.end);
+          if (b2 > a2) bar += `<b style="left:${((a2 - sl.start) / len * 100).toFixed(2)}%;width:${((b2 - a2) / len * 100).toFixed(2)}%"></b>`;
+        }
+      }
+      const ratio = cov / Math.max(1, elapsedEnd - sl.start);
+      detail = ` (${Math.round(Math.min(1, ratio) * 100)} % enregistré)`;
+      if (now < sl.end){ cls += ' live'; stTxt = 'en cours'; }
+      else if (ratio >= .995) stTxt = 'complet';
+      else if (ratio > .005) stTxt = 'partiel';
+      else { cls += ' empty'; stTxt = 'absent'; }
+    }
+    if (p >= sl.start && p < sl.end) cls += ' sel';
+    return `<button class="${cls}" data-i="${i}" ${sl.start >= now ? 'disabled' : ''} title="${sl.label} h${sl.bis ? ' bis' : ''} : ${stTxt}${detail}" aria-label="Tranche ${sl.label} h${sl.bis ? ' bis' : ''}, ${stTxt}${detail}">
+      <span class="h">${sl.label}<small>h${sl.bis ? ' bis' : ''}</small></span><span class="bar">${bar}</span><span class="st">${stTxt}</span></button>`;
+  }).join('');
+  $('hours').innerHTML = html;
 }
 
-function deleteSound(idx){
-  const c=cells[idx];
-  if(c.audio){c.audio.pause();c.audio=null;}
-  if(c.raf){cancelAnimationFrame(c.raf);c.raf=null;}
-  if(c.file&&c.file.startsWith('blob:'))URL.revokeObjectURL(c.file);
-  c.file=null;c.title=null;c.dur=0;c.playing=false;
-  c.el.className='cw-cell empty';c.el.innerHTML=buildEmpty(idx);rebind(idx);
+function renderEvents(){
+  const day = st.day, segs = segsSync(st.src, day), box = $('events'), sub = $('evSub');
+  if (!segs){ box.innerHTML = '<p class="empty-msg">Chargement…</p>'; sub.textContent = ''; return; }
+  const [a, b] = dayBounds(day), now = Date.now();
+  if (!segs.length){
+    box.innerHTML = `<p class="empty-msg">Aucun enregistrement pour ${esc(srcName(st.src))} ce jour-là.</p>`;
+    sub.textContent = ''; return;
+  }
+  const ev = [];
+  let cur = Math.max(a, retentionStart()), missing = 0;
+  for (const s of segs){
+    if (s.start - cur >= 10e3) ev.push({ k: 'gap', a: cur, b: s.start });
+    cur = Math.max(cur, s.end);
+    const pk = peaksFor(s);
+    if (!pk){ missing++; continue; }
+    for (const [x, y] of pk.sil) if (y > a && x < b) ev.push({ k: 'sil', a: x, b: y });
+  }
+  const endRef = Math.min(b, now);
+  if (endRef - cur >= 4 * 60e3) ev.push({ k: 'gap', a: cur, b: endRef });
+  ev.sort((x, y) => x.a - y.a);
+  const thr = cfg.silence?.thresholdDb ?? -50, min = cfg.silence?.minSeconds ?? 10;
+  sub.textContent = `Blanc : sous ${thr} dB pendant ${min} s ou plus` + (missing ? ` · niveaux pas encore calculés pour ${missing} fichier${missing > 1 ? 's' : ''}` : '');
+  if (!ev.length){ box.innerHTML = '<p class="empty-msg">Aucun blanc ni coupure détecté sur ce jour.</p>'; return; }
+  box.innerHTML = '<ol class="ev-list">' + ev.map(e => `<li>
+    <span class="pill ${e.k}">${e.k === 'sil' ? 'Blanc' : 'Coupure'}</span>
+    <span class="ev-time">${fmtClock(e.a)}</span>
+    <span class="ev-dur">${fmtDur((e.b - e.a) / 1000)}${e.k === 'gap' ? ' sans enregistrement' : ' de silence'}</span>
+    <button class="btn" data-t="${e.a}" data-k="${e.k}">Écouter</button></li>`).join('') + '</ol>';
 }
 
-function openPicker(idx){
-  window._cwPick=idx;
-  const inp=document.getElementById('cw-file-input');inp.value='';inp.click();
+/* Forme d'onde */
+const cv = $('wave'), cx = cv.getContext('2d');
+let colors = {}, hatch = null;
+function readColors(){
+  const cs = getComputedStyle(document.documentElement), g = k => cs.getPropertyValue(k).trim();
+  colors = { wave: g('--wave'), played: g('--played'), rec: g('--rec'), recSoft: g('--rec-soft'), muted: g('--muted'), line: g('--line'), hatch: g('--hatch'), ink: g('--ink'), accent: g('--accent') };
+  const pc = document.createElement('canvas'); pc.width = pc.height = 8;
+  const px = pc.getContext('2d'); px.strokeStyle = colors.hatch; px.lineWidth = 2;
+  px.beginPath(); px.moveTo(-2, 10); px.lineTo(10, -2); px.moveTo(6, 10); px.lineTo(10, 6); px.moveTo(-2, 2); px.lineTo(2, -2); px.stroke();
+  hatch = cx.createPattern(pc, 'repeat');
 }
-document.getElementById('cw-file-input').addEventListener('change',function(){
-  if(window._cwPick!==undefined&&this.files[0]){loadSound(window._cwPick,this.files[0]);window._cwPick=undefined;}
+let hoverX = null;
+function drawWave(){
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (!w || !h) return;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)){ cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, w, h);
+  const p = curPos(), sl = slotAt(p), len = sl.end - sl.start, now = Date.now();
+  const top = 8, axis = 20, bot = h - axis, mid = (top + bot) / 2, amp = (bot - top) / 2;
+  const X = t => (t - sl.start) / len * w;
+  const segs = (segsSync(st.src, localDay(sl.start)) || []).filter(s => s.end > sl.start && s.start < sl.end);
+  const recEnd = Math.min(sl.end, now);
+
+  // graduations toutes les 5 minutes
+  cx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--font-mono');
+  cx.textBaseline = 'middle';
+  const lblStep = w < 520 ? 15 : 5;
+  for (let m = 0; m <= 60; m += 5){
+    const t = sl.start + m * 60e3; if (t > sl.end) break;
+    const x = Math.round(X(t)) + .5;
+    cx.strokeStyle = colors.line; cx.lineWidth = 1; cx.globalAlpha = m % 15 ? .55 : 1;
+    cx.beginPath(); cx.moveTo(x, top); cx.lineTo(x, bot); cx.stroke(); cx.globalAlpha = 1;
+    if (m < 60 && m % lblStep === 0){ cx.fillStyle = colors.muted; cx.textAlign = m === 0 ? 'left' : 'center'; cx.fillText(m === 0 ? `${sl.label}:00` : pad(m), m === 0 ? x + 3 : x, bot + axis / 2); }
+  }
+  // zones sans enregistrement
+  let cur = sl.start;
+  const gaps = [];
+  for (const s of segs){ if (s.start > cur) gaps.push([cur, Math.min(s.start, recEnd)]); cur = Math.max(cur, s.end); }
+  if (cur < recEnd) gaps.push([cur, recEnd]);
+  if (segsSync(st.src, localDay(sl.start))) for (const [a, b] of gaps){
+    if (b <= a) continue;
+    cx.fillStyle = hatch; cx.fillRect(X(a), top, Math.max(1, X(b) - X(a)), bot - top);
+    if (X(b) - X(a) > 140){ cx.fillStyle = colors.muted; cx.textAlign = 'center'; cx.fillText('pas d\'enregistrement', (X(a) + X(b)) / 2, mid); }
+  }
+  // blancs
+  for (const s of segs){ const pk = peaksFor(s); if (pk && pk.sil) for (const [a, b] of pk.sil){ if (b < sl.start || a > sl.end) continue; cx.fillStyle = colors.recSoft; cx.fillRect(X(a), top, Math.max(2, X(b) - X(a)), bot - top); } }
+  // barres de niveau
+  const bw = 2, step = 3, cols = Math.floor(w / step), colMs = len / cols;
+  const thr = cfg.silence?.thresholdDb ?? -50;
+  let si = 0;
+  for (let c = 0; c < cols; c++){
+    const t0 = sl.start + c * colMs, t1 = t0 + colMs;
+    if (t0 >= recEnd) break;
+    while (si < segs.length && segs[si].end <= t0) si++;
+    const s = segs[si]; if (!s || s.start >= t1) continue;
+    const pk = peaksFor(s), x = c * step;
+    cx.fillStyle = t0 < p ? colors.played : colors.wave;
+    if (!pk){ cx.globalAlpha = .5; cx.fillRect(x, mid - 1.5, bw, 3); cx.globalAlpha = 1; continue; }
+    let mx = -99;
+    const i0 = Math.max(0, Math.floor((t0 - s.start) / 1000)), i1 = Math.min(pk.n, Math.ceil((t1 - s.start) / 1000));
+    for (let i = i0; i < i1; i++) if (pk.db[i] > mx) mx = pk.db[i];
+    if (mx < thr) cx.fillStyle = colors.rec;
+    const hh = Math.max(1, Math.pow(Math.max(0, (mx + 60) / 57), 1.4) * amp);
+    cx.fillRect(x, mid - hh, bw, hh * 2);
+  }
+  // direct
+  if (now > sl.start && now < sl.end){
+    const x = Math.round(X(now)) + .5; cx.strokeStyle = colors.rec; cx.setLineDash([3, 3]); cx.beginPath(); cx.moveTo(x, top); cx.lineTo(x, bot); cx.stroke(); cx.setLineDash([]);
+    cx.fillStyle = colors.rec; cx.textAlign = X(now) > w - 50 ? 'right' : 'left'; cx.fillText('direct', X(now) > w - 50 ? x - 4 : x + 4, top + 7);
+  }
+  // survol
+  if (hoverX != null && dragPos == null){ cx.strokeStyle = colors.muted; cx.globalAlpha = .7; cx.beginPath(); cx.moveTo(hoverX + .5, top); cx.lineTo(hoverX + .5, bot); cx.stroke(); cx.globalAlpha = 1; }
+  // tête de lecture
+  const px = Math.round(X(p)) + .5;
+  cx.strokeStyle = colors.accent; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(px, top - 4); cx.lineTo(px, bot + 2); cx.stroke();
+  cx.fillStyle = colors.accent; cx.beginPath(); cx.moveTo(px - 6, top - 6); cx.lineTo(px + 6, top - 6); cx.lineTo(px, top + 2); cx.fill();
+  cx.lineWidth = 1;
+}
+
+/* Interaction sur la forme d'onde */
+function timeAtX(clientX){
+  const r = cv.getBoundingClientRect(), sl = slotAt(curPos());
+  const f = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+  return Math.min(sl.start + f * (sl.end - sl.start), sl.end - 500);
+}
+cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); dragPos = timeAtX(e.clientX); renderTime(); drawWave(); });
+cv.addEventListener('pointermove', e => {
+  const r = cv.getBoundingClientRect(); hoverX = e.clientX - r.left;
+  const t = timeAtX(e.clientX);
+  if (dragPos != null) dragPos = t;
+  const tip = $('tip'), segs = segsSync(st.src, st.day) || [], s = segs.find(x => t >= x.start && t < x.end);
+  const db = s ? dbAt(s, t) : null;
+  tip.hidden = false; tip.style.left = Math.max(40, Math.min(r.width - 40, hoverX)) + 'px';
+  tip.textContent = fmtClock(t) + (s ? (db != null ? `  ${db <= -99 ? '−∞' : db} dB` : '') : '  —');
+  if (dragPos != null) renderTime();
+  drawWave();
 });
+cv.addEventListener('pointerleave', () => { hoverX = null; $('tip').hidden = true; drawWave(); });
+cv.addEventListener('pointerup', e => { if (dragPos == null) return; const t = dragPos; dragPos = null; seek(t); });
+cv.addEventListener('pointercancel', () => { dragPos = null; drawWave(); });
 
-// Context menu
-const ctxMenu=document.getElementById('cw-ctx');
-function showCtx(idx,x,y){
-  ctxTarget=idx;
-  document.getElementById('ctx-delete').style.display=cells[idx].audio?'block':'none';
-  ctxMenu.style.left=Math.min(x,window.innerWidth-180)+'px';
-  ctxMenu.style.top=Math.min(y,window.innerHeight-100)+'px';
-  ctxMenu.classList.add('open');
+/* ---------- Divers ---------- */
+let toastTimer;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 4200); }
+function linkFor(ms){ const d = new Date(ms); return `#${st.src}.${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`; }
+function parseHash(){
+  const m = /^#([A-Za-z0-9_-]+)\.(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/.exec(location.hash || '');
+  if (!m) return null;
+  return { src: m[1], t: new Date(+m[2], +m[3]-1, +m[4], +m[5], +m[6], +m[7]).getTime() };
 }
-document.getElementById('ctx-load').onclick=()=>{if(ctxTarget!==null)openPicker(ctxTarget);ctxMenu.classList.remove('open');};
-document.getElementById('ctx-delete').onclick=()=>{if(ctxTarget!==null)deleteSound(ctxTarget);ctxMenu.classList.remove('open');};
-document.addEventListener('click',e=>{if(!ctxMenu.contains(e.target))ctxMenu.classList.remove('open');});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')ctxMenu.classList.remove('open');});
+
+function bind(){
+  $('bPlay').onclick = togglePlay;
+  $('bM10').onclick = () => nudge(-10); $('bM30').onclick = () => nudge(-30);
+  $('bP10').onclick = () => nudge(10);  $('bP30').onclick = () => nudge(30);
+  $('bPrevH').onclick = () => stepHour(-1); $('bNextH').onclick = () => stepHour(1);
+  document.querySelector('.side').addEventListener('click', e => { const b = e.target.closest('.src'); if (b) selectSource(b.dataset.id); });
+  $('hours').addEventListener('click', e => { const b = e.target.closest('.hour'); if (!b || b.disabled) return; const sl = slotsOf(st.day)[+b.dataset.i]; if (sl) seek(sl.start); });
+  $('events').addEventListener('click', e => { const b = e.target.closest('button[data-t]'); if (!b) return; const t = +b.dataset.t; if (mode === 'demo'){ synth.init(); } seek(t - 5000, { autoplay: true, snapTo: t + 3 * HOUR }); });
+  $('rates').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (mode === 'demo') synth.setRate(); st.rate = +b.dataset.r; media().setRate(st.rate);
+    if (mode === 'server') audio.defaultPlaybackRate = st.rate;
+    [...$('rates').children].forEach(x => x.setAttribute('aria-pressed', x === b));
+  });
+  $('vol').value = st.vol;
+  $('vol').oninput = e => { st.vol = +e.target.value; media().setVol(st.vol); audio.volume = st.vol; store.set('vol', st.vol); };
+  $('gotoForm').onsubmit = e => {
+    e.preventDefault();
+    const v = $('gotoTime').value; if (!v) return;
+    const [hh, mm, ss] = v.split(':').map(Number), [y, m, d] = st.day.split('-').map(Number);
+    const t = new Date(y, m-1, d, hh, mm, ss || 0).getTime();
+    if (t > Date.now()){ toast('Cette heure n\'est pas encore passée.'); return; }
+    seek(t, { snapTo: t + HOUR });
+  };
+  $('dPrev').onclick = () => goDay(shiftDay(st.day, -1));
+  $('dNext').onclick = () => goDay(shiftDay(st.day, 1));
+  $('dToday').onclick = () => goDay(localDay(Date.now()));
+  $('dayInput').onchange = e => { if (e.target.value) goDay(e.target.value); };
+  $('copyLink').onclick = () => {
+    const url = location.href.split('#')[0] + linkFor(curPos());
+    const done = () => toast(`Lien copié : ${srcName(st.src)} à ${fmtClock(curPos())}.`);
+    try { navigator.clipboard.writeText(url).then(done, () => toast(url)); } catch(e){ toast(url); }
+  };
+  document.addEventListener('keydown', e => {
+    if (e.target.closest('input, select, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === ' ' || e.code === 'Space'){ if (e.target.closest('button')) return; e.preventDefault(); togglePlay(); }
+    else if (e.key === 'ArrowLeft'){ e.preventDefault(); nudge(e.shiftKey ? -30 : -10); }
+    else if (e.key === 'ArrowRight'){ e.preventDefault(); nudge(e.shiftKey ? 30 : 10); }
+    else if (e.key === 'PageUp'){ e.preventDefault(); stepHour(-1); }
+    else if (e.key === 'PageDown'){ e.preventDefault(); stepHour(1); }
+  });
+  new ResizeObserver(() => drawWave()).observe($('waveWrap'));
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); drawWave(); });
+  new MutationObserver(() => { readColors(); drawWave(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  window.addEventListener('hashchange', () => { const h = parseHash(); if (h && cfg.sources.some(s => s.id === h.src)){ st.src = h.src; renderSources(); seek(h.t); } });
+}
+
+/* Boucle d'affichage */
+let lastDraw = 0;
+function frame(ts){
+  if (st.seg && dragPos == null && st.playing){
+    st.pos = media().pos();
+    if (localDay(st.pos) !== st.day){ st.day = localDay(st.pos); renderData(); }
+    if (ts - lastDraw > 120){ lastDraw = ts; renderTime(); drawWave(); }
+  }
+  requestAnimationFrame(frame);
+}
+async function refreshToday(){
+  const today = localDay(Date.now());
+  await Promise.all(cfg.sources.map(s => ensureDay(s.id, today, true)));
+  renderSources();
+  if (st.day === today) renderData();
+}
+
+/* ---------- Démarrage ---------- */
+async function init(){
+  try {
+    const r = await fetch('config.json', { cache: 'no-store' });
+    if (r.ok){ const j = await r.json(); if (j && Array.isArray(j.sources) && j.sources.length){ cfg = Object.assign({}, DEMO_CONFIG, j); mode = 'server'; } }
+  } catch(e){}
+  $('station').textContent = cfg.station || '';
+  $('modeBadge').textContent = mode === 'demo' ? 'Démo' : 'Serveur';
+  $('modeBadge').classList.toggle('demo', mode === 'demo');
+  $('demoNote').hidden = mode !== 'demo';
+  st.vol = store.get('vol', .8);
+  const saved = store.get('src', null), hash = parseHash();
+  st.src = (hash && cfg.sources.some(s => s.id === hash.src) && hash.src) || (cfg.sources.some(s => s.id === saved) ? saved : cfg.sources[0].id);
+  const start = hash ? hash.t : slotAt(Date.now()).start;
+  st.pos = start; st.day = localDay(start);
+  readColors(); bind(); renderSources(); renderData();
+  setInterval(() => { $('nowClock').textContent = fmtClock(Date.now()); }, 1000);
+  $('nowClock').textContent = fmtClock(Date.now());
+  await seek(start, { autoplay: false });
+  refreshToday();
+  setInterval(refreshToday, 60e3);
+  requestAnimationFrame(frame);
+}
+init();
+})();
 </script>
+
 </body>
 </html>
