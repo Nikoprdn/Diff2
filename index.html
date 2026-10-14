@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%2231%2031%20140.2%20140.2%22%3E%3Cpath%20fill%3D%22%23e4032e%22%20fill-rule%3D%22nonzero%22%20d%3D%22M%20140.05%2062.27%20L%20140.05%20140.08%20L%20124.49%20140.08%20L%20124.49%2077.84%20L%20108.93%2077.84%20L%20108.93%20140.08%20L%2093.37%20140.08%20L%2093.37%2077.84%20L%2077.81%2077.84%20L%2077.81%20140.08%20L%2062.25%20140.08%20L%2062.25%2062.27%20Z%20M%20140.05%2062.27%20M%20108.93%20155.64%20L%20140.05%20155.64%20C%20148.65%20155.64%20155.62%20148.68%20155.62%20140.08%20L%20155.62%2062.27%20C%20155.62%2053.68%20148.65%2046.71%20140.05%2046.71%20L%2062.25%2046.71%20C%2053.65%2046.71%2046.68%2053.68%2046.68%2062.27%20L%2046.68%20140.08%20C%2046.68%20148.68%2053.65%20155.64%2062.25%20155.64%20L%2093.37%20155.64%20L%2093.37%20171.2%20L%2062.25%20171.2%20C%2045.09%20171.2%2031.12%20157.24%2031.12%20140.08%20L%2031.12%2062.27%20C%2031.12%2045.11%2045.09%2031.15%2062.25%2031.15%20L%20140.05%2031.15%20C%20157.21%2031.15%20171.18%2045.11%20171.18%2062.27%20L%20171.18%20140.08%20C%20171.18%20157.24%20157.21%20171.2%20140.05%20171.2%20L%20108.93%20171.2%20Z%20M%20108.93%20155.64%22/%3E%3C/svg%3E">
 <title>Pige Radio Monaco</title>
 <meta name="description" content="Pige de Radio Monaco heure par heure : Monte-Carlo, Paris et webradios.">
@@ -79,6 +80,8 @@ button{cursor:pointer}
 .mon-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .mon-sum{font-size:13.5px;font-weight:600;color:var(--muted)}
 .mon-sum.alerte{color:var(--rec)}
+.mon-head .grp{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-left:auto}
+.mon-go{padding:4px 10px;font-size:13px;border-color:var(--ink-2)}
 .mon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
 .mon{display:flex;flex-direction:column;gap:8px;text-align:left;padding:10px 12px 8px;background:var(--panel-2);border:1.5px solid var(--line);border-radius:var(--r);min-width:0}
 .mon:hover{border-color:var(--ink-2)}
@@ -224,6 +227,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
 .sw.rep{width:2px;height:12px;border-radius:0;background:var(--ink);opacity:.6}
 .empty-msg{margin:0;padding:12px 14px;border:1.5px dashed var(--line);border-radius:var(--r);color:var(--muted);font-size:14px}
 
+.who{font-size:13px;font-weight:600;color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:min(92vw,560px);
   background:var(--monaco);color:#fff;padding:10px 14px;border-radius:10px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:10;word-break:break-word}
 
@@ -277,12 +281,14 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
       <span id="station" hidden></span>
     </div>
     <div class="top-right">
+      <span class="who" id="who" hidden></span>
+      <a class="btn" id="logout" href="/cdn-cgi/access/logout" hidden>Déconnexion</a>
       <span class="now" title="Heure locale"><small>Il est</small><span id="nowClock">--:--:--</span></span>
     </div>
   </header>
 
   <section class="monitor" aria-label="Surveillance des flux">
-    <div class="mon-head"><h2 class="label">Surveillance des flux</h2><span class="mon-sum" id="monSum" role="status">Connexion à la mesure…</span></div>
+    <div class="mon-head"><h2 class="label">Surveillance des flux</h2><span class="grp"><span class="mon-sum" id="monSum" role="status">Connexion à la mesure…</span><button class="btn mon-go" type="button" id="monGo" hidden>Activer la mesure en direct</button></span></div>
     <div class="mon-grid" id="monGrid"></div>
   </section>
 
@@ -369,6 +375,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
 
+
 <script>
 (() => {
 'use strict';
@@ -436,11 +443,17 @@ function slotAt(ms){ const sl = slotsOf(localDay(ms)); return sl.find(s => ms >=
 const dayCache = new Map();   // src|jour -> { at, promise, segs }
 const peaksCache = new Map(); // url -> { data }
 
+/* Tout passe par l'adresse de la page elle-même (le programme de pige, derrière Cloudflare Access) */
+const apiRoot = () => '';
+const pigeBase = () => (cfg.baseUrl || '/pige/').replace(/\/?$/, '/');
+const withAuth = u => u;
+function needLogin(){}
+
 async function listDir(src, uday){
-  const base = (cfg.baseUrl || '/pige/').replace(/\/?$/, '/');
+  const base = pigeBase();
   const dir = `${base}${encodeURIComponent(src)}/${uday}/`;
   let text;
-  try { const r = await fetch(dir, { cache: 'no-store' }); if (!r.ok) return []; text = await r.text(); } catch(e){ return []; }
+  try { const r = await fetch(withAuth(dir), { cache: 'no-store' }); if (r.status === 401) needLogin(); if (!r.ok) return []; text = await r.text(); } catch(e){ return []; }
   let entries = [];
   try {
     const j = JSON.parse(text);
@@ -461,7 +474,7 @@ async function listDir(src, uday){
   }
   if (names.has('reperes.json')){
     try {
-      const r = await fetch(dir + 'reperes.json', { cache: 'no-store' });
+      const r = await fetch(withAuth(dir + 'reperes.json'), { cache: 'no-store' });
       const j = r.ok ? await r.json() : [];
       segs.reperes = (Array.isArray(j) ? j : []).map(x => ({ t: x.t * 1000, nom: x.nom || x.j, score: x.score }));
     } catch(e){}
@@ -512,7 +525,7 @@ const marksSync = (src, day) => { const c = dayCache.get(src + '|' + day); retur
 let extraits = null;
 async function loadExtraits(){
   try {
-    const r = await fetch((cfg.baseUrl || '/pige/').replace(/\/?$/, '/') + 'extraits/index.json', { cache: 'no-store' });
+    const r = await fetch(withAuth(pigeBase() + 'extraits/index.json'), { cache: 'no-store' });
     extraits = r.ok ? await r.json() : [];
     if (!Array.isArray(extraits)) extraits = [];
   } catch(e){ extraits = []; }
@@ -522,7 +535,7 @@ function renderExtraits(){
   const box = $('extraits');
   if (!extraits){ box.innerHTML = '<p class="empty-msg">Chargement…</p>'; return; }
   if (!extraits.length){ box.innerHTML = '<p class="empty-msg">Aucun extrait pour l\'instant. Ils apparaissent ici dès qu\'une règle de découpe se déclenche sur le serveur.</p>'; return; }
-  const base = (cfg.baseUrl || '/pige/').replace(/\/?$/, '/');
+  const base = pigeBase();
   box.innerHTML = '<ol class="xt-list">' + extraits.slice(0, 30).map((x, i) => {
     const s = srcObj(x.source), d0 = x.debut * 1000, d1 = x.fin * 1000;
     const jour = new Date(d0).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -532,7 +545,7 @@ function renderExtraits(){
       <div class="xt-main"><span class="xt-title">${esc(x.titre || x.nom)}</span>
         <span class="xt-meta">${esc(s.name || x.source)} · ${esc(jour)} · ${fmtClock(d0)} → ${fmtClock(d1)} · ${fmtDur(x.duree)}${x.incomplet ? ' <span class="pill sil">Incomplet</span>' : ''}</span>
         ${why ? `<span class="xt-why">${esc(why)}</span>` : ''}</div>
-      <div class="xt-act"><button class="btn" data-x="${i}">Écouter</button>${x.fichier ? `<a class="btn" href="${esc(base + x.fichier)}" download>Télécharger</a>` : ''}</div></li>`;
+      <div class="xt-act"><button class="btn" data-x="${i}">Écouter</button>${x.fichier ? `<a class="btn" href="${esc(withAuth(base + x.fichier + '?telecharger=1'))}" download>Télécharger</a>` : ''}</div></li>`;
   }).join('') + '</ol>';
 }
 
@@ -558,7 +571,7 @@ function peaksFor(seg){
   if (c) return c.data;
   if (!seg.peaksUrl) return null;
   const entry = { data: null }; peaksCache.set(seg.url, entry);
-  fetch(seg.peaksUrl, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
+  fetch(withAuth(seg.peaksUrl), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
     if (!j || !Array.isArray(j.rms)) return;
     const d = buildPeaks(j.rms); d.sil = silencesOf(seg, d); entry.data = d;
     seg.dur = d.n; seg.end = Math.min(seg.end, seg.start + d.n * 1000) || seg.end;
@@ -583,7 +596,7 @@ const srv = {
       const clean = () => { audio.removeEventListener('loadedmetadata', ok); audio.removeEventListener('error', ko); };
       const ok = () => { clean(); go(); }, ko = () => { clean(); this.url = null; res(false); };
       audio.addEventListener('loadedmetadata', ok); audio.addEventListener('error', ko);
-      audio.src = force ? seg.url + (seg.url.includes('?') ? '&' : '?') + 'r=' + Date.now() : seg.url;
+      audio.src = withAuth(force ? seg.url + '?r=' + Date.now() : seg.url);
       audio.defaultPlaybackRate = st.rate; audio.playbackRate = st.rate; audio.volume = st.vol;
     });
   },
@@ -784,7 +797,7 @@ function renderDeck(){
   $('deckDate').textContent = longDate(st.day);
   const dl = $('dl');
   if (st.seg){
-    dl.hidden = false; dl.href = st.seg.url;
+    dl.hidden = false; dl.href = withAuth(st.seg.url + '?telecharger=1');
     dl.download = `${st.src}_${localDay(st.seg.start)}_${fmtClock(st.seg.start).replace(/:/g, '')}.mp3`;
   } else dl.hidden = true;
   renderTime();
@@ -1084,25 +1097,116 @@ function buildMonitor(){
 }
 function connectMonitor(){
   if (!window.EventSource) return;
-  const url = (cfg.apiUrl || '/api/').replace(/\/?$/, '/') + 'surveillance';
+  const url = withAuth(apiRoot() + '/api/surveillance');
   try { mon.es = new EventSource(url); } catch(e){ return; }
   mon.es.onmessage = e => { try { mon.data = JSON.parse(e.data); mon.at = performance.now(); mon.vu = true; } catch(err){} };
   mon.es.onerror = () => {
     if (mon.es && mon.es.readyState === 2){ mon.es = null; clearTimeout(mon.retry); mon.retry = setTimeout(connectMonitor, 15000); }
   };
 }
+/* Mesure dans le navigateur : la page écoute elle-même les flux, sans le son, et en mesure le niveau.
+   Utilisée quand le programme de pige ne fournit pas les niveaux (page ouverte depuis GitHub, par exemple). */
+const bm = { on: false, ctx: null, zero: null, m: {}, sansCors: {} };
+const progActif = () => mon.data && performance.now() - mon.at < 3000;
+function bmStart(){
+  if (bm.on || progActif()) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC){ toast('Ce navigateur ne permet pas de mesurer les flux.'); return; }
+  try { bm.ctx = new AC(); } catch(e){ return; }
+  bm.on = true;
+  bm.zero = bm.ctx.createGain(); bm.zero.gain.value = 0; bm.zero.connect(bm.ctx.destination);   // traité, jamais entendu
+  for (const s of cfg.sources) if (s.stream) bmOpen(s);
+  $('monGo').hidden = true;
+  store.set('mesure', true);
+}
+function bmOpen(s){
+  const old = bm.m[s.id];
+  if (old){ clearTimeout(old.retry); old.mort = true; try { old.a.pause(); old.a.removeAttribute('src'); old.a.load(); } catch(e){} }
+  const cors = !bm.sansCors[s.id];
+  const a = new Audio();
+  a.preload = 'none';
+  if (cors) a.crossOrigin = 'anonymous'; else a.muted = true;
+  const m = { s, a, cors, mesurable: false, an: null, buf: null, l: -99, r: -99, silence: null,
+              essais: old ? old.essais : 0, etat: 'connexion', vu: performance.now(), pos: -1, retry: 0, mort: false };
+  bm.m[s.id] = m;
+  if (cors){
+    try {
+      const src = bm.ctx.createMediaElementSource(a), sp = bm.ctx.createChannelSplitter(2);
+      src.connect(sp);
+      m.an = [0, 1].map(i => { const n = bm.ctx.createAnalyser(); n.fftSize = 2048; sp.connect(n, i); n.connect(bm.zero); return n; });
+      m.buf = new Float32Array(2048);
+      m.mesurable = true;
+    } catch(e){}
+  }
+  a.addEventListener('playing', () => { if (m.mort) return; m.etat = 'ok'; m.vu = performance.now(); });
+  a.addEventListener('timeupdate', () => { if (!m.mort && a.currentTime !== m.pos){ m.pos = a.currentTime; m.vu = performance.now(); if (m.etat === 'ok') m.essais = 0; } });
+  a.addEventListener('error', () => bmEchec(m));
+  a.src = s.stream;
+  a.play().catch(() => {});
+  if (bm.ctx.state === 'suspended') bm.ctx.resume().catch(() => {});
+}
+function bmEchec(m){
+  if (m.mort) return;
+  if (m.cors && m.etat === 'connexion' && !m.testSansCors){
+    // Le flux ne s'ouvre pas en mode mesure : soit il est coupé, soit son serveur refuse la mesure.
+    // On essaie sans mesure ; s'il joue ainsi, c'est que le serveur refuse la mesure.
+    bm.sansCors[m.s.id] = 'test';
+    const s = m.s; bmOpen(s); const n = bm.m[s.id]; n.testSansCors = true;
+    n.a.addEventListener('playing', () => { bm.sansCors[s.id] = true; }, { once: true });
+    return;
+  }
+  if (bm.sansCors[m.s.id] === 'test') delete bm.sansCors[m.s.id];   // coupé aussi sans mesure : on retentera la mesure
+  m.etat = 'coupe'; m.essais++;
+  clearTimeout(m.retry);
+  m.retry = setTimeout(() => { if (!m.mort) bmOpen(m.s); }, Math.min(30000, 3000 * m.essais));
+}
+setInterval(() => {                       // chien de garde : un flux qui n'avance plus depuis 8 s est relancé
+  if (!bm.on) return;
+  const now = performance.now();
+  for (const id in bm.m){
+    const m = bm.m[id];
+    if (m.mort || m.etat === 'coupe') continue;
+    if (now - m.vu > (m.etat === 'ok' ? 8000 : 15000)) bmEchec(m);
+  }
+}, 1000);
+function bmNiveau(m, i){
+  m.an[i].getFloatTimeDomainData(m.buf);
+  let s = 0; for (let k = 0; k < m.buf.length; k++) s += m.buf[k] * m.buf[k];
+  const rms = Math.sqrt(s / m.buf.length);
+  return rms > 1e-5 ? 20 * Math.log10(rms) : -99;
+}
+function bmSnapshot(now){
+  const seuil = cfg.silence?.thresholdDb ?? -50, min = cfg.silence?.minSeconds ?? 10, out = {};
+  for (const s of cfg.sources){
+    const m = bm.m[s.id];
+    if (!m) continue;
+    if (m.etat !== 'ok'){ out[s.id] = { etat: m.etat, l: -99, r: -99 }; continue; }
+    if (m.mesurable){
+      m.l = bmNiveau(m, 0); m.r = bmNiveau(m, 1);
+      if (Math.max(m.l, m.r) < seuil){ if (!m.silence) m.silence = now; } else m.silence = null;
+    }
+    const sil = m.silence ? Math.floor((now - m.silence) / 1000) : 0;
+    out[s.id] = { etat: sil >= min ? 'blanc' : 'ok', l: m.mesurable ? m.l : -99, r: m.mesurable ? m.r : -99, silence: sil, mesurable: m.mesurable };
+  }
+  return out;
+}
+
 function fmtSilence(sec){ return `${Math.floor(sec / 60)}:${pad(sec % 60)}`; }
 function monFrame(now){
   const dt = Math.min(0.1, (now - (mon.last || now)) / 1000); mon.last = now;
-  const fresh = mon.data && now - mon.at < 3000;
+  const prog = mon.data && now - mon.at < 3000;
+  const data = prog ? mon.data : (bm.on ? { sources: bmSnapshot(now) } : null);
+  const fresh = !!data, nonMesures = [];
   const alertes = [];
   for (const c of mon.cards){
-    const src = fresh ? mon.data.sources[c.id] : null;
+    const src = fresh ? data.sources[c.id] : null;
     let cls, label;
-    if (!fresh){ cls = 'off'; label = mon.vu ? 'Pas de mesure' : '—'; }
+    if (!fresh){ cls = 'off'; label = '—'; }
     else if (!src){ cls = 'off'; label = 'Non surveillé'; }
+    else if (src.etat === 'connexion'){ cls = 'off'; label = 'Connexion…'; }
     else if (src.etat === 'coupe'){ cls = 'alerte'; label = 'Flux coupé'; alertes.push(`${srcName(c.id)} : flux coupé`); }
     else if (src.etat === 'blanc'){ cls = 'alerte'; label = `Blanc ${fmtSilence(src.silence)}`; alertes.push(`${srcName(c.id)} : blanc depuis ${fmtSilence(src.silence)}`); }
+    else if (src.mesurable === false){ cls = 'ok'; label = 'Flux reçu'; nonMesures.push(srcName(c.id)); }
     else { cls = 'ok'; label = 'En onde'; }
     if (cls !== c.cls){ c.el.classList.remove('ok', 'off', 'alerte'); c.el.classList.add(cls); c.cls = cls; }
     if (label !== c.label){ c.txt.textContent = label; c.label = label; }
@@ -1119,9 +1223,12 @@ function monFrame(now){
   }
   const sum = $('monSum');
   let txt, alert = alertes.length > 0;
-  if (!fresh) txt = mon.vu ? 'Le programme de pige ne répond plus : mesure interrompue.' : 'Mesure en direct indisponible : ouvrez la page depuis le programme de pige.';
+  if (!fresh) txt = mon.vu ? 'Le programme de pige ne répond plus.' : 'Mesure en direct à l\'arrêt.';
   else if (alert) txt = (alertes.length > 1 ? `${alertes.length} alertes · ` : 'Alerte · ') + alertes.join(' · ');
-  else txt = `${mon.cards.length} flux en onde`;
+  else txt = `${mon.cards.length} flux en onde` + (prog ? '' : ' · mesuré par ce navigateur');
+  if (fresh && !prog && nonMesures.length) txt += ` · niveau non mesurable : ${nonMesures.join(', ')}`;
+  const go = $('monGo'), montrer = !fresh && !bm.on;
+  if (go.hidden === montrer) go.hidden = !montrer;
   if (sum.textContent !== txt){ sum.textContent = txt; sum.classList.toggle('alerte', alert || (mon.vu && !fresh)); }
   const titre = alert ? `(!) ${alertes[0]} · ${TITRE}` : TITRE;
   if (document.title !== titre) document.title = titre;
@@ -1139,13 +1246,13 @@ function frame(ts){
 }
 let pigeVue = false;
 async function checkPige(){
-  const base = (cfg.baseUrl || '/pige/').replace(/\/?$/, '/');
+  const base = pigeBase();
   let ok = false;
-  try { const r = await fetch(base, { cache: 'no-store' }); ok = r.ok; } catch(e){}
+  try { const r = await fetch(withAuth(base), { cache: 'no-store' }); ok = r.ok; } catch(e){}
   const n = $('setupNote');
   n.hidden = ok;
   if (ok) pigeVue = true;
-  else if (pigeVue) n.innerHTML = `<strong>Le programme de pige ne répond plus.</strong> Vérifiez que la machine est allumée et que la pige tourne. Cette page se remettra à jour d'elle-même dès son retour.`;
+  else if (pigeVue) n.innerHTML = `<strong>La pige ne répond plus.</strong> Le PC de pige est peut-être arrêté, ou votre session a expiré. <a href="">Recharger la page</a> pour vous reconnecter.`;
   else n.innerHTML = `<strong>Pige introuvable.</strong> La page ne trouve pas les enregistrements à l'adresse <code>${esc(base)}</code>. Le bouton Direct fonctionne ; pour réécouter les heures passées, le programme de pige doit tourner et <code>baseUrl</code> dans <code>config.json</code> doit pointer vers ses fichiers.`;
 }
 async function refreshToday(){
@@ -1157,6 +1264,19 @@ async function refreshToday(){
   checkPige();
 }
 
+/* ---------- Personne connectée (fournie par Cloudflare Access) ---------- */
+async function checkSession(){
+  try {
+    const r = await fetch('/api/session', { cache: 'no-store' });
+    if (!r.ok) return;
+    const j = await r.json();
+    if (j.mode === 'cloudflare'){
+      $('who').textContent = j.identite; $('who').title = 'Connecté avec ' + j.identite; $('who').hidden = false;
+      $('logout').hidden = false;
+    }
+  } catch(e){}
+}
+
 /* ---------- Démarrage ---------- */
 async function init(){
   try {
@@ -1164,6 +1284,7 @@ async function init(){
     if (r.ok){ const j = await r.json(); if (j && Array.isArray(j.sources) && j.sources.length){ cfg = Object.assign({}, DEFAULT_CONFIG, j); } }
   } catch(e){}
   $('station').textContent = cfg.station || '';
+  checkSession();
   st.vol = store.get('vol', .8);
   const saved = store.get('src', null), hash = parseHash();
   st.src = (hash && cfg.sources.some(s => s.id === hash.src) && hash.src) || (cfg.sources.some(s => s.id === saved) ? saved : cfg.sources[0].id);
@@ -1172,6 +1293,13 @@ async function init(){
   buildMonitor();
   readColors(); bind(); renderSources(); renderData(); renderExtraits(); checkPige();
   connectMonitor();
+  $('monGo').onclick = bmStart;
+  // Les navigateurs n'autorisent le son qu'après un geste : la mesure démarre au premier clic ou à la première touche.
+  const premierGeste = () => { if (!progActif()) bmStart(); else if (bm.ctx) bm.ctx.resume(); };
+  addEventListener('pointerdown', premierGeste, { once: true, capture: true });
+  addEventListener('keydown', premierGeste, { once: true, capture: true });
+  // Onglet en arrière-plan : on continue de surveiller (alerte dans le titre de l'onglet).
+  setInterval(() => { if (document.hidden) monFrame(performance.now()); }, 1000);
   setInterval(() => { $('nowClock').textContent = fmtClock(Date.now()); }, 1000);
   $('nowClock').textContent = fmtClock(Date.now());
   await seek(start, { autoplay: false });
