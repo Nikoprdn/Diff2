@@ -88,6 +88,10 @@ button{cursor:pointer}
 .mon[aria-pressed="true"]{box-shadow:inset 0 3px 0 var(--c)}
 .mon-top{display:flex;align-items:center;gap:8px;min-width:0}
 .mon-top .chip{grid-row:auto;width:22px;height:22px;flex:none}
+.mon-id{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.mon-tags{display:flex;flex-wrap:wrap;gap:4px}
+.mon-tag{font-family:var(--font-display);font-weight:700;font-size:10px;letter-spacing:.08em;line-height:1;padding:3px 5px 2px;border-radius:4px;
+  color:var(--ink-2);background:var(--panel)}
 .mon-name{font-weight:800;font-size:16px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lamp{flex:none;display:inline-flex;align-items:center;gap:7px;font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-spacing:.02em;line-height:1;
   padding:5px 10px 5px 8px;border-radius:999px;color:var(--muted);background:var(--panel);white-space:nowrap;font-variant-numeric:tabular-nums;transition:background .3s,color .3s}
@@ -418,10 +422,10 @@ const DEFAULT_CONFIG = {
   retentionDays: 35,
   silence: { thresholdDb: -50, minSeconds: 10 },
   sources: [
-    { id: 'montecarlo',  name: 'Monte-Carlo',   group: 'depart',   note: 'Antenne principale', color: '#e4032e', stream: 'https://radiomonaco.ice.infomaniak.ch/radiomonaco-128.mp3' },
-    { id: 'paris',       name: 'Paris',         group: 'depart',   note: 'Antenne Paris',      color: '#e4032e', stream: 'https://radiomonacoparis.ice.infomaniak.ch/radiomonacoparis-320.aac', titresDe: 'montecarlo' },
-    { id: 'mixdj',       name: '100 % Mix DJ',  group: 'webradio', note: 'Webradio',           color: '#f59c00', stream: 'https://mixdj.ice.infomaniak.ch/mixdj-128.aac' },
-    { id: 'nightmood',   name: 'Night Mood',    group: 'webradio', note: 'Webradio',           color: '#8a5aa1', stream: 'https://nightmood.ice.infomaniak.ch/nightmood-128.aac' }
+    { id: 'montecarlo',  name: 'Monte-Carlo',   group: 'depart',   note: 'Antenne principale', color: '#e4032e', stream: 'https://radiomonaco.ice.infomaniak.ch/radiomonaco-128.mp3', diffusion: ['FM', 'DAB+', 'WEB'] },
+    { id: 'paris',       name: 'Paris',         group: 'depart',   note: 'Antenne Paris',      color: '#e4032e', stream: 'https://radiomonacoparis.ice.infomaniak.ch/radiomonacoparis-320.aac', titresDe: 'montecarlo', diffusion: ['DAB+', 'WEB'] },
+    { id: 'mixdj',       name: '100 % Mix DJ',  group: 'webradio', note: 'Webradio',           color: '#f59c00', stream: 'https://mixdj.ice.infomaniak.ch/mixdj-128.aac', diffusion: ['WEB'] },
+    { id: 'nightmood',   name: 'Night Mood',    group: 'webradio', note: 'Webradio',           color: '#8a5aa1', stream: 'https://nightmood.ice.infomaniak.ch/nightmood-128.aac', diffusion: ['WEB'] }
   ]
 };
 let cfg = DEFAULT_CONFIG;
@@ -1120,7 +1124,7 @@ function buildMonitor(){
   const scale = [[-40, '40'], [-20, '20'], [-12, '12'], [-6, '6'], [-3, '3'], [0, '0']].map(([d, t]) => `<span style="left:${vuPct(d).toFixed(1)}%">${t}</span>`).join('');
   const bar = ch => `<span class="m-ch">${ch}</span><span class="m-bar"><i class="m-fill"></i><i class="m-peak"></i></span>`;
   $('monGrid').innerHTML = cfg.sources.map(s => `<button class="mon off" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" aria-pressed="${s.id === st.src}" title="Écouter ${esc(s.name)} dans la pige">
-    <span class="mon-top"><svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="mon-name">${esc(s.name)}</span><span class="lamp mon-txt">—</span></span>
+    <span class="mon-top"><svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="mon-id"><span class="mon-name">${esc(s.name)}</span>${Array.isArray(s.diffusion) && s.diffusion.length ? `<span class="mon-tags" aria-label="Diffusion">${s.diffusion.map(d => `<span class="mon-tag">${esc(d)}</span>`).join('')}</span>` : ''}</span><span class="lamp mon-txt">—</span></span>
     <span class="meter" aria-hidden="true"><span class="m-rows">${bar('L')}${bar('R')}<span class="m-scale">${scale}</span></span></span>
     <span class="np vide"><span class="np-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="np-txt"><span class="np-lbl">Now playing</span><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></span></button>`).join('');
   mon.cards = [...$('monGrid').querySelectorAll('.mon')].map(el => ({
