@@ -114,7 +114,13 @@ button{cursor:pointer}
 .m-scale span::before{content:"";position:absolute;left:50%;top:-4px;width:1px;height:3px;background:var(--meter-dim);opacity:.6}
 .m-scale span:last-child::before{left:auto;right:0}
 .mon.off .m-rows{opacity:.4}
-.np{display:flex;flex-direction:column;gap:2px;min-width:0;padding:0 2px}
+.np{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:center;min-width:0}
+.np-art{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;display:grid;place-items:center;
+  background:color-mix(in srgb, var(--c) 12%, var(--panel));box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--c) 18%, transparent)}
+.np-art svg{width:28px;height:28px;fill:var(--c);opacity:.85}
+.np-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .45s}
+.np-art img.ok{opacity:1}
+.np-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
 .np-lbl{font-family:var(--font-display);font-weight:700;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;line-height:1.2;margin-bottom:3px;
   color:color-mix(in srgb, var(--c) var(--c-mix), var(--c-to))}
 .np-t,.np-a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
@@ -1116,9 +1122,9 @@ function buildMonitor(){
   $('monGrid').innerHTML = cfg.sources.map(s => `<button class="mon off" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" aria-pressed="${s.id === st.src}" title="Écouter ${esc(s.name)} dans la pige">
     <span class="mon-top"><svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="mon-name">${esc(s.name)}</span><span class="lamp mon-txt">—</span></span>
     <span class="meter" aria-hidden="true"><span class="m-rows">${bar('L')}${bar('R')}<span class="m-scale">${scale}</span></span></span>
-    <span class="np vide"><span class="np-lbl">Now playing</span><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></button>`).join('');
+    <span class="np vide"><span class="np-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="np-txt"><span class="np-lbl">Now playing</span><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></span></button>`).join('');
   mon.cards = [...$('monGrid').querySelectorAll('.mon')].map(el => ({
-    id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'), np: el.querySelector('.np'), npT: el.querySelector('.np-t'), npA: el.querySelector('.np-a'), npK: '',
+    id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'), np: el.querySelector('.np'), npI: el.querySelector('.np-art img'), npT: el.querySelector('.np-t'), npA: el.querySelector('.np-a'), npK: '',
     d: [-99, -99], pk: [-99, -99], pt: [0, 0], cls: '', label: ''
   }));
 }
@@ -1326,6 +1332,79 @@ function decouper(x){
   const k = x.indexOf(' - ');
   return k > 0 ? { artiste: x.slice(0, k).trim(), titre: x.slice(k + 3).trim() || x } : { artiste: '', titre: x };
 }
+/* Pochettes : recherche du titre dans le catalogue public d'Apple (iTunes), puis de Deezer.
+   On ne garde une pochette que si l'artiste et le titre trouvés correspondent bien à ceux diffusés ;
+   sinon (jingle, publicité, titre inconnu) la carte garde le logo de la chaîne. */
+const pochettes = new Map(Object.entries(store.get('pochettes', {}) || {}));
+const enCours = new Map();
+let itunesDirect = true, jsonpN = 0;
+const sansAccents = x => x.normalize('NFD').replace(/[̀-ͯ]/g, '');
+const motsDe = x => new Set(sansAccents(String(x).toLowerCase()).replace(/\(.*?\)|\[.*?\]/g, ' ')
+  .replace(/\b(feat|ft|featuring|avec|vs|x|and|et|the|le|la|les)\b\.?/g, ' ').replace(/[^a-z0-9]+/g, ' ').split(' ').filter(w => w.length > 1));
+function part(a, b){ const A = motsDe(a), B = motsDe(b); if (!A.size) return 0; let n = 0; for (const w of A) if (B.has(w)) n++; return n / A.size; }
+function correspond(d, artiste, titre){
+  return part(d.titre, titre) >= .6 && Math.max(part(d.artiste, artiste), part(artiste, d.artiste)) >= .5;
+}
+function jsonp(url){
+  return new Promise((ok, ko) => {
+    const cb = '__pochette' + (++jsonpN), sc = document.createElement('script');
+    const fin = () => { clearTimeout(t); try { delete window[cb]; } catch(e){} sc.remove(); };
+    const t = setTimeout(() => { fin(); ko(new Error('délai')); }, 8000);
+    window[cb] = j => { fin(); ok(j); };
+    sc.onerror = () => { fin(); ko(new Error('script')); };
+    sc.src = url + '&callback=' + cb;
+    document.head.appendChild(sc);
+  });
+}
+async function chercherItunes(q, d){
+  const url = 'https://itunes.apple.com/search?' + new URLSearchParams({ term: q, media: 'music', entity: 'song', limit: '10', country: 'FR' });
+  let j = null;
+  if (itunesDirect){ try { const r = await fetch(url); if (r.ok) j = await r.json(); } catch(e){ itunesDirect = false; } }
+  if (!j) j = await jsonp(url).catch(() => null);
+  if (!j) return null;                                              // catalogue injoignable
+  const r = (j.results || []).find(x => x.artworkUrl100 && correspond(d, x.artistName, x.trackName));
+  return r ? r.artworkUrl100.replace(/\/\d+x\d+(bb)?\.(jpg|png)$/, '/300x300bb.jpg') : '';
+}
+async function chercherDeezer(q, d){
+  const j = await jsonp('https://api.deezer.com/search?' + new URLSearchParams({ q, limit: '10', output: 'jsonp' })).catch(() => null);
+  if (!j) return null;
+  const r = (j.data || []).find(x => x.album && x.album.cover_medium && correspond(d, x.artist && x.artist.name, x.title));
+  return r ? r.album.cover_medium : '';
+}
+function pochette(brut){
+  const cle = sansAccents(brut.toLowerCase()).replace(/\s+/g, ' ').trim();
+  if (pochettes.has(cle)) return Promise.resolve(pochettes.get(cle));
+  if (enCours.has(cle)) return enCours.get(cle);
+  const d = decouper(brut);
+  const pr = (async () => {
+    if (!d.artiste) return '';                                      // pas d'artiste : jingle, émission, publicité…
+    const q = [...motsDe(d.artiste + ' ' + d.titre)].join(' ');
+    const a = await chercherItunes(q, d).catch(() => null);
+    if (a) return a;
+    const b = await chercherDeezer(q, d).catch(() => null);
+    return b || (a === null && b === null ? null : '');            // null : aucun catalogue n'a répondu, on réessaiera
+  })().then(url => {
+    enCours.delete(cle);
+    if (url === null) return '';
+    pochettes.set(cle, url);
+    while (pochettes.size > 300) pochettes.delete(pochettes.keys().next().value);
+    store.set('pochettes', Object.fromEntries(pochettes));
+    return url;
+  });
+  enCours.set(cle, pr);
+  return pr;
+}
+function majPochette(c, t){
+  const img = c.npI, cle = c.npK;
+  img.classList.remove('ok'); img.removeAttribute('src');
+  if (t.etat !== 'ok') return;
+  pochette(t.titre).then(url => {
+    if (!url || c.npK !== cle) return;
+    img.onload = () => { if (c.npK === cle) img.classList.add('ok'); };
+    img.onerror = () => img.removeAttribute('src');
+    img.src = url;
+  });
+}
 function afficherTitres(c){
   const s = cfg.sources.find(x => x.id === c.id) || {};
   const t = titres[s.titresDe || c.id] || { etat: 'attente', titre: '' };
@@ -1342,6 +1421,7 @@ function afficherTitres(c){
     c.npT.textContent = t.etat === 'vide' ? 'Aucun titre transmis' : t.etat === 'indispo' ? 'Titre indisponible' : 'Recherche du titre…';
     c.npA.textContent = ''; c.np.title = '';
   }
+  majPochette(c, t);
 }
 
 function fmtSilence(sec){ return `${Math.floor(sec / 60)}:${pad(sec % 60)}`; }
