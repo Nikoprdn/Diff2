@@ -25,7 +25,8 @@
   --accent-text:color-mix(in srgb, var(--accent) 82%, #000);
   --tag:var(--accent);
   --rec:#e4032e; --rec-soft:#fbdde3; --focus:#005ea1;
-  --vu-g:#93c01f; --vu-a:#f59c00; --vu-r:#e4032e;   /* vu-mètres : vert Feel Good, orange Mix DJ, rouge Monte-Carlo */
+  --meter-bg:#1a181e; --meter-track:#0e0d11; --meter-ink:#f3f2f5; --meter-dim:#8d8896;   /* écran des vu-mètres, sombre dans les deux thèmes */
+  --meter-grad:linear-gradient(90deg,#5fae2e 0%,#93c01f 52%,#e8d21d 66%,#f59c00 80%,#e4032e 91%,#e4032e 100%);
   --font-display:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --font-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --r:10px;
@@ -75,36 +76,56 @@ button{cursor:pointer}
 .now{display:flex;align-items:baseline;gap:8px;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
 .now small{font-family:var(--font-display);font-size:12px;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
 
-/* Surveillance des flux */
+/* Surveillance des flux — vu-mètres façon console de régie : écran sombre, barres dégradées, lampe ON AIR */
 .monitor{grid-area:mon;display:flex;flex-direction:column;gap:8px}
 .mon-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .mon-sum{font-size:13.5px;font-weight:600;color:var(--muted)}
 .mon-sum.alerte{color:var(--rec)}
-.mon-head .grp{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-left:auto}
-.mon-go{padding:4px 10px;font-size:13px;border-color:var(--ink-2)}
-.mon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
-.mon{display:flex;flex-direction:column;gap:8px;text-align:left;padding:10px 12px 8px;background:var(--panel-2);border:1.5px solid var(--line);border-radius:var(--r);min-width:0}
+.mon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.mon{display:flex;flex-direction:column;gap:10px;text-align:left;padding:12px 12px 12px;background:var(--panel-2);border:1.5px solid var(--line);border-radius:14px;min-width:0;transition:border-color .2s}
 .mon:hover{border-color:var(--ink-2)}
 .mon[aria-pressed="true"]{box-shadow:inset 0 3px 0 var(--c)}
 .mon-top{display:flex;align-items:center;gap:8px;min-width:0}
-.mon-top .chip{grid-row:auto;width:20px;height:20px;flex:none}
-.mon-name{font-weight:700;font-size:15.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mon-st{font-family:var(--font-display);font-weight:700;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:5px;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
-.mon.ok .mon-st{color:var(--ink-2)}
-.mon.ok .mon-st .dot{background:var(--vu-g)}
-.vu{display:grid;grid-template-columns:10px minmax(0,1fr);gap:3px 6px;align-items:center}
-.vu-ch{font-size:10px;font-weight:700;color:var(--muted);line-height:1}
-.vu-bar{position:relative;height:9px;border-radius:2px;background:var(--panel);overflow:hidden}
-.vu-fill{position:absolute;inset:0;background:linear-gradient(90deg,var(--vu-g) 0 80%,var(--vu-a) 80% 90%,var(--vu-r) 90%);clip-path:inset(0 calc(100% - var(--v, 0%)) 0 0)}
-.vu-bar::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 5px,var(--panel-2) 5px 6.5px)}
-.vu-peak{position:absolute;top:0;bottom:0;width:2px;left:var(--p, 0%);margin-left:-2px;background:var(--ink);opacity:.75;z-index:1}
-.vu-scale{grid-column:2;position:relative;height:11px;font-size:9.5px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
-.vu-scale span{position:absolute;top:0;transform:translateX(-50%)}
-.vu-scale span:last-child{transform:translateX(-100%)}
-.mon.off .vu{opacity:.35}
+.mon-top .chip{grid-row:auto;width:22px;height:22px;flex:none}
+.mon-name{font-weight:800;font-size:16px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lamp{flex:none;font-family:var(--font-display);font-weight:800;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;line-height:1;
+  padding:5px 8px 4px 9px;border-radius:5px;border:1.5px solid var(--line);color:var(--muted);background:transparent;white-space:nowrap;font-variant-numeric:tabular-nums;transition:background .3s,color .3s,box-shadow .3s}
+.mon.ok .lamp{background:#e4032e;border-color:#e4032e;color:#fff;box-shadow:0 0 0 3px rgba(228,3,46,.14),0 0 16px rgba(228,3,46,.55)}
+.mon.alerte .lamp{color:#fff;background:var(--rec);border-color:var(--rec);animation:lampe 1s steps(1,end) infinite}
+@keyframes lampe{50%{background:transparent;color:var(--rec)}}
+.meter{display:grid;grid-template-columns:minmax(0,1fr) 54px;gap:10px;align-items:center;padding:10px 10px 6px 10px;border-radius:10px;
+  background:var(--meter-bg);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),inset 0 0 0 1px rgba(0,0,0,.25)}
+.m-rows{display:grid;grid-template-columns:10px minmax(0,1fr);gap:5px 7px;align-items:center;min-width:0}
+.m-ch{font-size:10px;font-weight:700;color:var(--meter-dim);line-height:1}
+.m-bar{position:relative;height:9px;border-radius:3px;overflow:hidden;background:var(--meter-track)}
+.m-bar::before,.m-fill{content:"";position:absolute;inset:0;border-radius:3px;background:var(--meter-grad);
+  -webkit-mask:repeating-linear-gradient(90deg,#000 0 3px,transparent 3px 4px);mask:repeating-linear-gradient(90deg,#000 0 3px,transparent 3px 4px)}
+.m-bar::before{opacity:.16}
+.m-fill{clip-path:inset(0 calc(100% - var(--v, 0%)) 0 0);filter:brightness(1.12) drop-shadow(0 0 3px rgba(147,192,31,.5))}
+.m-peak{position:absolute;top:0;bottom:0;width:2px;left:var(--p, 0%);margin-left:-2px;background:#fff;border-radius:1px;box-shadow:0 0 6px rgba(255,255,255,.7);z-index:1}
+.m-scale{grid-column:2;position:relative;height:12px;font-size:9.5px;font-weight:600;color:var(--meter-dim);font-variant-numeric:tabular-nums}
+.m-scale span{position:absolute;top:1px;transform:translateX(-50%)}
+.m-scale span:last-child{transform:translateX(-100%)}
+.m-scale span::before{content:"";position:absolute;left:50%;top:-4px;width:1px;height:3px;background:var(--meter-dim);opacity:.6}
+.m-scale span:last-child::before{left:auto;right:0}
+.m-read{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;line-height:1;color:var(--meter-ink);font-variant-numeric:tabular-nums}
+.m-db{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em}
+.m-read small{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--meter-dim);margin-top:3px}
+.mon.off .m-rows,.mon.off .m-read{opacity:.4}
+.np{display:flex;flex-direction:column;gap:6px;min-width:0;padding:0 2px}
+.np-now{display:flex;flex-direction:column;gap:2px;min-width:0}
+.np-lbl{font-family:var(--font-display);font-weight:700;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.np-t,.np-a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
+.np-t{font-weight:700;font-size:14.5px;color:var(--ink)}
+.np-a{font-size:13px;font-weight:500;color:var(--ink-2);min-height:1.3em}
+.np-now.vide .np-t{font-weight:500;color:var(--muted)}
+.np-hist{display:flex;flex-direction:column;gap:3px;border-top:1px solid var(--line);padding-top:6px;min-width:0}
+.np-hist:empty{display:none}
+.np-row{display:grid;grid-template-columns:38px minmax(0,1fr);gap:6px;font-size:12.5px;color:var(--ink-2);min-width:0}
+.np-row time{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600}
+.np-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-row b{font-weight:600;color:var(--ink)}
 .mon.alerte{border-color:var(--rec);animation:alarme 1s steps(1,end) infinite}
-.mon.alerte .mon-st{color:var(--rec)}
-.mon.alerte .mon-st .dot{background:var(--rec)}
 @keyframes alarme{50%{background:var(--rec-soft)}}
 
 .note{grid-area:note;margin:0;background:var(--panel);border-left:4px solid var(--ink-2);border-radius:6px;padding:10px 14px;font-size:14px}
@@ -258,7 +279,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   .keys{display:none}
   .tc{align-items:flex-start}
 }
-@media (prefers-reduced-motion:reduce){.mon.alerte{animation:none;background:var(--rec-soft)}}
+@media (prefers-reduced-motion:reduce){.mon.alerte,.mon.alerte .lamp{animation:none}.mon.alerte{background:var(--rec-soft)}}
 @media (prefers-reduced-motion:reduce){.src-state.on .dot,.tbtn.live .dot{animation:none!important}.lk-acc,.lk-tag,.deck,.tbtn.play{transition:none}}
 </style>
 </head>
@@ -288,7 +309,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   </header>
 
   <section class="monitor" aria-label="Surveillance des flux">
-    <div class="mon-head"><h2 class="label">Surveillance des flux</h2><span class="grp"><span class="mon-sum" id="monSum" role="status">Connexion à la mesure…</span><button class="btn mon-go" type="button" id="monGo" hidden>Activer la mesure en direct</button></span></div>
+    <div class="mon-head"><h2 class="label">Surveillance des flux</h2><span class="mon-sum" id="monSum" role="status">Connexion aux flux…</span></div>
     <div class="mon-grid" id="monGrid"></div>
   </section>
 
@@ -1083,16 +1104,26 @@ let lastDraw = 0;
 /* ---------- Surveillance des flux (niveaux en direct envoyés par le programme de pige) ---------- */
 const mon = { data: null, at: 0, vu: false, es: null, cards: [], last: 0, retry: 0 };
 const TITRE = document.title;
-const vuPct = db => Math.max(0, Math.min(100, (db + 60) / 60 * 100));
+/* Échelle des vu-mètres : graduée comme une console (le haut de l'échelle prend plus de place) */
+const ECHELLE = [[-60, 0], [-40, 14], [-30, 26], [-20, 44], [-12, 62], [-6, 79], [-3, 89], [0, 100]];
+const vuPct = db => {
+  if (db <= ECHELLE[0][0]) return 0;
+  for (let k = 1; k < ECHELLE.length; k++){
+    const [d1, p1] = ECHELLE[k], [d0, p0] = ECHELLE[k - 1];
+    if (db <= d1) return p0 + (db - d0) / (d1 - d0) * (p1 - p0);
+  }
+  return 100;
+};
 function buildMonitor(){
-  const scale = [[-40, '−40'], [-20, '−20'], [-12, '−12'], [-6, '−6'], [0, '0']].map(([d, t]) => `<span style="left:${vuPct(d).toFixed(1)}%">${t}</span>`).join('');
-  const bar = ch => `<span class="vu-ch">${ch}</span><span class="vu-bar"><i class="vu-fill"></i><i class="vu-peak"></i></span>`;
+  const scale = [[-40, '40'], [-20, '20'], [-12, '12'], [-6, '6'], [-3, '3'], [0, '0']].map(([d, t]) => `<span style="left:${vuPct(d).toFixed(1)}%">${t}</span>`).join('');
+  const bar = ch => `<span class="m-ch">${ch}</span><span class="m-bar"><i class="m-fill"></i><i class="m-peak"></i></span>`;
   $('monGrid').innerHTML = cfg.sources.map(s => `<button class="mon off" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" aria-pressed="${s.id === st.src}" title="Écouter ${esc(s.name)} dans la pige">
-    <span class="mon-top"><svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="mon-name">${esc(s.name)}</span><span class="mon-st"><i class="dot"></i><span class="mon-txt">…</span></span></span>
-    <span class="vu" aria-hidden="true">${bar('G')}${bar('D')}<span class="vu-scale">${scale}</span></span></button>`).join('');
+    <span class="mon-top"><svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="mon-name">${esc(s.name)}</span><span class="lamp mon-txt">—</span></span>
+    <span class="meter" aria-hidden="true"><span class="m-rows">${bar('L')}${bar('R')}<span class="m-scale">${scale}</span></span><span class="m-read"><b class="m-db">—</b><small>dBFS</small></span></span>
+    <span class="np"><span class="np-now vide"><span class="np-lbl">Titre en cours</span><span class="np-t">En attente du titre…</span><span class="np-a"></span></span><span class="np-hist"></span></span></button>`).join('');
   mon.cards = [...$('monGrid').querySelectorAll('.mon')].map(el => ({
-    id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.vu-fill'), peaks: el.querySelectorAll('.vu-peak'),
-    d: [-99, -99], pk: [-99, -99], pt: [0, 0], cls: '', label: ''
+    id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'), lu: el.querySelector('.m-db'), np: el.querySelector('.np-now'), npL: el.querySelector('.np-lbl'), npT: el.querySelector('.np-t'), npA: el.querySelector('.np-a'), npH: el.querySelector('.np-hist'), npK: '',
+    d: [-99, -99], pk: [-99, -99], pt: [0, 0], cls: '', label: '', lv: ''
   }));
 }
 function connectMonitor(){
@@ -1104,77 +1135,262 @@ function connectMonitor(){
     if (mon.es && mon.es.readyState === 2){ mon.es = null; clearTimeout(mon.retry); mon.retry = setTimeout(connectMonitor, 15000); }
   };
 }
-/* Mesure dans le navigateur : la page écoute elle-même les flux, sans le son, et en mesure le niveau.
+/* Mesure dans le navigateur, dès l'ouverture de la page : la page lit elle-même les flux, décode le son
+   sans le jouer et en calcule le niveau. Comme rien n'est diffusé, aucun clic n'est nécessaire.
    Utilisée quand le programme de pige ne fournit pas les niveaux (page ouverte depuis GitHub, par exemple). */
-const bm = { on: false, ctx: null, zero: null, m: {}, sansCors: {} };
+const bm = { on: false, dec: null, m: {}, sansCors: {}, sansIcy: {} };
+/* Titres joués : lus dans le flux (métadonnées ICY qu'Icecast insère quand on les demande), gardés 24 h dans ce navigateur. */
+const titres = {};
+function titresDe(id){
+  if (!titres[id]){
+    const limite = Date.now() - 864e5;
+    titres[id] = (store.get('titres.' + id, []) || []).filter(x => x && x.t > limite && x.titre).slice(0, 12);
+  }
+  return titres[id];
+}
+function nouveauTitre(id, titre){
+  titre = (titre || '').replace(/\s+/g, ' ').trim();
+  if (!titre || titre === '-' ) return;
+  const liste = titresDe(id);
+  if (liste[0] && liste[0].titre === titre) return;
+  liste.unshift({ t: Date.now(), titre });
+  liste.length = Math.min(liste.length, 12);
+  store.set('titres.' + id, liste);
+}
+function lireMeta(m, octets){
+  let txt;
+  try { txt = new TextDecoder('utf-8', { fatal: true }).decode(octets); } catch(e){ txt = new TextDecoder('windows-1252').decode(octets); }
+  txt = txt.replace(/\0+$/, '');
+  const r = /StreamTitle='(.*?)';/s.exec(txt);
+  if (r){ m.icyOk = true; nouveauTitre(m.s.id, r[1]); return true; }
+  return /^\s*Stream[A-Za-z]*=/.test(txt);       // autre champ ICY (StreamUrl…) : bloc valide sans titre
+}
+const MARQUE = new TextEncoder().encode("StreamTitle='");
+function trouverMarque(b, de){
+  for (let k = b.indexOf(MARQUE[0], de); k >= 0 && k + MARQUE.length <= b.length; k = b.indexOf(MARQUE[0], k + 1)){
+    let ok = true; for (let j = 1; j < MARQUE.length; j++) if (b[k + j] !== MARQUE[j]){ ok = false; break; }
+    if (ok) return k;
+  }
+  return -1;
+}
+function ruptures(b){
+  // Nombre de cassures dans l'enchaînement des trames audio : 0 quand le son est découpé au bon endroit.
+  let i = premiereTrame(b, 0), n = 0;
+  if (i < 0) return 1e9;
+  while (i < b.length){
+    const t = trame(b, i);
+    if (!t){ n++; const j = premiereTrame(b, i + 1); if (j < 0) break; i = j; continue; }
+    if (i + t > b.length) break;
+    i += t;
+  }
+  return n;
+}
+function choisirMetaint(brut, P){
+  // Le premier titre arrive au n-ième intervalle (les précédents peuvent être vides : un seul octet nul).
+  // On garde l'intervalle qui laisse un son sans cassure.
+  let mieux = P, score = Infinity;
+  for (let n = 1; n <= 8; n++){
+    if ((P + 1) % n) continue;
+    const M = (P + 1) / n - 1;
+    if (M < 1024) break;
+    const parts = []; let ok = true;
+    for (let j = 1; j <= n; j++){
+      parts.push(brut.subarray((j - 1) * (M + 1), (j - 1) * (M + 1) + M));
+      if (j < n && brut[j * (M + 1) - 1] !== 0){ ok = false; break; }
+    }
+    if (!ok) continue;
+    const r = ruptures(joindre(parts, n * M));
+    if (r < score){ score = r; mieux = M; }
+    if (r === 0) break;
+  }
+  return mieux;
+}
+function deduireIcy(m, v){
+  // Le serveur a accepté la demande de titres sans dire tous les combien d'octets il les insère :
+  // on le déduit de la position du premier bloc de titre.
+  const b = m.brut ? joindre([m.brut, v], m.brut.length + v.length) : v, pos = m.brutPos || 0;
+  m.brut = null;
+  const k = trouverMarque(b, 0);
+  if (k > 0 && b[k - 1] > 0 && pos + k - 1 >= 1024){
+    const P = pos + k - 1;
+    (m.copie = m.copie || []).push(b.subarray(0, k - 1));
+    m.icy = { metaint: choisirMetaint(joindre(m.copie, P), P), audio: 0, lg: -1, lu: 0, parts: [] };
+    m.copie = null;
+    const suite = filtrerIcy(m, b.subarray(k - 1));
+    return suite && joindre([b.subarray(0, k - 1), suite], k - 1 + suite.length);
+  }
+  if (pos + b.length > 160000){ m.icyDemande = false; m.copie = null; return b; }   // aucun titre inséré : flux lu tel quel
+  const garde = Math.min(b.length, MARQUE.length + 1);                                 // de quoi retrouver un repère coupé en deux
+  m.brut = b.slice(b.length - garde); m.brutPos = pos + b.length - garde;
+  const sortie = b.subarray(0, b.length - garde);
+  (m.copie = m.copie || []).push(sortie);
+  return sortie;
+}
+function filtrerIcy(m, v){
+  // Le serveur intercale un bloc de métadonnées tous les « metaint » octets : on le retire avant de décoder le son.
+  const y = m.icy, morceaux = []; let n = 0, i = 0;
+  while (i < v.length){
+    if (y.audio > 0){
+      const k = Math.min(y.audio, v.length - i); morceaux.push(v.subarray(i, i + k)); n += k; i += k; y.audio -= k;
+    } else if (y.lg < 0){
+      y.lg = v[i++] * 16; y.lu = 0; y.parts = [];
+      if (y.lg === 0){ y.lg = -1; y.audio = y.metaint; }
+    } else {
+      const k = Math.min(y.lg - y.lu, v.length - i); y.parts.push(v.subarray(i, i + k)); y.lu += k; i += k;
+      if (y.lu >= y.lg){
+        if (!lireMeta(m, joindre(y.parts, y.lg))){ m.icyKo = true; return null; }   // découpage incohérent
+        y.lg = -1; y.audio = y.metaint;
+      }
+    }
+  }
+  return joindre(morceaux, n);
+}
 const progActif = () => mon.data && performance.now() - mon.at < 3000;
+const FEN = 50;                                   // une valeur de niveau toutes les 50 ms
+const dbms = x => x > 1e-10 ? 10 * Math.log10(x) : -99;
+/* Découpe exacte du flux en trames MP3 ou AAC (ADTS) : chaque morceau envoyé au décodeur commence et finit
+   sur une frontière de trame, en suivant la longueur indiquée dans l'en-tête de chaque trame. */
+const BR1 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320], BR2 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160];
+const SRT = { 3: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000] };
+function trame(b, i){
+  if (i + 6 > b.length || b[i] !== 0xFF) return 0;
+  const b1 = b[i + 1];
+  if ((b1 & 0xF6) === 0xF0){ const n = ((b[i + 3] & 3) << 11) | (b[i + 4] << 3) | (b[i + 5] >> 5); return n >= 7 ? n : 0; }   // AAC (ADTS)
+  if ((b1 & 0xE0) !== 0xE0) return 0;
+  const ver = (b1 >> 3) & 3, couche = (b1 >> 1) & 3;
+  if (ver === 1 || couche !== 1) return 0;                                                                          // MP3 (couche III)
+  const br = b[i + 2] >> 4, sr = (b[i + 2] >> 2) & 3, pad = (b[i + 2] >> 1) & 1;
+  if (br === 0 || br === 15 || sr === 3) return 0;
+  const kb = (ver === 3 ? BR1 : BR2)[br], hz = SRT[ver][sr];
+  return Math.floor((ver === 3 ? 144000 : 72000) * kb / hz) + pad;
+}
+const debutTrame = (b, i) => { const n = trame(b, i); return n > 0 && (i + n + 6 > b.length || trame(b, i + n) > 0); };
+function premiereTrame(b, k){ for (let i = k; i < b.length - 5; i++) if (debutTrame(b, i)) return i; return -1; }
+function joindre(parts, n){ const o = new Uint8Array(n); let k = 0; for (const x of parts){ o.set(x, k); k += x.length; } return o; }
 function bmStart(){
-  if (bm.on || progActif()) return;
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC){ toast('Ce navigateur ne permet pas de mesurer les flux.'); return; }
-  try { bm.ctx = new AC(); } catch(e){ return; }
+  if (bm.on) return;
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  try { bm.dec = OAC ? new OAC(2, 44100, 44100) : null; } catch(e){ bm.dec = null; }
   bm.on = true;
-  bm.zero = bm.ctx.createGain(); bm.zero.gain.value = 0; bm.zero.connect(bm.ctx.destination);   // traité, jamais entendu
   for (const s of cfg.sources) if (s.stream) bmOpen(s);
-  $('monGo').hidden = true;
-  store.set('mesure', true);
+}
+function bmStop(){
+  if (!bm.on) return;
+  bm.on = false;
+  for (const id in bm.m) bmFerme(bm.m[id]);
+  bm.m = {};
+}
+function bmFerme(m){
+  m.mort = true; clearTimeout(m.retry);
+  try { if (m.ac) m.ac.abort(); } catch(e){}
+  if (m.a){ try { m.a.pause(); m.a.removeAttribute('src'); m.a.load(); } catch(e){} }
 }
 function bmOpen(s){
   const old = bm.m[s.id];
-  if (old){ clearTimeout(old.retry); old.mort = true; try { old.a.pause(); old.a.removeAttribute('src'); old.a.load(); } catch(e){} }
-  const cors = !bm.sansCors[s.id];
-  const a = new Audio();
-  a.preload = 'none';
-  if (cors) a.crossOrigin = 'anonymous'; else a.muted = true;
-  const m = { s, a, cors, mesurable: false, an: null, buf: null, l: -99, r: -99, silence: null,
-              essais: old ? old.essais : 0, etat: 'connexion', vu: performance.now(), pos: -1, retry: 0, mort: false };
+  if (old) bmFerme(old);
+  const m = { s, mode: '', etat: 'connexion', mesurable: false, q: [], t: 0, joue: false, l: -99, r: -99, silence: null,
+              essais: old ? old.essais : 0, vu: performance.now(), mort: false, reste: null, echecs: 0, retry: 0, chaine: Promise.resolve() };
   bm.m[s.id] = m;
-  if (cors){
-    try {
-      const src = bm.ctx.createMediaElementSource(a), sp = bm.ctx.createChannelSplitter(2);
-      src.connect(sp);
-      m.an = [0, 1].map(i => { const n = bm.ctx.createAnalyser(); n.fftSize = 2048; sp.connect(n, i); n.connect(bm.zero); return n; });
-      m.buf = new Float32Array(2048);
-      m.mesurable = true;
-    } catch(e){}
+  if (bm.dec && window.fetch && !bm.sansCors[s.id]) bmLire(m); else bmEcoute(m, false);
+}
+async function bmLire(m){
+  m.mode = 'mesure';
+  m.ac = new AbortController();
+  let rep;
+  const avecTitres = !(bm.sansIcy[m.s.id] > Date.now() - 6e5);   // après un refus, on redemande les titres 10 min plus tard
+  try { rep = await fetch(m.s.stream, { signal: m.ac.signal, cache: 'no-store', headers: avecTitres ? { 'Icy-MetaData': '1' } : {} }); }
+  catch(e){
+    if (m.mort || m.mode !== 'mesure') return;
+    if (avecTitres){ bm.sansIcy[m.s.id] = Date.now(); bmLire(m); return; }   // le serveur refuse qu'on demande les titres : mesure seule
+    bmEcoute(m, true); return;                                                 // serveur qui refuse la lecture, ou flux injoignable
   }
-  a.addEventListener('playing', () => { if (m.mort) return; m.etat = 'ok'; m.vu = performance.now(); });
-  a.addEventListener('timeupdate', () => { if (!m.mort && a.currentTime !== m.pos){ m.pos = a.currentTime; m.vu = performance.now(); if (m.etat === 'ok') m.essais = 0; } });
+  if (m.mort) return;
+  if (!rep.ok || !rep.body){ bmEchec(m); return; }
+  const metaint = avecTitres ? parseInt(rep.headers.get('icy-metaint') || '0', 10) : 0;
+  m.icy = metaint > 0 ? { metaint, audio: metaint, lg: -1, lu: 0, parts: [] } : null;
+  m.icyDemande = avecTitres;
+  const lecteur = rep.body.getReader();
+  let morceaux = [], taille = 0;
+  try {
+    while (!m.mort && m.mode === 'mesure'){
+      let { value, done } = await lecteur.read();
+      if (done) break;
+      m.vu = performance.now();
+      if (m.icy) value = filtrerIcy(m, value); else if (m.icyDemande) value = deduireIcy(m, value);
+      if (!value){                                   // titres mal découpés : on se reconnecte sans les demander
+        bm.sansIcy[m.s.id] = Date.now(); try { m.ac.abort(); } catch(e){}
+        bmOpen(m.s); return;
+      }
+      morceaux.push(value); taille += value.length;
+      if (taille >= 8000){ bmDecoder(m, joindre(morceaux, taille)); morceaux = []; taille = 0; }
+    }
+  } catch(e){}
+  if (!m.mort && m.mode === 'mesure') bmEchec(m);
+}
+function bmDecoder(m, bloc){
+  let b = bloc;
+  if (m.reste){ b = joindre([m.reste, bloc], m.reste.length + bloc.length); m.reste = null; }
+  let i = premiereTrame(b, 0);
+  if (i < 0){ m.reste = b.slice(-6); return; }
+  const i0 = i; let iN = i;
+  while (i < b.length){
+    const n = trame(b, i);
+    if (!n){ const j = premiereTrame(b, i + 1); if (j < 0) break; i = j; continue; }
+    if (i + n > b.length) break;
+    i += n; iN = i;
+  }
+  m.reste = b.slice(iN);                              // la trame incomplète attend le morceau suivant
+  if (iN <= i0) return;
+  const morceau = b.slice(i0, iN).buffer;
+  m.chaine = m.chaine.then(() => new Promise(fin => {
+    const ok = buf => { fin(); if (!m.mort && buf) bmEnveloppe(m, buf); };
+    const ko = () => { fin(); m.echecs++; if (m.echecs > 8 && !m.mesurable && !m.mort) bmEcoute(m, false); };
+    try { const pr = bm.dec.decodeAudioData(morceau, ok, ko); if (pr && pr.catch) pr.catch(() => {}); } catch(e){ ko(); }
+  }));
+}
+function bmEnveloppe(m, buf){
+  const n = Math.max(1, Math.round(buf.sampleRate * FEN / 1000));
+  const c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : c0;
+  for (let k = 0; k + n <= c0.length; k += n){
+    let a = 0, b = 0;
+    for (let j = k; j < k + n; j++){ a += c0[j] * c0[j]; b += c1[j] * c1[j]; }
+    m.q.push([dbms(a / n), dbms(b / n)]);
+  }
+  if (m.q.length > 80) m.q.splice(0, m.q.length - 40);   // rester proche du direct
+  m.echecs = 0;
+  if (!m.mesurable){ m.mesurable = true; m.etat = 'ok'; m.essais = 0; }
+}
+function bmEcoute(m, apresRefus){
+  // Le son ne peut pas être analysé : on vérifie au moins que le flux arrive (lecture muette, autorisée sans clic).
+  m.mode = 'ecoute'; m.mesurable = false; m.etat = 'connexion';
+  try { if (m.ac) m.ac.abort(); } catch(e){}
+  const a = m.a = new Audio();
+  a.muted = true; a.preload = 'auto';
+  a.addEventListener('playing', () => { if (m.mort) return; m.etat = 'ok'; m.vu = performance.now(); m.essais = 0; if (apresRefus) bm.sansCors[m.s.id] = true; });
+  a.addEventListener('timeupdate', () => { if (!m.mort) m.vu = performance.now(); });
   a.addEventListener('error', () => bmEchec(m));
-  a.src = s.stream;
+  a.src = m.s.stream;
   a.play().catch(() => {});
-  if (bm.ctx.state === 'suspended') bm.ctx.resume().catch(() => {});
 }
 function bmEchec(m){
-  if (m.mort) return;
-  if (m.cors && m.etat === 'connexion' && !m.testSansCors){
-    // Le flux ne s'ouvre pas en mode mesure : soit il est coupé, soit son serveur refuse la mesure.
-    // On essaie sans mesure ; s'il joue ainsi, c'est que le serveur refuse la mesure.
-    bm.sansCors[m.s.id] = 'test';
-    const s = m.s; bmOpen(s); const n = bm.m[s.id]; n.testSansCors = true;
-    n.a.addEventListener('playing', () => { bm.sansCors[s.id] = true; }, { once: true });
-    return;
-  }
-  if (bm.sansCors[m.s.id] === 'test') delete bm.sansCors[m.s.id];   // coupé aussi sans mesure : on retentera la mesure
-  m.etat = 'coupe'; m.essais++;
+  if (m.mort || m.echec) return;
+  m.echec = true; m.etat = 'coupe'; m.mesurable = false; m.essais++;
+  try { if (m.ac) m.ac.abort(); } catch(e){}
+  if (m.a){ try { m.a.pause(); } catch(e){} }
   clearTimeout(m.retry);
   m.retry = setTimeout(() => { if (!m.mort) bmOpen(m.s); }, Math.min(30000, 3000 * m.essais));
 }
-setInterval(() => {                       // chien de garde : un flux qui n'avance plus depuis 8 s est relancé
-  if (!bm.on) return;
+setInterval(() => {
   const now = performance.now();
-  for (const id in bm.m){
+  // Le programme de pige fournit les niveaux : inutile de lire les flux en double.
+  if (progActif()){ if (bm.on) bmStop(); return; }
+  if (!bm.on && now > 2500){ bmStart(); return; }
+  for (const id in bm.m){                          // chien de garde : un flux qui n'arrive plus depuis 8 s est relancé
     const m = bm.m[id];
     if (m.mort || m.etat === 'coupe') continue;
     if (now - m.vu > (m.etat === 'ok' ? 8000 : 15000)) bmEchec(m);
   }
 }, 1000);
-function bmNiveau(m, i){
-  m.an[i].getFloatTimeDomainData(m.buf);
-  let s = 0; for (let k = 0; k < m.buf.length; k++) s += m.buf[k] * m.buf[k];
-  const rms = Math.sqrt(s / m.buf.length);
-  return rms > 1e-5 ? 20 * Math.log10(rms) : -99;
-}
 function bmSnapshot(now){
   const seuil = cfg.silence?.thresholdDb ?? -50, min = cfg.silence?.minSeconds ?? 10, out = {};
   for (const s of cfg.sources){
@@ -1182,13 +1398,60 @@ function bmSnapshot(now){
     if (!m) continue;
     if (m.etat !== 'ok'){ out[s.id] = { etat: m.etat, l: -99, r: -99 }; continue; }
     if (m.mesurable){
-      m.l = bmNiveau(m, 0); m.r = bmNiveau(m, 1);
-      if (Math.max(m.l, m.r) < seuil){ if (!m.silence) m.silence = now; } else m.silence = null;
+      // Les niveaux décodés sont rejoués au rythme réel, avec environ une seconde de réserve.
+      if (!m.joue && m.q.length >= 20){ m.joue = true; m.t = now; }
+      if (m.joue){
+        const pas = Math.floor((now - m.t) / FEN);
+        if (pas > 0){
+          m.t += pas * FEN;
+          let f = null; for (let k = 0; k < pas && m.q.length; k++) f = m.q.shift();
+          if (f){
+            m.l = f[0]; m.r = f[1];
+            if (Math.max(m.l, m.r) < seuil){ if (!m.silence) m.silence = now; } else m.silence = null;
+          }
+          if (!m.q.length) m.joue = false;            // réserve vide : on attend le morceau suivant
+        }
+      }
     }
     const sil = m.silence ? Math.floor((now - m.silence) / 1000) : 0;
-    out[s.id] = { etat: sil >= min ? 'blanc' : 'ok', l: m.mesurable ? m.l : -99, r: m.mesurable ? m.r : -99, silence: sil, mesurable: m.mesurable };
+    out[s.id] = { etat: sil >= min ? 'blanc' : 'ok', l: m.mesurable ? m.l : -99, r: m.mesurable ? m.r : -99, silence: sil, mesurable: m.mesurable,
+                  titres: m.icyDemande ? (m.icyOk ? 'ok' : 'attente') : 'indispo' };
   }
   return out;
+}
+
+const hhmm = t => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+function decouper(x){
+  // Format envoyé à Infomaniak : « artiste - titre ».
+  const k = x.indexOf(' - ');
+  return k > 0 ? { artiste: x.slice(0, k).trim(), titre: x.slice(k + 3).trim() || x } : { artiste: '', titre: x };
+}
+function afficherTitres(c, src, prog){
+  let etat = src ? src.titres : undefined;
+  if (prog){                                       // niveaux fournis par le programme de pige : titres seulement s'il les donne
+    if (src && typeof src.titre === 'string'){ nouveauTitre(c.id, src.titre); etat = 'ok'; } else etat = 'indispo';
+  }
+  const liste = titresDe(c.id);
+  const cle = (liste[0] ? liste[0].t + liste[0].titre : '') + '|' + etat + '|' + liste.length;
+  if (cle === c.npK) return;
+  c.npK = cle;
+  const dernier = liste[0];
+  if (dernier && etat !== 'indispo'){
+    const d = decouper(dernier.titre);
+    c.np.classList.remove('vide');
+    c.npL.textContent = `Titre en cours · ${hhmm(dernier.t)}`;
+    c.npT.textContent = d.titre; c.npT.title = d.titre;
+    c.npA.textContent = d.artiste; c.npA.title = d.artiste;
+  } else {
+    c.np.classList.add('vide');
+    c.npL.textContent = 'Titre en cours';
+    c.npT.textContent = etat === 'indispo' ? 'Titres non disponibles' : 'En attente du titre…';
+    c.npT.title = ''; c.npA.textContent = ''; c.npA.title = '';
+  }
+  c.npH.innerHTML = (etat === 'indispo' ? [] : liste.slice(1, 4)).map(x => {
+    const d = decouper(x.titre);
+    return `<span class="np-row"><time>${hhmm(x.t)}</time><span title="${esc(x.titre)}"><b>${esc(d.titre)}</b>${d.artiste ? ' · ' + esc(d.artiste) : ''}</span></span>`;
+  }).join('');
 }
 
 function fmtSilence(sec){ return `${Math.floor(sec / 60)}:${pad(sec % 60)}`; }
@@ -1204,10 +1467,9 @@ function monFrame(now){
     if (!fresh){ cls = 'off'; label = '—'; }
     else if (!src){ cls = 'off'; label = 'Non surveillé'; }
     else if (src.etat === 'connexion'){ cls = 'off'; label = 'Connexion…'; }
-    else if (src.etat === 'coupe'){ cls = 'alerte'; label = 'Flux coupé'; alertes.push(`${srcName(c.id)} : flux coupé`); }
+    else if (src.etat === 'coupe'){ cls = 'alerte'; label = 'Coupé'; alertes.push(`${srcName(c.id)} : flux coupé`); }
     else if (src.etat === 'blanc'){ cls = 'alerte'; label = `Blanc ${fmtSilence(src.silence)}`; alertes.push(`${srcName(c.id)} : blanc depuis ${fmtSilence(src.silence)}`); }
-    else if (src.mesurable === false){ cls = 'ok'; label = 'Flux reçu'; nonMesures.push(srcName(c.id)); }
-    else { cls = 'ok'; label = 'En onde'; }
+    else { cls = 'ok'; label = 'On air'; if (src.mesurable === false) nonMesures.push(srcName(c.id)); }
     if (cls !== c.cls){ c.el.classList.remove('ok', 'off', 'alerte'); c.el.classList.add(cls); c.cls = cls; }
     if (label !== c.label){ c.txt.textContent = label; c.label = label; }
     const target = [src && src.etat !== 'coupe' ? src.l : -99, src && src.etat !== 'coupe' ? src.r : -99];
@@ -1220,15 +1482,17 @@ function monFrame(now){
       c.peaks[i].style.setProperty('--p', p.toFixed(1) + '%');
       c.peaks[i].style.opacity = p > 1 ? '' : '0';
     }
+    afficherTitres(c, src, prog);
+    const niv = Math.max(c.d[0], c.d[1]);
+    const lv = cls === 'ok' && src && src.mesurable !== false && niv > -60 ? String(Math.round(niv)).replace('-', '−') : '—';
+    if (lv !== c.lv){ c.lu.textContent = lv; c.lv = lv; }
   }
   const sum = $('monSum');
   let txt, alert = alertes.length > 0;
-  if (!fresh) txt = mon.vu ? 'Le programme de pige ne répond plus.' : 'Mesure en direct à l\'arrêt.';
+  if (!fresh) txt = 'Connexion aux flux…';
   else if (alert) txt = (alertes.length > 1 ? `${alertes.length} alertes · ` : 'Alerte · ') + alertes.join(' · ');
-  else txt = `${mon.cards.length} flux en onde` + (prog ? '' : ' · mesuré par ce navigateur');
+  else txt = `${mon.cards.length} flux on air`;
   if (fresh && !prog && nonMesures.length) txt += ` · niveau non mesurable : ${nonMesures.join(', ')}`;
-  const go = $('monGo'), montrer = !fresh && !bm.on;
-  if (go.hidden === montrer) go.hidden = !montrer;
   if (sum.textContent !== txt){ sum.textContent = txt; sum.classList.toggle('alerte', alert || (mon.vu && !fresh)); }
   const titre = alert ? `(!) ${alertes[0]} · ${TITRE}` : TITRE;
   if (document.title !== titre) document.title = titre;
@@ -1293,11 +1557,6 @@ async function init(){
   buildMonitor();
   readColors(); bind(); renderSources(); renderData(); renderExtraits(); checkPige();
   connectMonitor();
-  $('monGo').onclick = bmStart;
-  // Les navigateurs n'autorisent le son qu'après un geste : la mesure démarre au premier clic ou à la première touche.
-  const premierGeste = () => { if (!progActif()) bmStart(); else if (bm.ctx) bm.ctx.resume(); };
-  addEventListener('pointerdown', premierGeste, { once: true, capture: true });
-  addEventListener('keydown', premierGeste, { once: true, capture: true });
   // Onglet en arrière-plan : on continue de surveiller (alerte dans le titre de l'onglet).
   setInterval(() => { if (document.hidden) monFrame(performance.now()); }, 1000);
   setInterval(() => { $('nowClock').textContent = fmtClock(Date.now()); }, 1000);
