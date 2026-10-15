@@ -24,6 +24,7 @@
   --accent-soft:color-mix(in srgb, var(--accent) 13%, var(--panel-2));
   --accent-text:color-mix(in srgb, var(--accent) 82%, #000);
   --tag:var(--accent);
+  --c-mix:88%; --c-to:#000;   /* couleur de chaîne en texte : assombrie en clair, éclaircie en sombre */
   --rec:#e4032e; --rec-soft:#fbdde3; --focus:#005ea1;
   --meter-bg:#1a181e; --meter-track:#0e0d11; --meter-ink:#f3f2f5; --meter-dim:#8d8896;   /* écran des vu-mètres, sombre dans les deux thèmes */
   --meter-grad:linear-gradient(90deg,#5fae2e 0%,#93c01f 52%,#e8d21d 66%,#f59c00 80%,#e4032e 91%,#e4032e 100%);
@@ -37,7 +38,7 @@
     --hatch:#3a3642; --wave:#5d5867; --rec-bar:#a7a1b3;
     --accent-soft:color-mix(in srgb, var(--accent) 22%, var(--panel-2));
     --accent-text:color-mix(in srgb, var(--accent) 62%, #fff);
-    --rec:#ff2e52; --rec-soft:#3d1520; --focus:#6fb2ea; --tag:var(--accent-text);
+    --rec:#ff2e52; --rec-soft:#3d1520; --focus:#6fb2ea; --tag:var(--accent-text); --c-mix:68%; --c-to:#fff;
     color-scheme:dark;
   }
 }
@@ -46,7 +47,7 @@
   --hatch:#3a3642; --wave:#5d5867; --rec-bar:#a7a1b3;
   --accent-soft:color-mix(in srgb, var(--accent) 22%, var(--panel-2));
   --accent-text:color-mix(in srgb, var(--accent) 62%, #fff);
-  --rec:#ff2e52; --rec-soft:#3d1520; --focus:#6fb2ea; --tag:var(--accent-text);
+  --rec:#ff2e52; --rec-soft:#3d1520; --focus:#6fb2ea; --tag:var(--accent-text); --c-mix:68%; --c-to:#fff;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -91,9 +92,9 @@ button{cursor:pointer}
 .lamp{flex:none;display:inline-flex;align-items:center;gap:7px;font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-spacing:.02em;line-height:1;
   padding:5px 10px 5px 8px;border-radius:999px;color:var(--muted);background:var(--panel);white-space:nowrap;font-variant-numeric:tabular-nums;transition:background .3s,color .3s}
 .lamp::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.55}
-.mon.ok .lamp{color:var(--ink)}
-.mon.ok .lamp::before{background:#e4032e;opacity:1;animation:pouls 2s ease-out infinite}
-@keyframes pouls{0%{box-shadow:0 0 0 0 rgba(228,3,46,.5)}70%,100%{box-shadow:0 0 0 6px rgba(228,3,46,0)}}
+.mon.ok .lamp{font-size:0;gap:0;padding:8px;background:transparent}
+.mon.ok .lamp::before{width:10px;height:10px;background:#e4032e;opacity:1;animation:pouls 2s ease-out infinite}
+@keyframes pouls{0%{box-shadow:0 0 0 0 rgba(228,3,46,.55)}70%,100%{box-shadow:0 0 0 8px rgba(228,3,46,0)}}
 .mon.alerte .lamp{color:#fff;background:var(--rec)}
 .mon.alerte .lamp::before{background:#fff;opacity:1;animation:clign 1s steps(1,end) infinite}
 @keyframes clign{50%{opacity:.25}}
@@ -114,6 +115,8 @@ button{cursor:pointer}
 .m-scale span:last-child::before{left:auto;right:0}
 .mon.off .m-rows{opacity:.4}
 .np{display:flex;flex-direction:column;gap:2px;min-width:0;padding:0 2px}
+.np-lbl{font-family:var(--font-display);font-weight:700;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;line-height:1.2;margin-bottom:3px;
+  color:color-mix(in srgb, var(--c) var(--c-mix), var(--c-to))}
 .np-t,.np-a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
 .np-t{font-weight:700;font-size:14.5px;color:var(--ink)}
 .np-a{font-size:13px;font-weight:500;color:var(--ink-2);min-height:1.3em}
@@ -410,7 +413,7 @@ const DEFAULT_CONFIG = {
   silence: { thresholdDb: -50, minSeconds: 10 },
   sources: [
     { id: 'montecarlo',  name: 'Monte-Carlo',   group: 'depart',   note: 'Antenne principale', color: '#e4032e', stream: 'https://radiomonaco.ice.infomaniak.ch/radiomonaco-128.mp3' },
-    { id: 'paris',       name: 'Paris',         group: 'depart',   note: 'Antenne Paris',      color: '#e4032e', stream: 'https://radiomonacoparis.ice.infomaniak.ch/radiomonacoparis-320.aac' },
+    { id: 'paris',       name: 'Paris',         group: 'depart',   note: 'Antenne Paris',      color: '#e4032e', stream: 'https://radiomonacoparis.ice.infomaniak.ch/radiomonacoparis-320.aac', titresDe: 'montecarlo' },
     { id: 'mixdj',       name: '100 % Mix DJ',  group: 'webradio', note: 'Webradio',           color: '#f59c00', stream: 'https://mixdj.ice.infomaniak.ch/mixdj-128.aac' },
     { id: 'nightmood',   name: 'Night Mood',    group: 'webradio', note: 'Webradio',           color: '#8a5aa1', stream: 'https://nightmood.ice.infomaniak.ch/nightmood-128.aac' }
   ]
@@ -1113,7 +1116,7 @@ function buildMonitor(){
   $('monGrid').innerHTML = cfg.sources.map(s => `<button class="mon off" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" aria-pressed="${s.id === st.src}" title="Écouter ${esc(s.name)} dans la pige">
     <span class="mon-top"><svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="mon-name">${esc(s.name)}</span><span class="lamp mon-txt">—</span></span>
     <span class="meter" aria-hidden="true"><span class="m-rows">${bar('L')}${bar('R')}<span class="m-scale">${scale}</span></span></span>
-    <span class="np vide"><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></button>`).join('');
+    <span class="np vide"><span class="np-lbl">Now playing</span><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></button>`).join('');
   mon.cards = [...$('monGrid').querySelectorAll('.mon')].map(el => ({
     id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'), np: el.querySelector('.np'), npT: el.querySelector('.np-t'), npA: el.querySelector('.np-a'), npK: '',
     d: [-99, -99], pk: [-99, -99], pt: [0, 0], cls: '', label: ''
@@ -1295,7 +1298,8 @@ function bmSnapshot(now){
 
 /* Titre en cours : chaque serveur Icecast publie une petite fiche par flux (adresse du flux + « .xspf ») qui
    contient le titre diffusé, lisible depuis n'importe quel navigateur. On la relit toutes les 10 secondes.
-   Dans config.json, "titres": "<adresse>" sur une source remplace cette fiche, "titres": false masque le titre. */
+   Dans config.json, sur une source : "titresDe": "<id>" reprend le titre d'une autre chaîne (mêmes programmes),
+   "titres": "<adresse>" remplace la fiche, "titres": false masque le titre. */
 const titres = {};
 let titresTour = 0;
 function adresseTitre(s){ return s.titres === false ? '' : typeof s.titres === 'string' ? s.titres : s.stream ? s.stream + '.xspf' : ''; }
@@ -1315,7 +1319,7 @@ async function lireTitre(s){
 function lireTitres(){
   // Onglet en arrière-plan : une lecture sur trois suffit.
   if (document.hidden && titresTour++ % 3) return;
-  for (const s of cfg.sources) lireTitre(s);
+  for (const s of cfg.sources) if (!s.titresDe) lireTitre(s);
 }
 function decouper(x){
   // Format envoyé par le logiciel de diffusion : « ARTISTE - TITRE ».
@@ -1323,7 +1327,8 @@ function decouper(x){
   return k > 0 ? { artiste: x.slice(0, k).trim(), titre: x.slice(k + 3).trim() || x } : { artiste: '', titre: x };
 }
 function afficherTitres(c){
-  const t = titres[c.id] || { etat: 'attente', titre: '' };
+  const s = cfg.sources.find(x => x.id === c.id) || {};
+  const t = titres[s.titresDe || c.id] || { etat: 'attente', titre: '' };
   const cle = t.etat + '|' + t.titre;
   if (cle === c.npK) return;
   c.npK = cle;
@@ -1354,9 +1359,9 @@ function monFrame(now){
     else if (src.etat === 'connexion'){ cls = 'off'; label = 'Connexion…'; }
     else if (src.etat === 'coupe'){ cls = 'alerte'; label = 'Coupé'; alertes.push(`${srcName(c.id)} : flux coupé`); }
     else if (src.etat === 'blanc'){ cls = 'alerte'; label = `Blanc ${fmtSilence(src.silence)}`; alertes.push(`${srcName(c.id)} : blanc depuis ${fmtSilence(src.silence)}`); }
-    else { cls = 'ok'; label = 'On air'; if (src.mesurable === false) nonMesures.push(srcName(c.id)); }
+    else { cls = 'ok'; label = 'En direct'; if (src.mesurable === false) nonMesures.push(srcName(c.id)); }
     if (cls !== c.cls){ c.el.classList.remove('ok', 'off', 'alerte'); c.el.classList.add(cls); c.cls = cls; }
-    if (label !== c.label){ c.txt.textContent = label; c.label = label; }
+    if (label !== c.label){ c.txt.textContent = label; c.txt.title = label; c.label = label; }
     const target = [src && src.etat !== 'coupe' ? src.l : -99, src && src.etat !== 'coupe' ? src.r : -99];
     for (let i = 0; i < 2; i++){
       c.d[i] = target[i] > c.d[i] ? target[i] : Math.max(target[i], c.d[i] - 24 * dt);   // montée immédiate, retombée douce
@@ -1373,7 +1378,7 @@ function monFrame(now){
   let txt, alert = alertes.length > 0;
   if (!fresh) txt = 'Connexion aux flux…';
   else if (alert) txt = (alertes.length > 1 ? `${alertes.length} alertes · ` : 'Alerte · ') + alertes.join(' · ');
-  else txt = `${mon.cards.length} flux on air`;
+  else txt = `${mon.cards.length} flux en direct`;
   if (fresh && !prog && nonMesures.length) txt += ` · niveau non mesurable : ${nonMesures.join(', ')}`;
   if (sum.textContent !== txt){ sum.textContent = txt; sum.classList.toggle('alerte', alert || (mon.vu && !fresh)); }
   const titre = alert ? `(!) ${alertes[0]} · ${TITRE}` : TITRE;
