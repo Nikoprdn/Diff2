@@ -93,8 +93,8 @@ button{cursor:pointer}
   padding:5px 10px 5px 8px;border-radius:999px;color:var(--muted);background:var(--panel);white-space:nowrap;font-variant-numeric:tabular-nums;transition:background .3s,color .3s}
 .lamp::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.55}
 .mon.ok .lamp{font-size:0;gap:0;padding:8px;background:transparent}
-.mon.ok .lamp::before{width:10px;height:10px;background:#e4032e;opacity:1;animation:pouls 2s ease-out infinite}
-@keyframes pouls{0%{box-shadow:0 0 0 0 rgba(228,3,46,.55)}70%,100%{box-shadow:0 0 0 8px rgba(228,3,46,0)}}
+.mon.ok .lamp::before{width:10px;height:10px;background:var(--c);opacity:1;animation:pouls 2s ease-out infinite}
+@keyframes pouls{0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--c) 60%, transparent)}70%,100%{box-shadow:0 0 0 8px color-mix(in srgb, var(--c) 0%, transparent)}}
 .mon.alerte .lamp{color:#fff;background:var(--rec)}
 .mon.alerte .lamp::before{background:#fff;opacity:1;animation:clign 1s steps(1,end) infinite}
 @keyframes clign{50%{opacity:.25}}
