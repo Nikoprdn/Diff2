@@ -97,7 +97,7 @@ button{cursor:pointer}
 .mon.alerte .lamp{color:#fff;background:var(--rec)}
 .mon.alerte .lamp::before{background:#fff;opacity:1;animation:clign 1s steps(1,end) infinite}
 @keyframes clign{50%{opacity:.25}}
-.meter{display:grid;grid-template-columns:minmax(0,1fr) 54px;gap:10px;align-items:center;padding:10px 10px 6px 10px;border-radius:10px;
+.meter{display:block;padding:10px 12px 6px 10px;border-radius:10px;
   background:var(--meter-bg);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),inset 0 0 0 1px rgba(0,0,0,.25)}
 .m-rows{display:grid;grid-template-columns:10px minmax(0,1fr);gap:5px 7px;align-items:center;min-width:0}
 .m-ch{font-size:10px;font-weight:700;color:var(--meter-dim);line-height:1}
@@ -112,23 +112,12 @@ button{cursor:pointer}
 .m-scale span:last-child{transform:translateX(-100%)}
 .m-scale span::before{content:"";position:absolute;left:50%;top:-4px;width:1px;height:3px;background:var(--meter-dim);opacity:.6}
 .m-scale span:last-child::before{left:auto;right:0}
-.m-read{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;line-height:1;color:var(--meter-ink);font-variant-numeric:tabular-nums}
-.m-db{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em}
-.m-read small{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--meter-dim);margin-top:3px}
-.mon.off .m-rows,.mon.off .m-read{opacity:.4}
-.np{display:flex;flex-direction:column;gap:6px;min-width:0;padding:0 2px}
-.np-now{display:flex;flex-direction:column;gap:2px;min-width:0}
-.np-lbl{font-family:var(--font-display);font-weight:700;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.mon.off .m-rows{opacity:.4}
+.np{display:flex;flex-direction:column;gap:2px;min-width:0;padding:0 2px}
 .np-t,.np-a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
 .np-t{font-weight:700;font-size:14.5px;color:var(--ink)}
 .np-a{font-size:13px;font-weight:500;color:var(--ink-2);min-height:1.3em}
-.np-now.vide .np-t{font-weight:500;color:var(--muted)}
-.np-hist{display:flex;flex-direction:column;gap:3px;border-top:1px solid var(--line);padding-top:6px;min-width:0}
-.np-hist:empty{display:none}
-.np-row{display:grid;grid-template-columns:38px minmax(0,1fr);gap:6px;font-size:12.5px;color:var(--ink-2);min-width:0}
-.np-row time{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600}
-.np-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.np-row b{font-weight:600;color:var(--ink)}
+.np.vide .np-t{font-weight:500;color:var(--muted)}
 .mon.alerte{border-color:var(--rec);animation:alarme 1s steps(1,end) infinite}
 @keyframes alarme{50%{background:var(--rec-soft)}}
 
@@ -1123,11 +1112,11 @@ function buildMonitor(){
   const bar = ch => `<span class="m-ch">${ch}</span><span class="m-bar"><i class="m-fill"></i><i class="m-peak"></i></span>`;
   $('monGrid').innerHTML = cfg.sources.map(s => `<button class="mon off" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" aria-pressed="${s.id === st.src}" title="Écouter ${esc(s.name)} dans la pige">
     <span class="mon-top"><svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="mon-name">${esc(s.name)}</span><span class="lamp mon-txt">—</span></span>
-    <span class="meter" aria-hidden="true"><span class="m-rows">${bar('L')}${bar('R')}<span class="m-scale">${scale}</span></span><span class="m-read"><b class="m-db">—</b><small>dBFS</small></span></span>
-    <span class="np"><span class="np-now vide"><span class="np-lbl">Titre en cours</span><span class="np-t">En attente du titre…</span><span class="np-a"></span></span><span class="np-hist"></span></span></button>`).join('');
+    <span class="meter" aria-hidden="true"><span class="m-rows">${bar('L')}${bar('R')}<span class="m-scale">${scale}</span></span></span>
+    <span class="np vide"><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></button>`).join('');
   mon.cards = [...$('monGrid').querySelectorAll('.mon')].map(el => ({
-    id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'), lu: el.querySelector('.m-db'), np: el.querySelector('.np-now'), npL: el.querySelector('.np-lbl'), npT: el.querySelector('.np-t'), npA: el.querySelector('.np-a'), npH: el.querySelector('.np-hist'), npK: '',
-    d: [-99, -99], pk: [-99, -99], pt: [0, 0], cls: '', label: '', lv: ''
+    id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'), np: el.querySelector('.np'), npT: el.querySelector('.np-t'), npA: el.querySelector('.np-a'), npK: '',
+    d: [-99, -99], pk: [-99, -99], pt: [0, 0], cls: '', label: ''
   }));
 }
 function connectMonitor(){
@@ -1142,113 +1131,7 @@ function connectMonitor(){
 /* Mesure dans le navigateur, dès l'ouverture de la page : la page lit elle-même les flux, décode le son
    sans le jouer et en calcule le niveau. Comme rien n'est diffusé, aucun clic n'est nécessaire.
    Utilisée quand le programme de pige ne fournit pas les niveaux (page ouverte depuis GitHub, par exemple). */
-const bm = { on: false, dec: null, m: {}, sansCors: {}, sansIcy: {} };
-/* Titres joués : lus dans le flux (métadonnées ICY qu'Icecast insère quand on les demande), gardés 24 h dans ce navigateur. */
-const titres = {};
-function titresDe(id){
-  if (!titres[id]){
-    const limite = Date.now() - 864e5;
-    titres[id] = (store.get('titres.' + id, []) || []).filter(x => x && x.t > limite && x.titre).slice(0, 12);
-  }
-  return titres[id];
-}
-function nouveauTitre(id, titre){
-  titre = (titre || '').replace(/\s+/g, ' ').trim();
-  if (!titre || titre === '-' ) return;
-  const liste = titresDe(id);
-  if (liste[0] && liste[0].titre === titre) return;
-  liste.unshift({ t: Date.now(), titre });
-  liste.length = Math.min(liste.length, 12);
-  store.set('titres.' + id, liste);
-}
-function lireMeta(m, octets){
-  let txt;
-  try { txt = new TextDecoder('utf-8', { fatal: true }).decode(octets); } catch(e){ txt = new TextDecoder('windows-1252').decode(octets); }
-  txt = txt.replace(/\0+$/, '');
-  const r = /StreamTitle='(.*?)';/s.exec(txt);
-  if (r){ m.icyOk = true; nouveauTitre(m.s.id, r[1]); return true; }
-  return /^\s*Stream[A-Za-z]*=/.test(txt);       // autre champ ICY (StreamUrl…) : bloc valide sans titre
-}
-const MARQUE = new TextEncoder().encode("StreamTitle='");
-function trouverMarque(b, de){
-  for (let k = b.indexOf(MARQUE[0], de); k >= 0 && k + MARQUE.length <= b.length; k = b.indexOf(MARQUE[0], k + 1)){
-    let ok = true; for (let j = 1; j < MARQUE.length; j++) if (b[k + j] !== MARQUE[j]){ ok = false; break; }
-    if (ok) return k;
-  }
-  return -1;
-}
-function ruptures(b){
-  // Nombre de cassures dans l'enchaînement des trames audio : 0 quand le son est découpé au bon endroit.
-  let i = premiereTrame(b, 0), n = 0;
-  if (i < 0) return 1e9;
-  while (i < b.length){
-    const t = trame(b, i);
-    if (!t){ n++; const j = premiereTrame(b, i + 1); if (j < 0) break; i = j; continue; }
-    if (i + t > b.length) break;
-    i += t;
-  }
-  return n;
-}
-function choisirMetaint(brut, P){
-  // Le premier titre arrive au n-ième intervalle (les précédents peuvent être vides : un seul octet nul).
-  // On garde l'intervalle qui laisse un son sans cassure.
-  let mieux = P, score = Infinity;
-  for (let n = 1; n <= 8; n++){
-    if ((P + 1) % n) continue;
-    const M = (P + 1) / n - 1;
-    if (M < 1024) break;
-    const parts = []; let ok = true;
-    for (let j = 1; j <= n; j++){
-      parts.push(brut.subarray((j - 1) * (M + 1), (j - 1) * (M + 1) + M));
-      if (j < n && brut[j * (M + 1) - 1] !== 0){ ok = false; break; }
-    }
-    if (!ok) continue;
-    const r = ruptures(joindre(parts, n * M));
-    if (r < score){ score = r; mieux = M; }
-    if (r === 0) break;
-  }
-  return mieux;
-}
-function deduireIcy(m, v){
-  // Le serveur a accepté la demande de titres sans dire tous les combien d'octets il les insère :
-  // on le déduit de la position du premier bloc de titre.
-  const b = m.brut ? joindre([m.brut, v], m.brut.length + v.length) : v, pos = m.brutPos || 0;
-  m.brut = null;
-  const k = trouverMarque(b, 0);
-  if (k > 0 && b[k - 1] > 0 && pos + k - 1 >= 1024){
-    const P = pos + k - 1;
-    (m.copie = m.copie || []).push(b.subarray(0, k - 1));
-    m.icy = { metaint: choisirMetaint(joindre(m.copie, P), P), audio: 0, lg: -1, lu: 0, parts: [] };
-    m.copie = null;
-    const suite = filtrerIcy(m, b.subarray(k - 1));
-    return suite && joindre([b.subarray(0, k - 1), suite], k - 1 + suite.length);
-  }
-  if (pos + b.length > 160000){ m.icyDemande = false; m.copie = null; return b; }   // aucun titre inséré : flux lu tel quel
-  const garde = Math.min(b.length, MARQUE.length + 1);                                 // de quoi retrouver un repère coupé en deux
-  m.brut = b.slice(b.length - garde); m.brutPos = pos + b.length - garde;
-  const sortie = b.subarray(0, b.length - garde);
-  (m.copie = m.copie || []).push(sortie);
-  return sortie;
-}
-function filtrerIcy(m, v){
-  // Le serveur intercale un bloc de métadonnées tous les « metaint » octets : on le retire avant de décoder le son.
-  const y = m.icy, morceaux = []; let n = 0, i = 0;
-  while (i < v.length){
-    if (y.audio > 0){
-      const k = Math.min(y.audio, v.length - i); morceaux.push(v.subarray(i, i + k)); n += k; i += k; y.audio -= k;
-    } else if (y.lg < 0){
-      y.lg = v[i++] * 16; y.lu = 0; y.parts = [];
-      if (y.lg === 0){ y.lg = -1; y.audio = y.metaint; }
-    } else {
-      const k = Math.min(y.lg - y.lu, v.length - i); y.parts.push(v.subarray(i, i + k)); y.lu += k; i += k;
-      if (y.lu >= y.lg){
-        if (!lireMeta(m, joindre(y.parts, y.lg))){ m.icyKo = true; return null; }   // découpage incohérent
-        y.lg = -1; y.audio = y.metaint;
-      }
-    }
-  }
-  return joindre(morceaux, n);
-}
+const bm = { on: false, dec: null, m: {}, sansCors: {} };
 const progActif = () => mon.data && performance.now() - mon.at < 3000;
 const FEN = 50;                                   // une valeur de niveau toutes les 50 ms
 const dbms = x => x > 1e-10 ? 10 * Math.log10(x) : -99;
@@ -1301,30 +1184,17 @@ async function bmLire(m){
   m.mode = 'mesure';
   m.ac = new AbortController();
   let rep;
-  const avecTitres = !(bm.sansIcy[m.s.id] > Date.now() - 6e5);   // après un refus, on redemande les titres 10 min plus tard
-  try { rep = await fetch(m.s.stream, { signal: m.ac.signal, cache: 'no-store', headers: avecTitres ? { 'Icy-MetaData': '1' } : {} }); }
-  catch(e){
-    if (m.mort || m.mode !== 'mesure') return;
-    if (avecTitres){ bm.sansIcy[m.s.id] = Date.now(); bmLire(m); return; }   // le serveur refuse qu'on demande les titres : mesure seule
-    bmEcoute(m, true); return;                                                 // serveur qui refuse la lecture, ou flux injoignable
-  }
+  try { rep = await fetch(m.s.stream, { signal: m.ac.signal, cache: 'no-store' }); }
+  catch(e){ if (!m.mort && m.mode === 'mesure') bmEcoute(m, true); return; }   // serveur qui refuse la lecture, ou flux injoignable
   if (m.mort) return;
   if (!rep.ok || !rep.body){ bmEchec(m); return; }
-  const metaint = avecTitres ? parseInt(rep.headers.get('icy-metaint') || '0', 10) : 0;
-  m.icy = metaint > 0 ? { metaint, audio: metaint, lg: -1, lu: 0, parts: [] } : null;
-  m.icyDemande = avecTitres;
   const lecteur = rep.body.getReader();
   let morceaux = [], taille = 0;
   try {
     while (!m.mort && m.mode === 'mesure'){
-      let { value, done } = await lecteur.read();
+      const { value, done } = await lecteur.read();
       if (done) break;
       m.vu = performance.now();
-      if (m.icy) value = filtrerIcy(m, value); else if (m.icyDemande) value = deduireIcy(m, value);
-      if (!value){                                   // titres mal découpés : on se reconnecte sans les demander
-        bm.sansIcy[m.s.id] = Date.now(); try { m.ac.abort(); } catch(e){}
-        bmOpen(m.s); return;
-      }
       morceaux.push(value); taille += value.length;
       if (taille >= 8000){ bmDecoder(m, joindre(morceaux, taille)); morceaux = []; taille = 0; }
     }
@@ -1418,44 +1288,55 @@ function bmSnapshot(now){
       }
     }
     const sil = m.silence ? Math.floor((now - m.silence) / 1000) : 0;
-    out[s.id] = { etat: sil >= min ? 'blanc' : 'ok', l: m.mesurable ? m.l : -99, r: m.mesurable ? m.r : -99, silence: sil, mesurable: m.mesurable,
-                  titres: m.icyDemande ? (m.icyOk ? 'ok' : 'attente') : 'indispo' };
+    out[s.id] = { etat: sil >= min ? 'blanc' : 'ok', l: m.mesurable ? m.l : -99, r: m.mesurable ? m.r : -99, silence: sil, mesurable: m.mesurable };
   }
   return out;
 }
 
-const hhmm = t => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+/* Titre en cours : chaque serveur Icecast publie une petite fiche par flux (adresse du flux + « .xspf ») qui
+   contient le titre diffusé, lisible depuis n'importe quel navigateur. On la relit toutes les 10 secondes.
+   Dans config.json, "titres": "<adresse>" sur une source remplace cette fiche, "titres": false masque le titre. */
+const titres = {};
+let titresTour = 0;
+function adresseTitre(s){ return s.titres === false ? '' : typeof s.titres === 'string' ? s.titres : s.stream ? s.stream + '.xspf' : ''; }
+async function lireTitre(s){
+  const t = titres[s.id] || (titres[s.id] = { titre: '', etat: 'attente', echecs: 0 }), url = adresseTitre(s);
+  if (!url){ t.etat = 'masque'; return; }
+  try {
+    const r = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    const doc = new DOMParser().parseFromString(await r.text(), 'application/xml');
+    if (doc.querySelector('parsererror')) throw new Error('xml');
+    const el = doc.querySelector('track > title') || doc.querySelector('title');
+    const x = (el ? el.textContent : '').replace(/\s+/g, ' ').trim();
+    t.titre = x; t.etat = x && x !== '-' ? 'ok' : 'vide'; t.echecs = 0;
+  } catch(e){ if (++t.echecs >= 3){ t.etat = 'indispo'; t.titre = ''; } }
+}
+function lireTitres(){
+  // Onglet en arrière-plan : une lecture sur trois suffit.
+  if (document.hidden && titresTour++ % 3) return;
+  for (const s of cfg.sources) lireTitre(s);
+}
 function decouper(x){
-  // Format envoyé à Infomaniak : « artiste - titre ».
+  // Format envoyé par le logiciel de diffusion : « ARTISTE - TITRE ».
   const k = x.indexOf(' - ');
   return k > 0 ? { artiste: x.slice(0, k).trim(), titre: x.slice(k + 3).trim() || x } : { artiste: '', titre: x };
 }
-function afficherTitres(c, src, prog){
-  let etat = src ? src.titres : undefined;
-  if (prog){                                       // niveaux fournis par le programme de pige : titres seulement s'il les donne
-    if (src && typeof src.titre === 'string'){ nouveauTitre(c.id, src.titre); etat = 'ok'; } else etat = 'indispo';
-  }
-  const liste = titresDe(c.id);
-  const cle = (liste[0] ? liste[0].t + liste[0].titre : '') + '|' + etat + '|' + liste.length;
+function afficherTitres(c){
+  const t = titres[c.id] || { etat: 'attente', titre: '' };
+  const cle = t.etat + '|' + t.titre;
   if (cle === c.npK) return;
   c.npK = cle;
-  const dernier = liste[0];
-  if (dernier && etat !== 'indispo'){
-    const d = decouper(dernier.titre);
+  c.np.hidden = t.etat === 'masque';
+  if (t.etat === 'ok'){
+    const d = decouper(t.titre);
     c.np.classList.remove('vide');
-    c.npL.textContent = `Titre en cours · ${hhmm(dernier.t)}`;
-    c.npT.textContent = d.titre; c.npT.title = d.titre;
-    c.npA.textContent = d.artiste; c.npA.title = d.artiste;
+    c.npT.textContent = d.titre; c.npA.textContent = d.artiste; c.np.title = t.titre;
   } else {
     c.np.classList.add('vide');
-    c.npL.textContent = 'Titre en cours';
-    c.npT.textContent = etat === 'indispo' ? 'Titres non disponibles' : 'En attente du titre…';
-    c.npT.title = ''; c.npA.textContent = ''; c.npA.title = '';
+    c.npT.textContent = t.etat === 'vide' ? 'Aucun titre transmis' : t.etat === 'indispo' ? 'Titre indisponible' : 'Recherche du titre…';
+    c.npA.textContent = ''; c.np.title = '';
   }
-  c.npH.innerHTML = (etat === 'indispo' ? [] : liste.slice(1, 4)).map(x => {
-    const d = decouper(x.titre);
-    return `<span class="np-row"><time>${hhmm(x.t)}</time><span title="${esc(x.titre)}"><b>${esc(d.titre)}</b>${d.artiste ? ' · ' + esc(d.artiste) : ''}</span></span>`;
-  }).join('');
 }
 
 function fmtSilence(sec){ return `${Math.floor(sec / 60)}:${pad(sec % 60)}`; }
@@ -1486,10 +1367,7 @@ function monFrame(now){
       c.peaks[i].style.setProperty('--p', p.toFixed(1) + '%');
       c.peaks[i].style.opacity = p > 1 ? '' : '0';
     }
-    afficherTitres(c, src, prog);
-    const niv = Math.max(c.d[0], c.d[1]);
-    const lv = cls === 'ok' && src && src.mesurable !== false && niv > -60 ? String(Math.round(niv)).replace('-', '−') : '—';
-    if (lv !== c.lv){ c.lu.textContent = lv; c.lv = lv; }
+    afficherTitres(c);
   }
   const sum = $('monSum');
   let txt, alert = alertes.length > 0;
@@ -1561,6 +1439,8 @@ async function init(){
   buildMonitor();
   readColors(); bind(); renderSources(); renderData(); renderExtraits(); checkPige();
   connectMonitor();
+  lireTitres(); setInterval(lireTitres, 10e3);
+  try { for (const k of Object.keys(localStorage)) if (k.startsWith('pige.titres.')) localStorage.removeItem(k); } catch(e){}   // ancien historique
   // Onglet en arrière-plan : on continue de surveiller (alerte dans le titre de l'onglet).
   setInterval(() => { if (document.hidden) monFrame(performance.now()); }, 1000);
   setInterval(() => { $('nowClock').textContent = fmtClock(Date.now()); }, 1000);
