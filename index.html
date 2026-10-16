@@ -59,12 +59,44 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .num{font-variant-numeric:tabular-nums}
 
-.app{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:16px 40px;display:grid;gap:18px;
-  grid-template-columns:240px minmax(0,1fr);grid-template-areas:"top top" "mon mon" "det det" "note note" "side main"}
+.app{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:14px 40px;display:flex;flex-direction:column;gap:20px}
+.v-piges{display:grid;gap:18px;grid-template-columns:240px minmax(0,1fr);grid-template-areas:"note note" "side main"}
+.v-surv,.v-podcast{display:flex;flex-direction:column;gap:20px}
 
 /* Bandeau logo */
-.top{grid-area:top;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-block:2px 14px;border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"brand nav right" "strip strip strip";align-items:center;gap:12px 22px;padding-block:2px 14px;border-bottom:1px solid var(--line)}
+.brand{grid-area:brand;display:flex;align-items:center;gap:12px;min-width:0;text-decoration:none;color:inherit}
+/* Menus */
+.nav{grid-area:nav;display:flex;gap:4px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.nav a{display:inline-flex;align-items:center;gap:8px;padding:8px 13px 8px 9px;border-radius:999px;font-weight:700;font-size:15px;color:var(--ink-2);text-decoration:none;white-space:nowrap;transition:background .15s,color .15s}
+.nav a b{font-family:var(--font-display);font-size:12px;font-weight:800;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--panel);color:var(--muted)}
+.nav a:hover{background:var(--panel)}
+.nav a[aria-current="page"]{background:var(--ink);color:var(--bg)}
+.nav a[aria-current="page"] b{background:var(--accent);color:#fff}
+.nav-c{display:none}
+.nav-badge{font-style:normal;font-size:11.5px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:grid;place-items:center;background:var(--rec);color:#fff}
+/* Les 4 départs en direct, dans le bandeau */
+.strip{grid-area:strip;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.sv{display:grid;grid-template-columns:16px minmax(0,1fr) 70px;align-items:center;gap:9px;padding:7px 11px;border:1.5px solid var(--line);border-radius:10px;background:var(--panel-2);text-decoration:none;color:var(--ink);min-width:0;transition:border-color .2s,background .2s}
+.sv:hover{border-color:var(--ink-2)}
+.sv-logo{width:16px;height:16px;fill:var(--c)}
+.sv-n{font-weight:700;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv-m{display:flex;flex-direction:column;gap:3px}
+.sv-m i{position:relative;display:block;height:4px;border-radius:2px;background:var(--panel);overflow:hidden}
+.sv-m i::after{content:"";position:absolute;inset:0;background:var(--meter-grad);clip-path:inset(0 calc(100% - var(--v, 0%)) 0 0)}
+.sv.off{opacity:.55}
+.sv.alerte{border-color:var(--rec);background:var(--rec-soft);animation:clignsv 1s steps(1,end) infinite}
+@keyframes clignsv{50%{border-color:var(--line)}}
+/* Accueil */
+.v-accueil{display:flex;flex-direction:column;gap:14px;padding-top:6px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.tile{display:flex;flex-direction:column;gap:10px;padding:24px 22px 18px;min-height:230px;border-radius:16px;background:var(--panel-2);border:1.5px solid var(--line);text-decoration:none;color:var(--ink);transition:border-color .2s,transform .2s,box-shadow .2s}
+.tile:hover{border-color:var(--ink-2);transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.08)}
+.tile-n{font-family:var(--font-display);font-weight:800;font-size:46px;line-height:1;color:var(--accent)}
+.tile b{font-family:var(--font-display);font-weight:800;font-size:23px;line-height:1.15}
+.tile p{margin:0;color:var(--ink-2);font-size:14.5px;flex:1}
+.tile-live{font-size:13px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:7px}
+.tile-live::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.7}
 .lockup{height:60px;width:auto;flex:none;display:block;overflow:visible}
 .lk-acc{fill:var(--accent);transition:fill .25s}
 .lk-radio{fill:var(--ink)}
@@ -78,18 +110,21 @@ button{cursor:pointer}
 .now small{font-family:var(--font-display);font-size:12px;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
 
 /* Surveillance des flux — vu-mètres façon console de régie : écran sombre, barres dégradées, pastille d'état */
-.monitor{grid-area:mon;display:flex;flex-direction:column;gap:8px}
+.monitor{display:flex;flex-direction:column;gap:8px}
 /* Reconnaissance en direct */
-.det{grid-area:det;display:flex;flex-direction:column;gap:8px}
-.det-box{display:grid;grid-template-columns:minmax(240px,340px) minmax(0,1fr);gap:18px;background:var(--panel-2);border:1.5px solid var(--line);border-radius:14px;padding:14px}
-.det-lamp{--dc:#e4032e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:168px;border-radius:12px;padding:18px;text-align:center;
-  background:var(--meter-bg);color:#57525e;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);transition:background .2s,color .2s,box-shadow .2s}
-.det-lamp b{font-family:var(--font-display);font-weight:800;font-size:clamp(28px,3.4vw,42px);letter-spacing:.14em;line-height:1}
-.det-lamp small{font-size:13.5px;font-weight:600;color:var(--meter-dim);line-height:1.35}
-.det-lamp.on{background:var(--dc);color:#fff;animation:detpouls .9s ease-in-out infinite alternate;
-  box-shadow:0 0 0 4px color-mix(in srgb, var(--dc) 30%, transparent),0 0 42px color-mix(in srgb, var(--dc) 70%, transparent)}
-.det-lamp.on small{color:#fff}
-@keyframes detpouls{to{box-shadow:0 0 0 9px color-mix(in srgb, var(--dc) 16%, transparent),0 0 64px color-mix(in srgb, var(--dc) 90%, transparent)}}
+.det{display:flex;flex-direction:column;gap:10px}
+.det-haut{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--panel-2);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px}
+.det-lamp{--dc:#e4032e;flex:none;display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 16px;border-radius:9px;
+  background:var(--meter-bg);color:#5d5865;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);transition:background .2s,color .2s,box-shadow .2s}
+.det-lamp b{font-family:var(--font-display);font-weight:800;font-size:14px;letter-spacing:.2em;line-height:1}
+.det-lamp.on{background:var(--dc);color:#fff;animation:detpouls .9s ease-in-out infinite alternate;box-shadow:0 0 0 3px color-mix(in srgb, var(--dc) 25%, transparent),0 0 18px color-mix(in srgb, var(--dc) 60%, transparent)}
+@keyframes detpouls{to{box-shadow:0 0 0 5px color-mix(in srgb, var(--dc) 14%, transparent),0 0 26px color-mix(in srgb, var(--dc) 80%, transparent)}}
+.det-etat{flex:1 1 260px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0}
+.det-etat > span{font-size:14px;font-weight:600;color:var(--ink-2);min-width:0}
+.det-etat .det-scores{flex:0 1 260px}
+.det-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:14px}
+.det-card{display:flex;flex-direction:column;gap:10px;background:var(--panel-2);border:1.5px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+.det-note{margin:0;font-size:12.5px;color:var(--muted)}
 .det-side{display:flex;flex-direction:column;gap:12px;min-width:0}
 .det-h{font-family:var(--font-display);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
 .det-refs{display:flex;flex-direction:column;gap:6px}
@@ -107,7 +142,9 @@ button{cursor:pointer}
 .det-bar i{position:absolute;inset:0 auto 0 0;width:var(--v,0%);background:var(--c);border-radius:3px;transition:width .2s}
 .det-bar u{position:absolute;top:0;bottom:0;left:var(--s,60%);width:2px;background:var(--ink-2);opacity:.6}
 .det-log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:13px}
-.det-log li{display:grid;grid-template-columns:62px minmax(0,1fr) auto auto;gap:8px;align-items:center;color:var(--ink-2)}
+.det-log{gap:6px}
+.det-log li{display:grid;grid-template-columns:62px minmax(0,1fr) auto auto;gap:8px;align-items:center;color:var(--ink-2);padding-bottom:6px;border-bottom:1px solid var(--line)}
+.det-log li:last-child{border-bottom:0;padding-bottom:0}
 .det-log li.det-vide{display:block}
 .det-act{display:flex;gap:4px;justify-content:flex-end}
 .det-act .btn{padding:2px 8px;font-size:12.5px}
@@ -116,12 +153,22 @@ button{cursor:pointer}
 .det-log time,.det-log em{font-variant-numeric:tabular-nums;color:var(--muted);font-style:normal}
 .det-log span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mon.detecte{border-color:var(--c);box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent)}
-@media (max-width:760px){.det-box{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.det-cols{grid-template-columns:minmax(0,1fr)}}
 @media (prefers-reduced-motion:reduce){.det-lamp.on{animation:none}}
 .mon-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .mon-sum{font-size:13.5px;font-weight:600;color:var(--muted)}
 .mon-sum.alerte{color:var(--rec)}
-.mon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.mon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px}
+.np-hist{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px;min-width:0}
+.np-hist:empty{display:none}
+.nh{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;min-width:0;font-size:13px}
+.nh-art{position:relative;width:34px;height:34px;border-radius:5px;overflow:hidden;display:grid;place-items:center;background:color-mix(in srgb, var(--c) 10%, var(--panel))}
+.nh-art svg{width:15px;height:15px;fill:var(--c);opacity:.7}
+.nh-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s}
+.nh-art img.ok{opacity:1}
+.nh-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
+.nh-t b{font-weight:700;color:var(--ink)}
+.nh time{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600;font-size:12.5px}
 .mon{display:flex;flex-direction:column;gap:10px;text-align:left;padding:12px 12px 12px;background:var(--panel-2);border:1.5px solid var(--line);border-radius:14px;min-width:0;transition:border-color .2s}
 .mon:hover{border-color:var(--ink-2)}
 .mon[aria-pressed="true"]{box-shadow:inset 0 3px 0 var(--c)}
@@ -239,6 +286,15 @@ input[type="range"]{accent-color:var(--accent);width:110px}
 .btn:hover{border-color:var(--ink-2)}
 .btn:disabled{opacity:.4;cursor:default}
 .keys{margin:0;font-size:12.5px;color:var(--muted);text-align:center}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn.primary:hover{opacity:.88}
+.clip{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.clip-row{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap}
+.clip-f{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--muted)}
+.clip-f input{width:116px;background:var(--panel-2);border:1.5px solid var(--line);border-radius:8px;padding:4px 7px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
+.clip-f input.err{border-color:var(--rec)}
+.clip-dur{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink-2);min-width:70px}
+.clip-sep{flex:1}
 kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--panel)}
 
 /* Jour */
@@ -299,7 +355,12 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   background:var(--monaco);color:#fff;padding:10px 14px;border-radius:10px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:10;word-break:break-word}
 
 @media (max-width:860px){
-  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "mon" "det" "note" "side" "main"}
+  .v-piges{grid-template-columns:minmax(0,1fr);grid-template-areas:"note" "side" "main"}
+  .top{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"brand right" "nav nav" "strip strip"}
+  .top-right{justify-self:end}
+  .strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tiles{grid-template-columns:minmax(0,1fr)}
+  .tile{min-height:0}
   .side{flex-direction:row;flex-wrap:wrap;gap:12px}
   .side section{flex:1 1 220px;min-width:0}
   .side-help{display:none}
@@ -313,6 +374,12 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   .app-name{display:none}
 }
 @media (max-width:520px){
+  .nav-l{display:none}
+  .nav-c{display:inline}
+  .nav a{padding:7px 10px 7px 7px;font-size:14px;gap:6px}
+  .sv{grid-template-columns:14px minmax(0,1fr) 40px;gap:7px;padding:6px 9px}
+  .sv-logo{width:14px;height:14px}
+  .sv-n{font-size:12.5px}
   .xt-list li{grid-template-columns:auto minmax(0,1fr)}
   .xt-act{grid-column:2;justify-content:flex-start}
   .lockup{height:50px}
@@ -325,7 +392,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   .keys{display:none}
   .tc{align-items:flex-start}
 }
-@media (prefers-reduced-motion:reduce){.mon.alerte,.mon.ok .lamp::before,.mon.alerte .lamp::before{animation:none}.mon.alerte{background:var(--rec-soft)}}
+@media (prefers-reduced-motion:reduce){.mon.alerte,.mon.ok .lamp::before,.mon.alerte .lamp::before,.sv.alerte{animation:none}.mon.alerte{background:var(--rec-soft)}}
 @media (prefers-reduced-motion:reduce){.src-state.on .dot,.tbtn.live .dot{animation:none!important}.lk-acc,.lk-tag,.deck,.tbtn.play{transition:none}}
 </style>
 </head>
@@ -333,7 +400,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
 <div class="app">
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><path id="rmMark" fill-rule="nonzero" d="M 140.05 62.27 L 140.05 140.08 L 124.49 140.08 L 124.49 77.84 L 108.93 77.84 L 108.93 140.08 L 93.37 140.08 L 93.37 77.84 L 77.81 77.84 L 77.81 140.08 L 62.25 140.08 L 62.25 62.27 Z M 140.05 62.27 M 108.93 155.64 L 140.05 155.64 C 148.65 155.64 155.62 148.68 155.62 140.08 L 155.62 62.27 C 155.62 53.68 148.65 46.71 140.05 46.71 L 62.25 46.71 C 53.65 46.71 46.68 53.68 46.68 62.27 L 46.68 140.08 C 46.68 148.68 53.65 155.64 62.25 155.64 L 93.37 155.64 L 93.37 171.2 L 62.25 171.2 C 45.09 171.2 31.12 157.24 31.12 140.08 L 31.12 62.27 C 31.12 45.11 45.09 31.15 62.25 31.15 L 140.05 31.15 C 157.21 31.15 171.18 45.11 171.18 62.27 L 171.18 140.08 C 171.18 157.24 157.21 171.2 140.05 171.2 L 108.93 171.2 Z M 108.93 155.64"/></defs></svg>
   <header class="top">
-    <div class="brand">
+    <a class="brand" href="#accueil" title="Accueil">
       <svg class="lockup" viewBox="28 28 397 147" role="img" aria-label="Radio Monaco">
         <use href="#rmMark" class="lk-acc"/>
         <path class="lk-radio" d="M 203.89 61.9 C 204.33 62.07 204.48 62.4 204.35 62.91 L 203.69 65.68 C 203.55 66.19 203.2 66.36 202.62 66.19 C 201.79 65.93 200.7 65.83 199.37 65.87 C 197.07 65.96 195.17 66.77 193.66 68.3 C 192.16 69.83 191.41 71.78 191.41 74.13 L 191.41 92.54 C 191.41 93.09 191.12 93.36 190.54 93.36 L 187.56 93.36 C 186.98 93.36 186.7 93.09 186.7 92.54 L 186.7 62.28 C 186.7 61.73 186.98 61.46 187.56 61.46 L 190.54 61.46 C 191.12 61.46 191.41 61.73 191.41 62.28 L 191.41 65.81 C 191.41 65.98 191.44 66.07 191.51 66.09 C 191.57 66.11 191.65 66.06 191.74 65.93 C 192.67 64.42 193.85 63.25 195.29 62.4 C 196.73 61.56 198.38 61.14 200.23 61.14 C 201.7 61.14 202.91 61.39 203.89 61.9 M 226.29 88.16 C 228.21 86.92 229.18 85.25 229.18 83.15 L 229.18 78.29 C 229.18 78.08 229.06 77.98 228.84 77.98 L 221.88 77.98 C 218.95 77.98 216.61 78.55 214.84 79.68 C 213.07 80.82 212.18 82.39 212.18 84.41 C 212.18 86.26 212.87 87.66 214.24 88.6 C 215.61 89.55 217.36 90.02 219.48 90.02 C 222.09 90.02 224.36 89.4 226.29 88.16 M 230.6 63.85 C 232.79 65.79 233.89 68.35 233.89 71.55 L 233.89 92.54 C 233.89 93.09 233.6 93.36 233.02 93.36 L 230.04 93.36 C 229.46 93.36 229.18 93.09 229.18 92.54 L 229.18 90.27 C 229.18 90.15 229.13 90.06 229.04 90.02 C 228.95 89.98 228.86 90.02 228.78 90.15 C 227.58 91.37 226.09 92.29 224.3 92.92 C 222.5 93.55 220.55 93.87 218.42 93.87 C 215.32 93.87 212.72 93.11 210.62 91.6 C 208.52 90.09 207.47 87.77 207.47 84.66 C 207.47 81.51 208.68 79.02 211.09 77.19 C 213.5 75.36 216.85 74.45 221.14 74.45 L 228.84 74.45 C 229.06 74.45 229.18 74.34 229.18 74.13 L 229.18 71.8 C 229.18 69.65 228.55 67.96 227.29 66.72 C 226.02 65.48 224.06 64.86 221.41 64.86 C 219.33 64.86 217.62 65.24 216.3 66 C 214.97 66.75 214.13 67.8 213.77 69.15 C 213.64 69.65 213.31 69.86 212.78 69.78 L 209.53 69.4 C 208.95 69.32 208.69 69.09 208.73 68.71 C 209.17 66.4 210.54 64.53 212.81 63.1 C 215.09 61.67 217.93 60.95 221.34 60.95 C 225.32 60.95 228.41 61.92 230.6 63.85 M 262.89 82.14 C 263.07 81 263.16 79.43 263.16 77.41 C 263.16 75.39 263.07 73.8 262.89 72.65 C 262.71 71.49 262.41 70.47 261.96 69.59 C 261.43 68.16 260.56 67.02 259.34 66.15 C 258.12 65.29 256.68 64.86 255 64.86 C 253.22 64.86 251.7 65.28 250.41 66.12 C 249.13 66.96 248.2 68.08 247.62 69.46 C 247.1 70.39 246.71 71.43 246.46 72.59 C 246.22 73.74 246.1 75.35 246.1 77.41 C 246.1 79.39 246.19 80.93 246.36 82.04 C 246.54 83.16 246.85 84.16 247.29 85.04 C 247.82 86.55 248.77 87.75 250.11 88.63 C 251.46 89.52 253.07 89.96 254.93 89.96 C 256.7 89.96 258.18 89.52 259.38 88.63 C 260.57 87.75 261.45 86.57 262.03 85.1 C 262.43 84.26 262.71 83.27 262.89 82.14 M 264.16 49.22 L 267.14 49.22 C 267.71 49.22 268 49.5 268 50.04 L 268 92.54 C 268 93.09 267.71 93.36 267.14 93.36 L 264.16 93.36 C 263.58 93.36 263.29 93.09 263.29 92.54 L 263.29 90.15 C 263.29 90.02 263.25 89.95 263.16 89.93 C 263.07 89.91 262.98 89.94 262.89 90.02 C 261.92 91.24 260.71 92.19 259.28 92.86 C 257.84 93.53 256.23 93.87 254.46 93.87 C 251.37 93.87 248.77 93.11 246.66 91.6 C 244.56 90.09 243.11 88.02 242.32 85.42 C 241.7 83.53 241.39 80.86 241.39 77.41 C 241.39 73.92 241.65 71.32 242.18 69.59 C 242.98 66.9 244.44 64.79 246.57 63.25 C 248.69 61.72 251.32 60.95 254.46 60.95 C 256.19 60.95 257.78 61.28 259.24 61.93 C 260.7 62.58 261.92 63.52 262.89 64.73 C 262.98 64.86 263.07 64.9 263.16 64.86 C 263.25 64.82 263.29 64.73 263.29 64.61 L 263.29 50.04 C 263.29 49.5 263.58 49.22 264.16 49.22 M 278.16 92.54 L 278.16 62.28 C 278.16 61.73 278.45 61.46 279.02 61.46 L 282.01 61.46 C 282.58 61.46 282.87 61.73 282.87 62.28 L 282.87 92.54 C 282.87 93.09 282.58 93.36 282.01 93.36 L 279.02 93.36 C 278.45 93.36 278.16 93.09 278.16 92.54 M 277.89 54.8 C 277.23 54.2 276.9 53.41 276.9 52.44 C 276.9 51.47 277.23 50.7 277.89 50.11 C 278.56 49.52 279.42 49.22 280.48 49.22 C 281.54 49.22 282.41 49.52 283.07 50.11 C 283.73 50.7 284.07 51.47 284.07 52.44 C 284.07 53.41 283.73 54.2 283.07 54.8 C 282.41 55.41 281.54 55.72 280.48 55.72 C 279.42 55.72 278.56 55.41 277.89 54.8 M 311.21 88.29 C 312.72 87.17 313.74 85.67 314.27 83.78 C 314.62 82.43 314.8 80.31 314.8 77.41 C 314.8 74.38 314.62 72.26 314.27 71.04 C 313.78 69.15 312.77 67.65 311.25 66.53 C 309.72 65.42 307.85 64.86 305.64 64.86 C 303.52 64.86 301.7 65.42 300.2 66.53 C 298.69 67.65 297.68 69.15 297.14 71.04 C 296.79 72.26 296.61 74.38 296.61 77.41 C 296.61 80.44 296.79 82.56 297.14 83.78 C 297.63 85.67 298.64 87.17 300.16 88.29 C 301.69 89.4 303.56 89.96 305.77 89.96 C 307.89 89.96 309.71 89.4 311.21 88.29 M 297.51 91.54 C 295.23 89.98 293.64 87.84 292.76 85.11 C 292.14 83.17 291.83 80.59 291.83 77.35 C 291.83 74.15 292.12 71.59 292.7 69.66 C 293.58 66.96 295.16 64.84 297.44 63.29 C 299.72 61.73 302.5 60.95 305.77 60.95 C 308.96 60.95 311.69 61.73 313.97 63.29 C 316.25 64.84 317.81 66.94 318.65 69.59 C 319.27 71.61 319.58 74.2 319.58 77.35 C 319.58 80.59 319.27 83.17 318.65 85.11 C 317.76 87.84 316.18 89.98 313.9 91.54 C 311.62 93.09 308.91 93.87 305.77 93.87 C 302.54 93.87 299.79 93.09 297.51 91.54"/>
@@ -344,35 +411,65 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
         <path class="lk-tag" id="tagNM" d="M 155.77 140.13 C 155.69 140.05 155.66 139.96 155.66 139.84 L 155.66 124.98 C 155.66 124.86 155.69 124.76 155.77 124.69 C 155.84 124.61 155.94 124.57 156.06 124.57 L 158.81 124.57 C 159.02 124.57 159.18 124.66 159.28 124.84 L 164.2 133.17 C 164.23 133.23 164.27 133.25 164.32 133.24 C 164.36 133.22 164.38 133.18 164.38 133.1 L 164.36 124.98 C 164.36 124.86 164.4 124.76 164.47 124.69 C 164.55 124.61 164.64 124.57 164.77 124.57 L 167.63 124.57 C 167.75 124.57 167.84 124.61 167.92 124.69 C 168 124.76 168.03 124.86 168.03 124.98 L 168.03 139.84 C 168.03 139.96 168 140.05 167.92 140.13 C 167.84 140.21 167.75 140.24 167.63 140.24 L 164.88 140.24 C 164.68 140.24 164.52 140.15 164.41 139.97 L 159.48 131.54 C 159.45 131.46 159.41 131.43 159.36 131.45 C 159.31 131.46 159.28 131.51 159.28 131.58 L 159.32 139.84 C 159.32 139.96 159.29 140.05 159.21 140.13 C 159.14 140.21 159.04 140.24 158.92 140.24 L 156.06 140.24 C 155.94 140.24 155.84 140.21 155.77 140.13 M 173.04 140.13 C 172.97 140.05 172.93 139.96 172.93 139.84 L 172.93 124.98 C 172.93 124.86 172.97 124.76 173.04 124.69 C 173.12 124.61 173.21 124.57 173.34 124.57 L 176.25 124.57 C 176.36 124.57 176.46 124.61 176.54 124.69 C 176.61 124.76 176.65 124.86 176.65 124.98 L 176.65 139.84 C 176.65 139.96 176.61 140.05 176.54 140.13 C 176.46 140.21 176.36 140.24 176.25 140.24 L 173.34 140.24 C 173.21 140.24 173.12 140.21 173.04 140.13 M 184.16 139.71 C 183.25 139.23 182.55 138.55 182.05 137.69 C 181.55 136.82 181.3 135.83 181.3 134.69 L 181.3 130.11 C 181.3 128.97 181.55 127.97 182.05 127.12 C 182.55 126.26 183.25 125.59 184.16 125.11 C 185.06 124.64 186.11 124.4 187.3 124.4 C 188.48 124.4 189.52 124.62 190.43 125.08 C 191.34 125.54 192.05 126.16 192.55 126.95 C 193.05 127.74 193.3 128.61 193.3 129.57 C 193.3 129.82 193.16 129.95 192.89 129.95 L 189.98 129.95 C 189.72 129.95 189.58 129.9 189.58 129.81 L 189.58 129.68 C 189.58 129.1 189.38 128.6 188.97 128.19 C 188.56 127.78 188 127.57 187.3 127.57 C 186.61 127.57 186.06 127.8 185.64 128.25 C 185.23 128.7 185.02 129.28 185.02 129.99 L 185.02 134.8 C 185.02 135.52 185.25 136.1 185.71 136.55 C 186.17 137 186.75 137.22 187.46 137.22 C 188.11 137.22 188.64 137.05 189.05 136.7 C 189.45 136.34 189.65 135.86 189.65 135.23 L 189.65 134.65 C 189.65 134.54 189.6 134.49 189.49 134.49 L 187.43 134.49 C 187.32 134.49 187.22 134.45 187.14 134.38 C 187.07 134.3 187.03 134.21 187.03 134.09 L 187.03 131.89 C 187.03 131.77 187.07 131.68 187.14 131.61 C 187.22 131.53 187.32 131.49 187.43 131.49 L 192.89 131.49 C 193.02 131.49 193.11 131.53 193.19 131.61 C 193.26 131.68 193.3 131.77 193.3 131.89 L 193.3 134.8 C 193.3 135.92 193.05 136.91 192.55 137.76 C 192.05 138.61 191.35 139.27 190.45 139.73 C 189.54 140.19 188.49 140.42 187.3 140.42 C 186.11 140.42 185.06 140.18 184.16 139.71 M 206.08 124.69 C 206.15 124.61 206.25 124.58 206.37 124.58 L 209.28 124.58 C 209.39 124.58 209.49 124.61 209.57 124.69 C 209.64 124.76 209.68 124.86 209.68 124.98 L 209.68 139.84 C 209.68 139.96 209.64 140.05 209.57 140.13 C 209.49 140.21 209.39 140.24 209.28 140.24 L 206.37 140.24 C 206.25 140.24 206.15 140.21 206.08 140.13 C 206 140.05 205.96 139.96 205.96 139.84 L 205.96 134.07 C 205.96 133.96 205.91 133.91 205.81 133.91 L 201.71 133.91 C 201.61 133.91 201.55 133.96 201.55 134.07 L 201.55 139.84 C 201.55 139.96 201.52 140.05 201.45 140.13 C 201.37 140.21 201.27 140.24 201.15 140.24 L 198.25 140.24 C 198.12 140.24 198.03 140.21 197.95 140.13 C 197.88 140.05 197.84 139.96 197.84 139.84 L 197.84 124.98 C 197.84 124.86 197.88 124.76 197.95 124.69 C 198.03 124.61 198.12 124.58 198.25 124.58 L 201.15 124.58 C 201.27 124.58 201.37 124.61 201.45 124.69 C 201.52 124.76 201.55 124.86 201.55 124.98 L 201.55 130.57 C 201.55 130.68 201.61 130.73 201.71 130.73 L 205.81 130.73 C 205.91 130.73 205.96 130.68 205.96 130.57 L 205.96 124.98 C 205.96 124.86 206 124.76 206.08 124.69 M 225.86 124.69 C 225.93 124.76 225.97 124.86 225.97 124.98 L 225.97 127.38 C 225.97 127.49 225.93 127.59 225.86 127.66 C 225.79 127.74 225.69 127.78 225.57 127.78 L 221.83 127.78 C 221.73 127.78 221.68 127.83 221.68 127.93 L 221.68 139.84 C 221.68 139.96 221.64 140.05 221.56 140.13 C 221.49 140.21 221.39 140.24 221.27 140.24 L 218.36 140.24 C 218.24 140.24 218.14 140.21 218.07 140.13 C 218 140.05 217.96 139.96 217.96 139.84 L 217.96 127.93 C 217.96 127.83 217.91 127.78 217.8 127.78 L 214.2 127.78 C 214.08 127.78 213.98 127.74 213.91 127.66 C 213.84 127.59 213.8 127.49 213.8 127.38 L 213.8 124.98 C 213.8 124.86 213.84 124.76 213.91 124.69 C 213.98 124.61 214.08 124.58 214.2 124.58 L 225.57 124.58 C 225.69 124.58 225.79 124.61 225.86 124.69 M 237.57 140.13 C 237.49 140.05 237.45 139.96 237.45 139.84 L 237.45 124.98 C 237.45 124.86 237.49 124.76 237.57 124.69 C 237.64 124.61 237.74 124.57 237.86 124.57 L 240.74 124.57 C 240.95 124.57 241.11 124.66 241.21 124.84 L 244.19 129.66 C 244.26 129.76 244.34 129.76 244.41 129.66 L 247.41 124.84 C 247.52 124.66 247.67 124.57 247.88 124.57 L 250.77 124.57 C 250.89 124.57 250.98 124.61 251.06 124.69 C 251.13 124.76 251.17 124.86 251.17 124.98 L 251.17 139.84 C 251.17 139.96 251.13 140.05 251.06 140.13 C 250.98 140.21 250.89 140.24 250.77 140.24 L 247.86 140.24 C 247.74 140.24 247.64 140.21 247.57 140.13 C 247.49 140.05 247.46 139.96 247.46 139.84 L 247.46 131.09 C 247.46 131.02 247.43 130.97 247.39 130.95 C 247.34 130.94 247.31 130.97 247.28 131.04 L 245.46 134 C 245.36 134.18 245.2 134.27 245 134.27 L 243.63 134.27 C 243.42 134.27 243.26 134.18 243.16 134 L 241.35 131.04 C 241.32 130.97 241.28 130.94 241.23 130.95 C 241.19 130.97 241.17 131.02 241.17 131.09 L 241.17 139.84 C 241.17 139.96 241.13 140.05 241.05 140.13 C 240.98 140.21 240.88 140.24 240.77 140.24 L 237.86 140.24 C 237.74 140.24 237.64 140.21 237.57 140.13 M 263.65 136.62 C 264.09 136.16 264.31 135.54 264.31 134.76 L 264.31 130.13 C 264.31 129.37 264.09 128.75 263.65 128.28 C 263.21 127.81 262.63 127.57 261.91 127.57 C 261.21 127.57 260.64 127.81 260.2 128.28 C 259.76 128.75 259.54 129.37 259.54 130.13 L 259.54 134.76 C 259.54 135.54 259.76 136.16 260.2 136.62 C 260.64 137.08 261.21 137.31 261.91 137.31 C 262.63 137.31 263.21 137.08 263.65 136.62 M 258.73 139.76 C 257.81 139.28 257.09 138.59 256.59 137.71 C 256.08 136.83 255.83 135.81 255.83 134.65 L 255.83 130.17 C 255.83 129.04 256.08 128.04 256.59 127.16 C 257.09 126.29 257.81 125.61 258.73 125.12 C 259.64 124.64 260.71 124.4 261.91 124.4 C 263.12 124.4 264.19 124.64 265.11 125.12 C 266.04 125.61 266.76 126.29 267.27 127.16 C 267.77 128.04 268.02 129.04 268.02 130.17 L 268.02 134.65 C 268.02 135.81 267.77 136.83 267.27 137.71 C 266.76 138.59 266.04 139.28 265.11 139.76 C 264.19 140.25 263.12 140.49 261.91 140.49 C 260.71 140.49 259.64 140.25 258.73 139.76 M 280.23 136.62 C 280.67 136.16 280.89 135.54 280.89 134.76 L 280.89 130.13 C 280.89 129.37 280.67 128.75 280.23 128.28 C 279.79 127.81 279.21 127.57 278.5 127.57 C 277.8 127.57 277.23 127.81 276.79 128.28 C 276.35 128.75 276.12 129.37 276.12 130.13 L 276.12 134.76 C 276.12 135.54 276.35 136.16 276.79 136.62 C 277.23 137.08 277.8 137.31 278.5 137.31 C 279.21 137.31 279.79 137.08 280.23 136.62 M 275.31 139.76 C 274.39 139.28 273.68 138.59 273.17 137.71 C 272.66 136.83 272.41 135.81 272.41 134.65 L 272.41 130.17 C 272.41 129.04 272.66 128.04 273.17 127.16 C 273.68 126.29 274.39 125.61 275.31 125.12 C 276.23 124.64 277.29 124.4 278.5 124.4 C 279.71 124.4 280.77 124.64 281.7 125.12 C 282.62 125.61 283.34 126.29 283.85 127.16 C 284.36 128.04 284.61 129.04 284.61 130.17 L 284.61 134.65 C 284.61 135.81 284.36 136.83 283.85 137.71 C 283.34 138.59 282.62 139.28 281.7 139.76 C 280.77 140.25 279.71 140.49 278.5 140.49 C 277.29 140.49 276.23 140.25 275.31 139.76 M 293.11 137.06 L 295.37 137.06 C 295.97 137.06 296.45 136.85 296.82 136.43 C 297.2 136 297.39 135.43 297.41 134.71 L 297.41 130.11 C 297.41 129.39 297.22 128.82 296.84 128.39 C 296.46 127.97 295.96 127.75 295.35 127.75 L 293.11 127.75 C 293.01 127.75 292.95 127.81 292.95 127.91 L 292.95 136.91 C 292.95 137.01 293.01 137.06 293.11 137.06 M 289.35 140.13 C 289.28 140.05 289.24 139.96 289.24 139.84 L 289.24 124.98 C 289.24 124.86 289.28 124.76 289.35 124.69 C 289.43 124.61 289.52 124.57 289.64 124.57 L 295.21 124.57 C 296.38 124.57 297.41 124.78 298.3 125.18 C 299.2 125.58 299.89 126.16 300.38 126.9 C 300.88 127.65 301.12 128.51 301.12 129.48 L 301.12 135.34 C 301.12 136.31 300.88 137.17 300.38 137.91 C 299.89 138.66 299.2 139.23 298.3 139.64 C 297.41 140.04 296.38 140.24 295.21 140.24 L 289.64 140.24 C 289.52 140.24 289.43 140.21 289.35 140.13" transform="translate(31.1 30.5)" style="display:none"/>
         <text class="lk-tag lk-tagtxt" id="tagTxt" x="186.5" y="171.3" style="display:none"></text>
       </svg>
-      <span class="app-name">Pige</span>
       <span id="station" hidden></span>
-    </div>
+    </a>
+    <nav class="nav" aria-label="Menus">
+      <a href="#surveillance" data-vue="surveillance"><b>1</b><span class="nav-l">Surveillance des flux</span><span class="nav-c">Surveillance</span></a>
+      <a href="#piges" data-vue="piges"><b>2</b>Piges</a>
+      <a href="#podcaster" data-vue="podcaster"><b>3</b><span class="nav-l">Auto-Podcaster</span><span class="nav-c">Podcaster</span><i class="nav-badge" id="navBadge" hidden></i></a>
+    </nav>
     <div class="top-right">
       <span class="who" id="who" hidden></span>
       <a class="btn" id="logout" href="/cdn-cgi/access/logout" hidden>Déconnexion</a>
       <span class="now" title="Heure locale"><small>Il est</small><span id="nowClock">--:--:--</span></span>
     </div>
+    <div class="strip" id="strip" aria-label="Départs en direct"></div>
   </header>
 
+  <section class="vue v-accueil" data-vue="accueil" aria-label="Accueil" hidden>
+    <h1 class="label">Menus</h1>
+    <div class="tiles">
+      <a class="tile" href="#surveillance"><span class="tile-n">1</span><b>Surveillance des flux</b><p>Les vu-mètres des quatre départs, le titre en cours et les derniers titres diffusés, avec leur pochette. Alerte en cas de blanc ou de coupure.</p><span class="tile-live" id="tileSurv">Connexion aux flux…</span></a>
+      <a class="tile" href="#piges"><span class="tile-n">2</span><b>Piges</b><p>Réécouter heure par heure les quatre départs, avancer ou reculer de 10 ou 30 secondes, et extraire une plage précise en MP3.</p><span class="tile-live" id="tilePiges">—</span></a>
+      <a class="tile" href="#podcaster"><span class="tile-n">3</span><b>Auto-Podcaster</b><p>La page écoute Monte-Carlo, reconnaît les jingles programmés et en extrait automatiquement le son, coupé au début et à la fin.</p><span class="tile-live" id="tilePod">—</span></a>
+    </div>
+  </section>
+
+  <div class="vue v-surv" data-vue="surveillance" hidden>
   <section class="monitor" aria-label="Surveillance des flux">
     <div class="mon-head"><h2 class="label">Surveillance des flux</h2><span class="mon-sum" id="monSum" role="status">Connexion aux flux…</span></div>
     <div class="mon-grid" id="monGrid"></div>
   </section>
+  </div>
 
-  <section class="det" aria-label="Reconnaissance en direct">
-    <div class="mon-head"><h2 class="label">Reconnaissance en direct</h2><span class="mon-sum" id="detSum">Aucun son à reconnaître</span></div>
-    <div class="det-box">
-      <div class="det-lamp" id="detLamp" role="status" aria-live="assertive"><b>DÉTECTION</b><small id="detLampD">En attente d'un son à reconnaître</small></div>
-      <div class="det-side">
-        <div><p class="det-h">Sons à reconnaître</p><div class="det-refs" id="detRefs"></div></div>
-        <label class="btn det-add"><input type="file" id="detFile" accept="audio/*,.mp3,.mp2,.mpa,.wav,.bwf,.aif,.aiff,.aifc,.m4a,.aac,.flac,.ogg" hidden>Ajouter un son à reconnaître…</label>
-        <div><p class="det-h">Ressemblance en direct</p><div class="det-scores" id="detScores"></div></div>
-        <div><p class="det-h">Dernières détections</p><ol class="det-log" id="detLog"><li class="det-vide">Aucune pour l'instant.</li></ol>
-          <label class="det-auto"><input type="checkbox" id="detAuto" checked>Télécharger automatiquement le fichier de chaque son détecté</label></div>
+  <div class="vue v-podcast" data-vue="podcaster" hidden>
+  <section class="det" aria-label="Auto-Podcaster">
+    <div class="mon-head"><h2 class="label">Auto-Podcaster</h2><span class="mon-sum" id="detSum">Aucun fichier à analyser</span></div>
+    <div class="det-haut">
+      <div class="det-lamp" id="detLamp" role="status" aria-live="polite"><b>EXTRACTION</b></div>
+      <div class="det-etat"><span id="detLampD">En attente d'un fichier à analyser</span><div class="det-scores" id="detScores"></div></div>
+    </div>
+    <div class="det-cols">
+      <div class="det-card">
+        <p class="det-h">Fichiers à analyser</p>
+        <div class="det-refs" id="detRefs"></div>
+        <label class="btn det-add"><input type="file" id="detFile" accept="audio/*,.mp3,.mp2,.mpa,.wav,.bwf,.aif,.aiff,.aifc,.m4a,.aac,.flac,.ogg" hidden>Ajouter un fichier à analyser…</label>
+        <p class="det-note">La page les reconnaît sur le direct de Monte-Carlo. Seul le son détecté est gardé, le temps d'en faire le fichier.</p>
+      </div>
+      <div class="det-card">
+        <p class="det-h">Fichiers détectés</p>
+        <ol class="det-log" id="detLog"><li class="det-vide">Aucun pour l'instant.</li></ol>
+        <label class="det-auto"><input type="checkbox" id="detAuto" checked>Télécharger automatiquement chaque fichier détecté</label>
       </div>
     </div>
   </section>
+  <section class="extraits" aria-label="Extraits automatiques">
+    <div class="events-head"><h2 class="label">Extraits automatiques</h2><span class="events-sub">Découpés par le programme de pige du Mac, quand un jingle est reconnu ou à heure fixe</span></div>
+    <div id="extraits"></div>
+  </section>
+  </div>
 
+  <div class="vue v-piges" data-vue="piges" hidden>
   <p class="note" id="setupNote" hidden></p>
 
   <aside class="side" aria-label="Sources">
@@ -428,7 +525,21 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
           <button class="btn" type="button" id="copyLink">Copier le lien</button>
         </div>
       </div>
-      <p class="keys"><kbd>Espace</kbd> lecture · <kbd>←</kbd> <kbd>→</kbd> 10 s · <kbd>Maj</kbd>+<kbd>←</kbd> <kbd>→</kbd> 30 s · <kbd>Page ↑</kbd> <kbd>Page ↓</kbd> heure · <kbd>L</kbd> direct</p>
+      <div class="clip" id="clip">
+        <span class="label">Extraire une plage</span>
+        <div class="clip-row">
+          <label class="clip-f">Début <input id="clipIn" placeholder="hh:mm:ss,0" autocomplete="off" spellcheck="false"></label>
+          <button class="btn" type="button" id="clipInSet" title="Prendre la position de lecture (touche I)">Marquer ici</button>
+          <label class="clip-f">Fin <input id="clipOut" placeholder="hh:mm:ss,0" autocomplete="off" spellcheck="false"></label>
+          <button class="btn" type="button" id="clipOutSet" title="Prendre la position de lecture (touche O)">Marquer ici</button>
+          <span class="clip-dur" id="clipDur">—</span>
+          <span class="clip-sep"></span>
+          <button class="btn" type="button" id="clipPlay">Écouter la plage</button>
+          <button class="btn primary" type="button" id="clipGo">Extraire en MP3</button>
+          <button class="btn" type="button" id="clipClear" title="Effacer le début et la fin" aria-label="Effacer la plage">×</button>
+        </div>
+      </div>
+      <p class="keys"><kbd>Espace</kbd> lecture · <kbd>←</kbd> <kbd>→</kbd> 10 s · <kbd>Maj</kbd>+<kbd>←</kbd> <kbd>→</kbd> 30 s · <kbd>Page ↑</kbd> <kbd>Page ↓</kbd> heure · <kbd>L</kbd> direct · <kbd>I</kbd> <kbd>O</kbd> début et fin de plage</p>
     </section>
 
     <section class="day" aria-label="Heures du jour">
@@ -448,11 +559,8 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
       <div id="events"></div>
     </section>
 
-    <section class="extraits" aria-label="Extraits automatiques">
-      <div class="events-head"><h2 class="label">Extraits automatiques</h2><span class="events-sub">Découpés quand un jingle est reconnu ou à heure fixe</span></div>
-      <div id="extraits"></div>
-    </section>
   </main>
+  </div>
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -477,6 +585,7 @@ const DEFAULT_CONFIG = {
   silence: { thresholdDb: -50, minSeconds: 10 },
   // Sons reconnus en direct par la page : { nom, fichier (adresse du son), seuil (0,6 par défaut), sources (toutes par défaut) }
   detection: [],
+  detectionSources: ['montecarlo'],   // départs écoutés par l'Auto-Podcaster
   sources: [
     { id: 'montecarlo',  name: 'Monte-Carlo',   group: 'depart',   note: 'Antenne principale', color: '#e4032e', stream: 'https://radiomonaco.ice.infomaniak.ch/radiomonaco-128.mp3', diffusion: ['FM', 'DAB+', 'WEB'] },
     { id: 'paris',       name: 'Paris',         group: 'depart',   note: 'Antenne Paris',      color: '#e4032e', stream: 'https://radiomonacoparis.ice.infomaniak.ch/radiomonacoparis-320.aac', titresDe: 'montecarlo', diffusion: ['DAB+', 'WEB'] },
@@ -568,6 +677,13 @@ function finalize(segs, a, b){
   const seen = new Set();
   segs = segs.filter(s => !seen.has(s.url) && seen.add(s.url)).sort((x, y) => x.start - y.start);
   const now = Date.now();
+  // Le nom d'un fichier donne l'heure où son premier son est arrivé. Après une (re)connexion, le serveur envoie
+  // d'un coup quelques secondes d'avance : ce fichier contient alors plus de son que sa durée à l'horloge. On le cale
+  // donc sur le début du fichier suivant, pour que chaque instant de la pige tombe au bon endroit.
+  segs.forEach((s, i) => {
+    const n = segs[i + 1], d = s.estDur;
+    if (n && d && Math.abs(n.start - (s.start + d * 1000)) < 10e3) s.start = n.start - d * 1000;
+  });
   segs.forEach((s, i) => {
     const pk = peaksCache.get(s.url);
     if (pk && pk.data) s.dur = pk.data.n;
@@ -1018,6 +1134,14 @@ function drawWave(){
   }
   // blancs
   for (const s of segs){ const pk = peaksFor(s); if (pk && pk.sil) for (const [a, b] of pk.sil){ if (b < sl.start || a > sl.end) continue; cx.fillStyle = colors.recSoft; cx.fillRect(X(a), top, Math.max(2, X(b) - X(a)), bot - top); } }
+  // plage à extraire
+  if (clip.a != null || clip.b != null){
+    const a = clip.a ?? clip.b, b = clip.b ?? clip.a;
+    if (b >= sl.start && a <= sl.end){
+      cx.fillStyle = colors.accent; cx.globalAlpha = .14;
+      cx.fillRect(X(Math.max(a, sl.start)), top, Math.max(2, X(Math.min(b, sl.end)) - X(Math.max(a, sl.start))), bot - top); cx.globalAlpha = 1;
+    }
+  }
   // barres de niveau
   const bw = 2, step = 3, cols = Math.floor(w / step), colMs = len / cols;
   const thr = cfg.silence?.thresholdDb ?? -50;
@@ -1054,6 +1178,12 @@ function drawWave(){
     lastRight = Math.max(lastRight, lx + tw);
   }
   cx.font = '600 11.5px Barlow, system-ui, sans-serif';
+  for (const [t, nom] of [[clip.a, 'début'], [clip.b, 'fin']]){
+    if (t == null || t < sl.start || t > sl.end) continue;
+    const x = Math.round(X(t)) + .5;
+    cx.strokeStyle = colors.accent; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(x, top); cx.lineTo(x, bot); cx.stroke(); cx.lineWidth = 1;
+    cx.fillStyle = colors.accent; cx.textAlign = nom === 'début' ? 'right' : 'left'; cx.fillText(nom, nom === 'début' ? x - 4 : x + 4, bot - 9);   // à l'extérieur de la plage
+  }
   // direct
   if (now > sl.start && now < sl.end){
     const x = Math.round(X(now)) + .5; cx.strokeStyle = colors.rec; cx.setLineDash([3, 3]); cx.beginPath(); cx.moveTo(x, top); cx.lineTo(x, bot); cx.stroke(); cx.setLineDash([]);
@@ -1100,13 +1230,123 @@ function parseHash(){
   return { src: m[1], t: new Date(+m[2], +m[3]-1, +m[4], +m[5], +m[6], +m[7]).getTime() };
 }
 
+/* ---------- Extraire une plage de la pige ----------
+   Début et fin au dixième de seconde (bouton « Marquer ici », touches I et O, ou saisie). Le fichier MP3 est
+   assemblé directement à partir des enregistrements, trame par trame (26 ms), sans réencodage : même qualité que la
+   pige, et seuls les morceaux utiles sont téléchargés depuis le programme de pige. */
+const clip = { a: null, b: null, stop: null, occupe: false };
+const fmtClip = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())},${Math.floor(d.getMilliseconds() / 100)}`; };
+const hmsNom = ms => { const d = new Date(ms); return `${pad(d.getHours())}h${pad(d.getMinutes())}m${pad(d.getSeconds())}s`; };
+function clipLire(txt, jour){
+  const m = /^\s*(\d{1,2})\s*[:h]\s*(\d{1,2})(?:\s*[:m]\s*(\d{1,2})(?:\s*[.,]\s*(\d{1,3}))?)?\s*s?\s*$/i.exec(txt || '');
+  if (!m) return null;
+  const [y, mo, d] = jour.split('-').map(Number);
+  const ms = m[4] ? Math.round(+('0.' + m[4]) * 1000) : 0;
+  if (+m[1] > 23 || +m[2] > 59 || +(m[3] || 0) > 59) return null;
+  return new Date(y, mo - 1, d, +m[1], +m[2], +(m[3] || 0), ms).getTime();
+}
+function clipMarquer(w){
+  const t = Math.round(curPos() / 100) * 100;
+  clip[w] = t;
+  if (clip.a != null && clip.b != null && clip.b <= clip.a){ if (w === 'a') clip.b = null; else clip.a = null; }
+  clipMaj(); drawWave();
+}
+function clipSaisie(w){
+  const el = $(w === 'a' ? 'clipIn' : 'clipOut'), v = el.value.trim();
+  if (!v){ clip[w] = null; el.classList.remove('err'); clipMaj(); drawWave(); return; }
+  const autre = clip[w === 'a' ? 'b' : 'a'], jour = autre != null ? localDay(autre) : st.day;
+  const t = clipLire(v, jour);
+  el.classList.toggle('err', t == null);
+  if (t == null){ toast('Heure à écrire ainsi : 14:05:30,5'); return; }
+  clip[w] = t; clipMaj(); drawWave();
+}
+function clipMaj(){
+  const { a, b } = clip, ok = a != null && b != null && b > a;
+  for (const [w, id] of [['a', 'clipIn'], ['b', 'clipOut']]){ const el = $(id); if (document.activeElement !== el){ el.value = clip[w] != null ? fmtClip(clip[w]) : ''; el.classList.remove('err'); } }
+  const sec = ok ? (b - a) / 1000 : 0;
+  $('clipDur').textContent = !ok ? (a != null || b != null ? 'Marquez l\'autre bout' : '—')
+    : sec < 60 ? `${sec.toFixed(1).replace('.', ',')} s` : `${Math.floor(sec / 60)} min ${(sec % 60).toFixed(1).replace('.', ',')} s`;
+  $('clipPlay').disabled = !ok || clip.occupe;
+  $('clipGo').disabled = !ok || clip.occupe || !pigeVue;
+  $('clipGo').title = pigeVue ? '' : 'Il faut le programme de pige (enregistrements) pour extraire une plage.';
+}
+function clipEcouter(){
+  if (clip.a == null || clip.b == null) return;
+  if (live.on) stopLive();
+  clip.stop = clip.b;
+  seek(clip.a, { autoplay: true, snapTo: clip.a + HOUR });
+}
+async function lireOctets(url, a, b){
+  const r = await fetch(withAuth(url), { headers: { Range: `bytes=${a}-${b}` }, cache: 'no-store' });
+  if (r.status === 206) return new Uint8Array(await r.arrayBuffer());
+  if (r.ok){ const tout = new Uint8Array(await r.arrayBuffer()); return tout.subarray(a, Math.min(tout.length, b + 1)); }
+  throw new Error(`Enregistrement illisible (erreur ${r.status}).`);
+}
+async function tramesEntre(sg, t0, t1){
+  // Fichier MP3 à débit constant : la trame n° k commence à k × (taille moyenne d'une trame) octets du début.
+  const tete = await lireOctets(sg.url, 0, 16383);
+  let o = premiereTrame(tete, 0);
+  if (o < 0) throw new Error('Enregistrement illisible.');
+  const b1 = tete[o + 1], ver = (b1 >> 3) & 3, kb = (ver === 3 ? BR1 : BR2)[tete[o + 2] >> 4], hz = SRT[ver][(tete[o + 2] >> 2) & 3];
+  const fd = (ver === 3 ? 1152 : 576) / hz * 1000, moy = (ver === 3 ? 144000 : 72000) * kb / hz;
+  const n0 = trame(tete, o);
+  if (/Xing|Info/.test(dTxt(tete, o, Math.min(n0, 200)))) o += n0;   // trame d'information du début : pas de son
+  const k0 = Math.max(0, Math.round(t0 / fd)), k1 = Math.round(t1 / fd);
+  if (k1 <= k0) return null;
+  const debut = Math.max(0, o + Math.floor(k0 * moy) - 4096), fin = o + Math.ceil(k1 * moy) + 4096;
+  const u = await lireOctets(sg.url, debut, fin), morceaux = [];
+  let i = premiereTrame(u, 0);
+  while (i >= 0 && i < u.length){
+    const n = trame(u, i);
+    if (!n){ i = premiereTrame(u, i + 1); continue; }
+    if (i + n > u.length) break;
+    const k = Math.round((debut + i - o) / moy);
+    if (k >= k1) break;
+    if (k >= k0) morceaux.push(u.subarray(i, i + n));
+    i += n;
+  }
+  return joindre(morceaux, morceaux.reduce((x, m) => x + m.length, 0));
+}
+async function clipExtraire(){
+  const { a, b } = clip;
+  if (clip.occupe) return;
+  if (a == null || b == null || b <= a){ toast('Marquez d\'abord le début et la fin de la plage.'); return; }
+  if (b - a > 2 * HOUR){ toast('La plage dépasse 2 heures : raccourcissez-la.'); return; }
+  clip.occupe = true; const bt = $('clipGo'), lib = bt.textContent; bt.textContent = 'Extraction…'; clipMaj();
+  try {
+    const src = st.src, segs = [];
+    for (const j of new Set([localDay(a), localDay(b - 1)])) for (const x of (await ensureDay(src, j)) || []) if (!segs.some(y => y.url === x.url)) segs.push(x);
+    segs.sort((x, y) => x.start - y.start);
+    const parts = []; let couvert = 0;
+    for (const sg of segs){
+      const lo = Math.max(a, sg.start), hi = Math.min(b, sg.end);
+      if (hi - lo < 30) continue;
+      const u = await tramesEntre(sg, lo - sg.start, hi - sg.start);
+      if (u && u.length){ parts.push(u); couvert += hi - lo; }
+    }
+    if (!parts.length) throw new Error('Aucun enregistrement sur cette plage.');
+    const nom = `${srcName(src)} ${localDay(a)} ${hmsNom(a)}-${hmsNom(b)}.mp3`.replace(/[\\/:*?"<>|]/g, '-');
+    const url = URL.createObjectURL(new Blob(parts, { type: 'audio/mpeg' }));
+    dTelecharger(url, nom); setTimeout(() => URL.revokeObjectURL(url), 120e3);
+    toast(couvert < b - a - 1000 ? `Extrait téléchargé, mais ${fmtDur((b - a - couvert) / 1000)} de la plage n'ont pas été enregistrées.` : `Extrait téléchargé : ${nom}`);
+  } catch(e){ toast(e.message || 'L\'extraction a échoué.'); }
+  finally { clip.occupe = false; bt.textContent = lib; clipMaj(); }
+}
+
 function bind(){
   $('bPlay').onclick = togglePlay;
   $('bM10').onclick = () => nudge(-10); $('bM30').onclick = () => nudge(-30);
   $('bP10').onclick = () => nudge(10);  $('bP30').onclick = () => nudge(30);
   $('bPrevH').onclick = () => stepHour(-1); $('bNextH').onclick = () => stepHour(1);
   document.querySelector('.side').addEventListener('click', e => { const b = e.target.closest('.src'); if (b) selectSource(b.dataset.id); });
-  $('monGrid').addEventListener('click', e => { const b = e.target.closest('.mon'); if (b) selectSource(b.dataset.id); });
+  $('monGrid').addEventListener('click', e => { const b = e.target.closest('.mon'); if (b){ selectSource(b.dataset.id); location.hash = '#piges'; } });
+  $('clipInSet').onclick = () => clipMarquer('a');
+  $('clipOutSet').onclick = () => clipMarquer('b');
+  $('clipIn').onchange = () => clipSaisie('a');
+  $('clipOut').onchange = () => clipSaisie('b');
+  $('clipPlay').onclick = clipEcouter;
+  $('clipGo').onclick = clipExtraire;
+  $('clipClear').onclick = () => { clip.a = clip.b = clip.stop = null; clipMaj(); drawWave(); };
   $('hours').addEventListener('click', e => { const b = e.target.closest('.hour'); if (!b || b.disabled) return; const sl = slotsOf(st.day)[+b.dataset.i]; if (sl) seek(sl.start); });
   $('extraits').addEventListener('click', e => {
     const b = e.target.closest('button[data-x]'); if (!b || !extraits) return;
@@ -1148,6 +1388,9 @@ function bind(){
   };
   document.addEventListener('keydown', e => {
     if (e.target.closest('input, select, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (vue !== 'piges') return;                   // les raccourcis du lecteur ne valent que dans les piges
+    if (e.key === 'i' || e.key === 'I'){ e.preventDefault(); clipMarquer('a'); return; }
+    if (e.key === 'o' || e.key === 'O'){ e.preventDefault(); clipMarquer('b'); return; }
     if (e.key === ' ' || e.code === 'Space'){ if (e.target.closest('button')) return; e.preventDefault(); togglePlay(); }
     else if (e.key === 'ArrowLeft'){ e.preventDefault(); nudge(e.shiftKey ? -30 : -10); }
     else if (e.key === 'ArrowRight'){ e.preventDefault(); nudge(e.shiftKey ? 30 : 10); }
@@ -1158,7 +1401,22 @@ function bind(){
   new ResizeObserver(() => drawWave()).observe($('waveWrap'));
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); drawWave(); });
   new MutationObserver(() => { readColors(); drawWave(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-  window.addEventListener('hashchange', () => { const h = parseHash(); if (h && cfg.sources.some(s => s.id === h.src)){ st.src = h.src; renderSources(); seek(h.t); } });
+  window.addEventListener('hashchange', () => route(false));
+}
+
+/* ---------- Vues : accueil, surveillance, piges, auto-podcaster ---------- */
+const VUES = ['accueil', 'surveillance', 'piges', 'podcaster'];
+let vue = 'accueil';
+function route(auDemarrage){
+  const h = (location.hash || '').slice(1), lien = parseHash();
+  const v = VUES.includes(h) ? h : lien ? 'piges' : 'accueil';
+  if (lien && !auDemarrage && cfg.sources.some(s => s.id === lien.src)){ st.src = lien.src; renderSources(); seek(lien.t); }
+  vue = v;
+  for (const el of document.querySelectorAll('.vue')) el.hidden = el.dataset.vue !== v;
+  for (const a of document.querySelectorAll('.nav a')) a.setAttribute('aria-current', a.dataset.vue === v ? 'page' : 'false');
+  if (v === 'piges') requestAnimationFrame(() => { renderTime(); drawWave(); });
+  if (v === 'podcaster'){ det.nonVus = 0; detAfficher(true); }
+  if (!auDemarrage) window.scrollTo(0, 0);
 }
 
 /* Boucle d'affichage */
@@ -1179,12 +1437,15 @@ const vuPct = db => {
 function buildMonitor(){
   const scale = [[-40, '40'], [-20, '20'], [-12, '12'], [-6, '6'], [-3, '3'], [0, '0']].map(([d, t]) => `<span style="left:${vuPct(d).toFixed(1)}%">${t}</span>`).join('');
   const bar = ch => `<span class="m-ch">${ch}</span><span class="m-bar"><i class="m-fill"></i><i class="m-peak"></i></span>`;
-  $('monGrid').innerHTML = cfg.sources.map(s => `<button class="mon off" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" aria-pressed="${s.id === st.src}" title="Écouter ${esc(s.name)} dans la pige">
+  $('monGrid').innerHTML = cfg.sources.map(s => `<button class="mon off" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" aria-pressed="${s.id === st.src}" title="Réécouter ${esc(s.name)} dans les piges">
     <span class="mon-top"><svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="mon-id"><span class="mon-name">${esc(s.name)}</span>${Array.isArray(s.diffusion) && s.diffusion.length ? `<span class="mon-tags" aria-label="Diffusion">${s.diffusion.map(d => `<span class="mon-tag">${esc(d)}</span>`).join('')}</span>` : ''}</span><span class="lamp mon-txt">—</span></span>
     <span class="meter" aria-hidden="true"><span class="m-rows">${bar('L')}${bar('R')}<span class="m-scale">${scale}</span></span></span>
-    <span class="np vide"><span class="np-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="np-txt"><span class="np-lbl">Now playing</span><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></span></button>`).join('');
+    <span class="np vide"><span class="np-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="np-txt"><span class="np-lbl">Now playing</span><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></span>
+    <span class="np-hist" aria-label="Derniers titres"></span></button>`).join('');
+  $('strip').innerHTML = cfg.sources.map(s => `<a class="sv off" href="#surveillance" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" title="${esc(s.name)}"><svg class="sv-logo" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="sv-n">${esc(s.court || s.name.replace(/^100\s*%\s*/, ''))}</span><span class="sv-m" aria-hidden="true"><i></i><i></i></span></a>`).join('');
   mon.cards = [...$('monGrid').querySelectorAll('.mon')].map(el => ({
-    id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'), np: el.querySelector('.np'), npI: el.querySelector('.np-art img'), npT: el.querySelector('.np-t'), npA: el.querySelector('.np-a'), npK: '',
+    id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'), np: el.querySelector('.np'), npI: el.querySelector('.np-art img'), npT: el.querySelector('.np-t'), npA: el.querySelector('.np-a'), npK: '', npH: el.querySelector('.np-hist'),
+    sv: $('strip').querySelector(`[data-id="${CSS.escape(el.dataset.id)}"]`),
     d: [-99, -99], pk: [-99, -99], pt: [0, 0], cls: '', label: ''
   }));
 }
@@ -1228,7 +1489,8 @@ function bmStart(){
   const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   try { bm.dec = OAC ? new OAC(2, 44100, 44100) : null; } catch(e){ bm.dec = null; }
   bm.on = true;
-  for (const s of cfg.sources) if (s.stream) bmOpen(s);
+  // Avec le programme de pige, les niveaux viennent de lui : la page n'écoute que les départs de l'Auto-Podcaster.
+  for (const s of cfg.sources) if (s.stream && (!progActif() || detSources().includes(s.id))) bmOpen(s);
 }
 function bmStop(){
   if (!bm.on) return;
@@ -1306,7 +1568,7 @@ function bmDecoder(m, bloc){
       const canal = c => { const x = buf.getChannelData(c); if (n >= E) return x.subarray(n - E); const o = new Float32Array(E); o.set(x, E - n); return o; };
       const c0 = canal(0), c1 = buf.numberOfChannels > 1 ? canal(1) : c0;
       bmEnveloppe(m, c0, c1, buf.sampleRate);
-      if (det.refs.length) detEcoute(m.s.id, c0, c1, buf.sampleRate);
+      if (det.refs.length && detSources().includes(m.s.id)) detEcoute(m.s.id, c0, c1, buf.sampleRate);
     };
     const ko = () => { fin(); m.echecs++; if (m.echecs > 8 && !m.mesurable && !m.mort) bmEcoute(m, false); };
     try { const pr = bm.dec.decodeAudioData(donnees.buffer, ok, ko); if (pr && pr.catch) pr.catch(() => {}); } catch(e){ ko(); }
@@ -1569,11 +1831,13 @@ function detCompare(id, st){
       det.dernier = e; det.jusqua = performance.now() + D_ALLUME;
       det.journal.unshift(e); det.journal.length = Math.min(det.journal.length, 20);
       det.attente.push({ id, r, e });
+      if (vue !== 'podcaster') det.nonVus = (det.nonVus || 0) + 1;
       detSauver();
     }
   }
   det.scores[id] = { v: mieux, t: performance.now() };
 }
+const detSources = () => Array.isArray(cfg.detectionSources) && cfg.detectionSources.length ? cfg.detectionSources : ['montecarlo'];
 function detSauver(){ store.set('detections', det.journal.map(({ id, nom, score, t }) => ({ id, nom, score, t }))); }
 
 /* Découpe du son détecté */
@@ -1623,7 +1887,7 @@ function detDecouper(id, st){
     const nom = `${e.nom} - ${srcName(id)} - ${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}h${p2(d.getMinutes())}m${p2(d.getSeconds())}s.wav`.replace(/[\\/:*?"<>|]/g, '-');
     const url = URL.createObjectURL(dWav(L, R));
     det.fichiers.set(e.t, { url, nom, duree: total / D_SR });
-    for (const k of [...det.fichiers.keys()].slice(0, Math.max(0, det.fichiers.size - 10))){ URL.revokeObjectURL(det.fichiers.get(k).url); det.fichiers.delete(k); }
+    for (const k of [...det.fichiers.keys()].slice(0, Math.max(0, det.fichiers.size - 20))){ URL.revokeObjectURL(det.fichiers.get(k).url); det.fichiers.delete(k); }
     det.pret++;
     if (det.auto) dTelecharger(url, nom);
   }
@@ -1684,8 +1948,8 @@ async function detAjouter(fichier){
 const dSec = v => v.toFixed(1).replace('.', ',');
 function detListe(){
   $('detRefs').innerHTML = det.refs.length ? det.refs.map(r => `<div class="det-ref"><b title="${esc(r.nom)}">${esc(r.nom)}</b><span>${dSec(r.total || r.duree)} s · seuil ${r.seuil.toFixed(2).replace('.', ',')}${r.site ? ' · programmé sur le site' : ''}${!r.site && !r.debut ? ' · à ajouter de nouveau pour une découpe au plus juste' : ''}</span>${r.site ? '' : `<button class="btn" type="button" data-retirer="${esc(r.cle)}">Retirer</button>`}</div>`).join('')
-    : '<p class="det-vide">Aucun pour l\'instant. Ajoutez le son à reconnaître (jingle, virgule, top horaire…).</p>';
-  $('detScores').innerHTML = cfg.sources.map(s => `<div class="det-sc" data-id="${esc(s.id)}" style="--c:${srcColor(s)}"><span>${esc(s.name)}</span><em>—</em><span class="det-bar"><i></i><u></u></span></div>`).join('');
+    : '<p class="det-vide">Aucun pour l\'instant. Ajoutez le jingle, la virgule ou le top à reconnaître.</p>';
+  $('detScores').innerHTML = cfg.sources.filter(s => detSources().includes(s.id)).map(s => `<div class="det-sc" data-id="${esc(s.id)}" style="--c:${srcColor(s)}"><span>${esc(s.name)}</span><em>—</em><span class="det-bar"><i></i><u></u></span></div>`).join('');
   det.ui = { sc: [...$('detScores').querySelectorAll('.det-sc')].map(el => ({ id: el.dataset.id, el, v: el.querySelector('em'), i: el.querySelector('i'), u: el.querySelector('u') })), cle: '' };
   $('detAuto').checked = det.auto;
   detAfficher(true);
@@ -1694,19 +1958,21 @@ function detAfficher(force){
   if (!det.ui) return;
   const now = performance.now(), on = now < det.jusqua && det.dernier, d = det.dernier;
   const lampe = $('detLamp'), seuil = det.refs.length ? Math.min(...det.refs.map(r => r.seuil)) : 0.6;
-  const cle = (on ? 'on' + d.t + d.score.toFixed(2) : 'off' + det.refs.length + (bm.on ? 1 : 0)) + '|' + det.pret + '|' + det.attente.length + '|' + det.journal.length;
+  const cle = (on ? 'on' + d.t + d.score.toFixed(2) : 'off' + det.refs.length + (bm.on ? 1 : 0)) + '|' + det.pret + '|' + det.attente.length + '|' + det.journal.length + '|' + (det.nonVus || 0);
   if (force || cle !== det.ui.cle){
     det.ui.cle = cle;
     lampe.classList.toggle('on', !!on);
     if (on){
       const s = cfg.sources.find(x => x.id === d.id) || {};
       lampe.style.setProperty('--dc', srcColor(s));
-      $('detLampD').textContent = `${d.nom} · ${srcName(d.id)} · ${new Date(d.t).toLocaleTimeString('fr-FR')} · ${Math.round(d.score * 100)} %`;
+      $('detLampD').textContent = `${d.nom} détecté sur ${srcName(d.id)} à ${new Date(d.t).toLocaleTimeString('fr-FR')} · ${Math.round(d.score * 100)} %`;
     } else {
-      $('detLampD').textContent = !det.refs.length ? 'En attente d\'un son à reconnaître'
-        : bm.on ? `En écoute sur ${cfg.sources.length} flux` : 'Connexion aux flux…';
+      const ou = detSources().map(srcName).join(', ');
+      $('detLampD').textContent = !det.refs.length ? 'En attente d\'un fichier à analyser' : bm.on ? `En écoute sur ${ou}` : 'Connexion aux flux…';
     }
-    $('detSum').textContent = det.refs.length ? `${det.refs.length} son${det.refs.length > 1 ? 's' : ''} à reconnaître · seules les détections sont découpées` : 'Aucun son à reconnaître';
+    const resume = det.refs.length ? `${det.refs.length} fichier${det.refs.length > 1 ? 's' : ''} à analyser · ${det.journal.length} détection${det.journal.length > 1 ? 's' : ''}` : 'Aucun fichier à analyser';
+    $('detSum').textContent = resume; $('tilePod').textContent = resume;
+    $('navBadge').hidden = !det.nonVus; $('navBadge').textContent = det.nonVus || '';
     for (const c of mon.cards || []) c.el.classList.toggle('detecte', !!on && c.id === d.id);
     const action = x => {
       const f = det.fichiers.get(x.t);
@@ -1715,8 +1981,8 @@ function detAfficher(force){
       if (x.echec) return '<span class="det-act det-vide">Trop ancien pour être découpé</span>';
       return '<span></span>';
     };
-    $('detLog').innerHTML = det.journal.length ? det.journal.slice(0, 6).map(x => `<li><time>${new Date(x.t).toLocaleTimeString('fr-FR')}</time><span>${esc(x.nom)} · ${esc(srcName(x.id))}</span><em>${Math.round(x.score * 100)} %</em>${action(x)}</li>`).join('')
-      : '<li class="det-vide">Aucune pour l\'instant.</li>';
+    $('detLog').innerHTML = det.journal.length ? det.journal.slice(0, 20).map(x => { const f = det.fichiers.get(x.t); return `<li><time>${new Date(x.t).toLocaleTimeString('fr-FR')}</time><span title="${esc(f ? f.nom : x.nom)}">${esc(x.nom)} · ${esc(srcName(x.id))}${f ? ` · ${f.duree.toFixed(1).replace('.', ',')} s` : ''}</span><em>${Math.round(x.score * 100)} %</em>${action(x)}</li>`; }).join('')
+      : '<li class="det-vide">Aucun pour l\'instant.</li>';
   }
   for (const u of det.ui.sc){
     const s = det.scores[u.id], v = s && now - s.t < 5000 && det.refs.length ? Math.max(0, s.v) : null;
@@ -1802,8 +2068,29 @@ async function lireTitre(s){
     const el = doc.querySelector('track > title') || doc.querySelector('title');
     const x = (el ? el.textContent : '').replace(/\s+/g, ' ').trim();
     t.titre = x; t.etat = x && x !== '-' ? 'ok' : 'vide'; t.echecs = 0;
+    if (t.etat === 'ok') noterTitre(s.id, x);
   } catch(e){ if (++t.echecs >= 3){ t.etat = 'indispo'; t.titre = ''; } }
 }
+/* Titres passés : notés par ce navigateur à chaque changement de titre, gardés 24 heures. */
+const histo = (() => { const h = store.get('historique', {}) || {}, lim = Date.now() - 864e5; for (const k in h) h[k] = (h[k] || []).filter(x => x && x.t > lim).slice(0, 12); return h; })();
+function noterTitre(id, titre){
+  const l = histo[id] || (histo[id] = []);
+  if (l[0] && l[0].titre === titre) return;
+  l.unshift({ titre, t: Date.now() }); l.length = Math.min(l.length, 12);
+  store.set('historique', histo);
+}
+function afficherHistorique(c, s, courant){
+  const l = (histo[s.titresDe || c.id] || []).filter(x => x.titre !== courant).slice(0, 5);
+  c.npH.innerHTML = l.length ? '<span class="det-h">Derniers titres</span>' + l.map(x => {
+    const d = decouper(x.titre);
+    return `<span class="nh"><span class="nh-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="nh-t" title="${esc(x.titre)}"><b>${esc(d.titre)}</b>${d.artiste ? ' · ' + esc(d.artiste) : ''}</span><time>${hhmmT(x.t)}</time></span>`;
+  }).join('') : '';
+  [...c.npH.querySelectorAll('.nh img')].forEach((img, i) => pochette(l[i].titre).then(url => {
+    if (!url || !img.isConnected) return;
+    img.onload = () => img.classList.add('ok'); img.onerror = () => img.removeAttribute('src'); img.src = url;
+  }));
+}
+const hhmmT = t => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 function lireTitres(){
   // Onglet en arrière-plan : une lecture sur trois suffit.
   if (document.hidden && titresTour++ % 3) return;
@@ -1904,6 +2191,7 @@ function afficherTitres(c){
     c.npA.textContent = ''; c.np.title = '';
   }
   majPochette(c, t);
+  afficherHistorique(c, s, t.etat === 'ok' ? t.titre : '');
 }
 
 function fmtSilence(sec){ return `${Math.floor(sec / 60)}:${pad(sec % 60)}`; }
@@ -1922,7 +2210,7 @@ function monFrame(now){
     else if (src.etat === 'coupe'){ cls = 'alerte'; label = 'Coupé'; alertes.push(`${srcName(c.id)} : flux coupé`); }
     else if (src.etat === 'blanc'){ cls = 'alerte'; label = `Blanc ${fmtSilence(src.silence)}`; alertes.push(`${srcName(c.id)} : blanc depuis ${fmtSilence(src.silence)}`); }
     else { cls = 'ok'; label = 'En direct'; if (src.mesurable === false) nonMesures.push(srcName(c.id)); }
-    if (cls !== c.cls){ c.el.classList.remove('ok', 'off', 'alerte'); c.el.classList.add(cls); c.cls = cls; }
+    if (cls !== c.cls){ c.el.classList.remove('ok', 'off', 'alerte'); c.el.classList.add(cls); c.sv.classList.remove('ok', 'off', 'alerte'); c.sv.classList.add(cls); c.sv.title = `${srcName(c.id)} · ${label}`; c.cls = cls; }
     if (label !== c.label){ c.txt.textContent = label; c.txt.title = label; c.label = label; }
     const target = [src && src.etat !== 'coupe' ? src.l : -99, src && src.etat !== 'coupe' ? src.r : -99];
     for (let i = 0; i < 2; i++){
@@ -1930,6 +2218,8 @@ function monFrame(now){
       if (c.d[i] >= c.pk[i]){ c.pk[i] = c.d[i]; c.pt[i] = now; }
       else if (now - c.pt[i] > 1500) c.pk[i] = Math.max(c.d[i], c.pk[i] - 20 * dt);       // crête maintenue 1,5 s
       c.fills[i].style.setProperty('--v', vuPct(c.d[i]).toFixed(1) + '%');
+      if (!c.svF) c.svF = c.sv.querySelectorAll('.sv-m i');
+      c.svF[i].style.setProperty('--v', vuPct(c.d[i]).toFixed(1) + '%');
       const p = vuPct(c.pk[i]);
       c.peaks[i].style.setProperty('--p', p.toFixed(1) + '%');
       c.peaks[i].style.opacity = p > 1 ? '' : '0';
@@ -1942,13 +2232,14 @@ function monFrame(now){
   else if (alert) txt = (alertes.length > 1 ? `${alertes.length} alertes · ` : 'Alerte · ') + alertes.join(' · ');
   else txt = `${mon.cards.length} flux en direct`;
   if (fresh && !prog && nonMesures.length) txt += ` · niveau non mesurable : ${nonMesures.join(', ')}`;
-  if (sum.textContent !== txt){ sum.textContent = txt; sum.classList.toggle('alerte', alert || (mon.vu && !fresh)); }
+  if (sum.textContent !== txt){ sum.textContent = txt; sum.classList.toggle('alerte', alert || (mon.vu && !fresh)); $('tileSurv').textContent = txt; }
   const titre = alert ? `(!) ${alertes[0]} · ${TITRE}` : TITRE;
   if (document.title !== titre) document.title = titre;
 }
 
 function frame(ts){
   monFrame(ts);
+  if (clip.stop && st.playing && curPos() >= clip.stop){ clip.stop = null; togglePlay(); }
   if (live.on && ts - lastDraw > 500){ lastDraw = ts; renderTime(); drawWave(); }
   else if (st.seg && dragPos == null && st.playing){
     st.pos = media().pos();
@@ -1964,9 +2255,11 @@ async function checkPige(){
   try { const r = await fetch(withAuth(base), { cache: 'no-store' }); ok = r.ok; } catch(e){}
   const n = $('setupNote');
   n.hidden = ok;
+  $('tilePiges').textContent = ok ? 'Enregistrements disponibles' : 'Programme de pige non joignable : direct seulement';
   if (ok) pigeVue = true;
   else if (pigeVue) n.innerHTML = `<strong>La pige ne répond plus.</strong> Le PC de pige est peut-être arrêté, ou votre session a expiré. <a href="">Recharger la page</a> pour vous reconnecter.`;
   else n.innerHTML = `<strong>Pige introuvable.</strong> La page ne trouve pas les enregistrements à l'adresse <code>${esc(base)}</code>. Le bouton Direct fonctionne ; pour réécouter les heures passées, le programme de pige doit tourner et <code>baseUrl</code> dans <code>config.json</code> doit pointer vers ses fichiers.`;
+  clipMaj();
 }
 async function refreshToday(){
   const today = localDay(Date.now());
@@ -2004,7 +2297,8 @@ async function init(){
   const start = hash ? hash.t : slotAt(Date.now()).start;
   st.pos = start; st.day = localDay(start);
   buildMonitor();
-  readColors(); bind(); renderSources(); renderData(); renderExtraits(); checkPige();
+  route(true);
+  readColors(); bind(); clipMaj(); renderSources(); renderData(); renderExtraits(); checkPige();
   connectMonitor();
   lireTitres(); setInterval(lireTitres, 10e3);
   detCharger();
