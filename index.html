@@ -2684,14 +2684,17 @@ async function refreshToday(){
 
 /* ---------- Personne connectée (fournie par Cloudflare Access) ---------- */
 async function checkSession(){
+  // Personne connectée : donnée par le programme de pige (derrière Cloudflare Tunnel) ou, quand la page est servie
+  // par Cloudflare Pages, directement par Cloudflare Access. Sans Cloudflare Access, rien ne s'affiche.
+  const montrer = id => { if (!id) return; $('who').textContent = id; $('who').title = 'Connecté avec ' + id; $('who').hidden = false; $('logout').hidden = false; };
+  const json = r => r.ok && /json/.test(r.headers.get('content-type') || '');
   try {
     const r = await fetch('/api/session', { cache: 'no-store' });
-    if (!r.ok) return;
-    const j = await r.json();
-    if (j.mode === 'cloudflare'){
-      $('who').textContent = j.identite; $('who').title = 'Connecté avec ' + j.identite; $('who').hidden = false;
-      $('logout').hidden = false;
-    }
+    if (json(r)){ const j = await r.json(); if (j.mode === 'cloudflare') montrer(j.identite); return; }
+  } catch(e){}
+  try {
+    const r = await fetch('/cdn-cgi/access/get-identity', { cache: 'no-store' });
+    if (json(r)){ const j = await r.json(); montrer(j.email || j.name); }
   } catch(e){}
 }
 

@@ -1,0 +1,11 @@
+# En-têtes de sécurité, appliqués par Cloudflare Pages à toutes les réponses.
+# Mêmes règles que le programme de pige : la page ne charge que ses propres fichiers, les flux Infomaniak (https)
+# et la recherche de pochettes (Apple, Deezer) ; elle ne peut pas être affichée dans une autre page.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://itunes.apple.com https://api.deezer.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' https: blob:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Strict-Transport-Security: max-age=31536000
+  X-Robots-Tag: noindex, nofollow
