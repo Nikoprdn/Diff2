@@ -107,7 +107,12 @@ button{cursor:pointer}
 .det-bar i{position:absolute;inset:0 auto 0 0;width:var(--v,0%);background:var(--c);border-radius:3px;transition:width .2s}
 .det-bar u{position:absolute;top:0;bottom:0;left:var(--s,60%);width:2px;background:var(--ink-2);opacity:.6}
 .det-log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:13px}
-.det-log li{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:8px;color:var(--ink-2)}
+.det-log li{display:grid;grid-template-columns:62px minmax(0,1fr) auto auto;gap:8px;align-items:center;color:var(--ink-2)}
+.det-log li.det-vide{display:block}
+.det-act{display:flex;gap:4px;justify-content:flex-end}
+.det-act .btn{padding:2px 8px;font-size:12.5px}
+.det-auto{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-2);margin-top:6px;cursor:pointer}
+.det-auto input{accent-color:var(--rec);width:15px;height:15px}
 .det-log time,.det-log em{font-variant-numeric:tabular-nums;color:var(--muted);font-style:normal}
 .det-log span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mon.detecte{border-color:var(--c);box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent)}
@@ -362,7 +367,8 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
         <div><p class="det-h">Sons à reconnaître</p><div class="det-refs" id="detRefs"></div></div>
         <label class="btn det-add"><input type="file" id="detFile" accept="audio/*,.mp3,.wav,.m4a,.aac" hidden>Ajouter un son à reconnaître…</label>
         <div><p class="det-h">Ressemblance en direct</p><div class="det-scores" id="detScores"></div></div>
-        <div><p class="det-h">Dernières détections</p><ol class="det-log" id="detLog"><li class="det-vide">Aucune pour l'instant.</li></ol></div>
+        <div><p class="det-h">Dernières détections</p><ol class="det-log" id="detLog"><li class="det-vide">Aucune pour l'instant.</li></ol>
+          <label class="det-auto"><input type="checkbox" id="detAuto" checked>Télécharger automatiquement le fichier de chaque son détecté</label></div>
       </div>
     </div>
   </section>
@@ -1322,9 +1328,12 @@ function bmEnveloppe(m, c0, c1, sr){
    Empreinte d'un son : énergie dans 24 bandes de fréquence (150 à 3 800 Hz), en échelle log, recentrée à chaque
    instant pour ignorer le volume ; 31 empreintes par seconde. Le son du direct, décodé par la page, est comparé en
    continu à l'empreinte de chaque son programmé (corrélation de -1 à 1, comme pour les extraits automatiques).
-   Au-dessus du seuil, le voyant DÉTECTION s'allume. Rien n'est enregistré. */
-const D_SR = 44100, D_N = 4096, D_HOP = 1411, D_NB = 24, D_MAX_S = 8, D_ALLUME = 10000;
-const det = { refs: [], st: {}, scores: {}, dernier: null, jusqua: 0, journal: store.get('detections', []) || [] };
+   Au-dessus du seuil, le voyant DÉTECTION s'allume, puis la page découpe le son tel qu'il est passé à l'antenne,
+   calé à l'échantillon près sur le son de référence, et en fait un fichier WAV. Seules les dernières secondes de
+   chaque flux sont gardées en mémoire, le temps de la découpe ; rien d'autre n'est enregistré. */
+const D_SR = 44100, D_N = 4096, D_HOP = 1411, D_NB = 24, D_MAX_S = 8, D_ALLUME = 10000, D_MAX_FICHIER = 60, D_FONDU = 0.01;
+const det = { refs: [], st: {}, scores: {}, dernier: null, jusqua: 0, journal: store.get('detections', []) || [],
+              attente: [], fichiers: new Map(), pret: 0, auto: store.get('detection.auto', true) !== false };
 const dFen = new Float32Array(D_N).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (D_N - 1)));
 const dBandes = (() => {
   const f = k => k * D_SR / D_N, cherche = hz => { let k = 0; while (k <= D_N / 2 && f(k) < hz) k++; return k; };
@@ -1336,7 +1345,7 @@ const dFft = (() => {
   for (let i = 0, bits = Math.log2(N); i < N; i++){ let r = 0; for (let b = 0; b < bits; b++) r = (r << 1) | ((i >> b) & 1); rev[i] = r; }
   for (let k = 0; k < N / 2; k++){ cos[k] = Math.cos(2 * Math.PI * k / N); sin[k] = Math.sin(2 * Math.PI * k / N); }
   const re = new Float64Array(N), im = new Float64Array(N);
-  return (x, o) => {                                 // spectre de puissance de x[o … o+N[
+  return (x, o) => {                                 // spectre de x[o … o+N[
     for (let i = 0; i < N; i++){ re[rev[i]] = x[o + i] * dFen[i]; im[rev[i]] = 0; }
     for (let t = 2; t <= N; t <<= 1){
       const h = t >> 1, pas = N / t;
@@ -1358,12 +1367,14 @@ function dTrame(x, o){
   moy /= D_NB; for (let b = 0; b < D_NB; b++) v[b] -= moy;
   return v;
 }
+const dReduire = x => { const y = new Float32Array(x.length >> 2); for (let i = 0; i < y.length; i++) y[i] = (x[4 * i] + x[4 * i + 1] + x[4 * i + 2] + x[4 * i + 3]) / 4; return y; };
 function dEmpreinteRef(mono){
-  // Son de référence : on retire le silence au début et à la fin, et on garde au plus 8 secondes.
+  // Son de référence : on retire le silence au début et à la fin. L'empreinte utilise ses 8 premières secondes ;
+  // sa durée complète et sa première seconde (en 11 kHz) servent à caler la découpe à l'échantillon près.
   let a = 0, z = mono.length - 1;
   while (a < z && Math.abs(mono[a]) <= 0.01) a++;
   while (z > a && Math.abs(mono[z]) <= 0.01) z--;
-  const x = mono.subarray(a, Math.min(z + 1, a + D_MAX_S * D_SR));
+  const tout = mono.subarray(a, z + 1), x = tout.subarray(0, D_MAX_S * D_SR);
   const T = [];
   for (let o = 0; o + D_N <= x.length; o += D_HOP) T.push(dTrame(x, o));
   if (T.length < 31) return null;                   // moins d'une seconde de son utile
@@ -1371,7 +1382,7 @@ function dEmpreinteRef(mono){
   for (let b = 0; b < D_NB; b++){ let s = 0; for (let i = 0; i < m; i++) s += T[i][b]; s /= m; for (let i = 0; i < m; i++) t[i * D_NB + b] = T[i][b] - s; }
   let nrm = 0; for (let i = 0; i < t.length; i++) nrm += t[i] * t[i];
   nrm = Math.sqrt(nrm) + 1e-9; for (let i = 0; i < t.length; i++) t[i] /= nrm;
-  return { m, t, duree: x.length / D_SR };
+  return { m, t, duree: x.length / D_SR, total: Math.min(tout.length / D_SR, D_MAX_FICHIER), debut: dReduire(tout.subarray(0, D_SR)) };
 }
 async function dDecoder(octets){
   const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
@@ -1384,7 +1395,13 @@ async function dDecoder(octets){
 function detEcoute(id, c0, c1, sr){
   if (sr !== D_SR) return;
   let st = det.st[id];
-  if (!st) st = det.st[id] = { x: new Float32Array(D_N + 4 * D_SR), n: 0, F: [], k: 0, repos: {} };
+  if (!st){
+    // Mémoire tampon : les dernières secondes du flux (durée du plus long son + 12 s), juste le temps de la découpe.
+    const R = Math.ceil((Math.max(...det.refs.map(r => r.total || r.duree)) + 12) * D_SR);
+    st = det.st[id] = { x: new Float32Array(D_N + 4 * D_SR), n: 0, F: [], k: 0, repos: {}, R, L: new Float32Array(R), D: new Float32Array(R), tot: 0 };
+  }
+  for (let i = 0; i < c0.length; i++){ const j = (st.tot + i) % st.R; st.L[j] = c0[i]; st.D[j] = c1[i]; }
+  st.tot += c0.length;
   if (st.n + c0.length > st.x.length){ const y = new Float32Array(st.n + c0.length + D_SR); y.set(st.x.subarray(0, st.n)); st.x = y; }
   for (let i = 0; i < c0.length; i++) st.x[st.n + i] = (c0[i] + c1[i]) / 2;
   st.n += c0.length;
@@ -1396,6 +1413,7 @@ function detEcoute(id, c0, c1, sr){
     detCompare(id, st);
   }
   st.x.copyWithin(0, o, st.n); st.n -= o;
+  detDecouper(id, st);
 }
 function detCompare(id, st){
   let mieux = -1;
@@ -1411,13 +1429,16 @@ function detCompare(id, st){
     }
     const sc = num / Math.sqrt(Math.max(varT, 1e-6));
     if (sc > mieux) mieux = sc;
-    const d = det.dernier;
-    if (d && d.id === id && d.ref === r.cle && st.k - d.k < 32 && sc > d.score){ d.score = sc; detSauver(); }   // pic juste après le déclenchement
+    for (const p of det.attente){                     // le meilleur alignement est le pic, juste après le déclenchement
+      const e = p.e;
+      if (p.id === id && p.r === r && st.k - e.k < 32 && sc > e.score){ e.score = sc; e.kPic = st.k - 1; detSauver(); }
+    }
     if (sc >= r.seuil && st.k >= (st.repos[r.cle] || 0)){
       st.repos[r.cle] = st.k + m;                    // pas de second déclenchement pendant la durée du son
-      det.dernier = { id, ref: r.cle, nom: r.nom, score: sc, t: Date.now(), k: st.k };
-      det.jusqua = performance.now() + D_ALLUME;
-      det.journal.unshift(det.dernier); det.journal.length = Math.min(det.journal.length, 20);
+      const e = { id, ref: r.cle, nom: r.nom, score: sc, t: Date.now(), k: st.k, kPic: st.k - 1 };
+      det.dernier = e; det.jusqua = performance.now() + D_ALLUME;
+      det.journal.unshift(e); det.journal.length = Math.min(det.journal.length, 20);
+      det.attente.push({ id, r, e });
       detSauver();
     }
   }
@@ -1425,9 +1446,70 @@ function detCompare(id, st){
 }
 function detSauver(){ store.set('detections', det.journal.map(({ id, nom, score, t }) => ({ id, nom, score, t }))); }
 
+/* Découpe du son détecté */
+const dLire = (st, k) => (k < st.tot - st.R || k >= st.tot || k < 0) ? 0 : (st.L[k % st.R] + st.D[k % st.R]) / 2;
+function dCaler(st, s0, debut){
+  // Calage fin : on fait glisser la première seconde du son de référence autour de la position donnée par
+  // l'empreinte (± 50 ms) et on garde la position où les deux formes d'onde se ressemblent le plus.
+  if (!debut || debut.length < 2000) return s0;
+  const marge = Math.ceil(1.5 * D_HOP / 4), n = debut.length, a0 = s0 - marge * 4, y = new Float32Array(n + 2 * marge);
+  for (let i = 0; i < y.length; i++){ const k = a0 + 4 * i; y[i] = (dLire(st, k) + dLire(st, k + 1) + dLire(st, k + 2) + dLire(st, k + 3)) / 4; }
+  let eR = 0; for (let j = 0; j < n; j++) eR += debut[j] * debut[j];
+  let eY = 0; for (let j = 0; j < n; j++) eY += y[j] * y[j];
+  let mieux = -1, lag = marge;
+  for (let d = 0; d <= 2 * marge; d++){
+    if (d > 0){ eY += y[d + n - 1] * y[d + n - 1] - y[d - 1] * y[d - 1]; }
+    let c = 0; for (let j = 0; j < n; j++) c += debut[j] * y[d + j];
+    const v = c / Math.sqrt(Math.max(eR * eY, 1e-12));
+    if (v > mieux){ mieux = v; lag = d; }
+  }
+  return mieux >= 0.3 ? a0 + 4 * lag : s0;          // forme d'onde trop transformée : on garde la position de l'empreinte
+}
+function dWav(L, R){
+  const n = L.length, buf = new ArrayBuffer(44 + n * 4), v = new DataView(buf);
+  const txt = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  txt(0, 'RIFF'); v.setUint32(4, 36 + n * 4, true); txt(8, 'WAVE'); txt(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 2, true); v.setUint32(24, D_SR, true); v.setUint32(28, D_SR * 4, true);
+  v.setUint16(32, 4, true); v.setUint16(34, 16, true); txt(36, 'data'); v.setUint32(40, n * 4, true);
+  for (let i = 0, o = 44; i < n; i++, o += 4){
+    v.setInt16(o, Math.max(-1, Math.min(1, L[i])) * 32767, true);
+    v.setInt16(o + 2, Math.max(-1, Math.min(1, R[i])) * 32767, true);
+  }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+function detDecouper(id, st){
+  for (const p of det.attente.slice()){
+    if (p.id !== id) continue;
+    const e = p.e, r = p.r, total = Math.round((r.total || r.duree) * D_SR);
+    const s0 = (e.kPic - r.m + 1) * D_HOP;
+    if (st.k - e.k < 32 || st.tot < s0 + total + 2 * D_HOP) continue;   // on attend le pic et la fin du son
+    det.attente.splice(det.attente.indexOf(p), 1);
+    if (s0 < st.tot - st.R){ e.echec = true; det.pret++; continue; }
+    const debut = dCaler(st, s0, r.debut), L = new Float32Array(total), R = new Float32Array(total);
+    for (let i = 0; i < total; i++){ const k = debut + i; if (k >= st.tot - st.R && k < st.tot){ L[i] = st.L[k % st.R]; R[i] = st.D[k % st.R]; } }
+    const f = Math.round(D_FONDU * D_SR);            // fondu de 10 ms à chaque bout : pas de clic
+    for (let i = 0; i < f && i < total; i++){ const g = i / f; L[i] *= g; R[i] *= g; L[total - 1 - i] *= g; R[total - 1 - i] *= g; }
+    const d = new Date(Date.now() - (st.tot - debut) / D_SR * 1000), p2 = x => String(x).padStart(2, '0');
+    const nom = `${e.nom} - ${srcName(id)} - ${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}h${p2(d.getMinutes())}m${p2(d.getSeconds())}s.wav`.replace(/[\\/:*?"<>|]/g, '-');
+    const url = URL.createObjectURL(dWav(L, R));
+    det.fichiers.set(e.t, { url, nom, duree: total / D_SR });
+    for (const k of [...det.fichiers.keys()].slice(0, Math.max(0, det.fichiers.size - 10))){ URL.revokeObjectURL(det.fichiers.get(k).url); det.fichiers.delete(k); }
+    det.pret++;
+    if (det.auto) dTelecharger(url, nom);
+  }
+}
+function dTelecharger(url, nom){ const a = document.createElement('a'); a.href = url; a.download = nom; document.body.appendChild(a); a.click(); a.remove(); }
+let dLecteur = null;
+function dEcouter(t){
+  const f = det.fichiers.get(t); if (!f) return;
+  if (dLecteur && dLecteur.dataset.t === String(t) && !dLecteur.paused){ dLecteur.pause(); return; }
+  if (dLecteur) dLecteur.pause();
+  dLecteur = new Audio(f.url); dLecteur.dataset.t = String(t); dLecteur.play().catch(() => {});
+}
+
 /* Sons de référence : ceux du site (config « detection ») et ceux ajoutés sur cette page (gardés dans ce navigateur). */
 const b64 = { de: a => { let s = ''; const u = new Uint8Array(a.buffer, a.byteOffset, a.byteLength); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); },
-              vers: s => { const r = atob(s), u = new Uint8Array(r.length); for (let i = 0; i < r.length; i++) u[i] = r.charCodeAt(i); return new Float32Array(u.buffer); } };
+              octets: s => { const r = atob(s), u = new Uint8Array(r.length); for (let i = 0; i < r.length; i++) u[i] = r.charCodeAt(i); return u.buffer; } };
 async function detCharger(){
   const refs = [];
   for (const [i, d] of (cfg.detection || []).entries()){
@@ -1441,13 +1523,18 @@ async function detCharger(){
     } catch(err){ console.warn('Son à reconnaître ignoré :', d.fichier, err); }
   }
   for (const d of store.get('detection.refs', []) || []){
-    try { const t = b64.vers(d.t); refs.push({ cle: d.cle, nom: d.nom, seuil: d.seuil || 0.6, sources: null, m: t.length / D_NB, t, duree: d.duree }); } catch(e){}
+    try {
+      const t = new Float32Array(b64.octets(d.t));
+      const debut = d.d ? Float32Array.from(new Int16Array(b64.octets(d.d)), v => v / 32768) : null;
+      refs.push({ cle: d.cle, nom: d.nom, seuil: d.seuil || 0.6, sources: null, m: t.length / D_NB, t, duree: d.duree, total: d.total || 0, debut });
+    } catch(e){}
   }
-  det.refs = refs; det.st = {};
+  det.refs = refs; det.st = {}; det.attente = [];
   detListe();
 }
 function detGarderLocaux(){
-  store.set('detection.refs', det.refs.filter(r => !r.site).map(r => ({ cle: r.cle, nom: r.nom, seuil: r.seuil, duree: r.duree, t: b64.de(r.t) })));
+  store.set('detection.refs', det.refs.filter(r => !r.site).map(r => ({ cle: r.cle, nom: r.nom, seuil: r.seuil, duree: r.duree, total: r.total,
+    t: b64.de(r.t), d: r.debut ? b64.de(Int16Array.from(r.debut, v => Math.max(-32768, Math.min(32767, Math.round(v * 32768))))) : undefined })));
 }
 async function detAjouter(fichier){
   const nom = fichier.name.replace(/\.[^.]+$/, '');
@@ -1456,23 +1543,25 @@ async function detAjouter(fichier){
     const e = dEmpreinteRef(await dDecoder(await fichier.arrayBuffer()));
     if (!e) { toast('Ce son est trop court : il faut au moins une seconde de son.'); detListe(); return; }
     det.refs.push({ cle: 'local' + Date.now(), nom, seuil: 0.6, sources: null, ...e });
-    detGarderLocaux(); det.st = {};
+    detGarderLocaux(); det.st = {}; det.attente = [];
     toast(`« ${nom} » sera reconnu sur toutes les chaînes.`);
   } catch(err){ toast('Ce fichier audio ne peut pas être lu par le navigateur.'); }
   detListe();
 }
+const dSec = v => v.toFixed(1).replace('.', ',');
 function detListe(){
-  $('detRefs').innerHTML = det.refs.length ? det.refs.map(r => `<div class="det-ref"><b title="${esc(r.nom)}">${esc(r.nom)}</b><span>${r.duree.toFixed(1).replace('.', ',')} s · seuil ${r.seuil.toFixed(2).replace('.', ',')}${r.site ? ' · programmé sur le site' : ''}</span>${r.site ? '' : `<button class="btn" type="button" data-retirer="${esc(r.cle)}">Retirer</button>`}</div>`).join('')
+  $('detRefs').innerHTML = det.refs.length ? det.refs.map(r => `<div class="det-ref"><b title="${esc(r.nom)}">${esc(r.nom)}</b><span>${dSec(r.total || r.duree)} s · seuil ${r.seuil.toFixed(2).replace('.', ',')}${r.site ? ' · programmé sur le site' : ''}${!r.site && !r.debut ? ' · à ajouter de nouveau pour une découpe au plus juste' : ''}</span>${r.site ? '' : `<button class="btn" type="button" data-retirer="${esc(r.cle)}">Retirer</button>`}</div>`).join('')
     : '<p class="det-vide">Aucun pour l\'instant. Ajoutez le son à reconnaître (jingle, virgule, top horaire…).</p>';
   $('detScores').innerHTML = cfg.sources.map(s => `<div class="det-sc" data-id="${esc(s.id)}" style="--c:${srcColor(s)}"><span>${esc(s.name)}</span><em>—</em><span class="det-bar"><i></i><u></u></span></div>`).join('');
   det.ui = { sc: [...$('detScores').querySelectorAll('.det-sc')].map(el => ({ id: el.dataset.id, el, v: el.querySelector('em'), i: el.querySelector('i'), u: el.querySelector('u') })), cle: '' };
+  $('detAuto').checked = det.auto;
   detAfficher(true);
 }
 function detAfficher(force){
   if (!det.ui) return;
   const now = performance.now(), on = now < det.jusqua && det.dernier, d = det.dernier;
   const lampe = $('detLamp'), seuil = det.refs.length ? Math.min(...det.refs.map(r => r.seuil)) : 0.6;
-  const cle = on ? 'on' + d.t + d.score.toFixed(2) : 'off' + det.refs.length + (bm.on ? 1 : 0);
+  const cle = (on ? 'on' + d.t + d.score.toFixed(2) : 'off' + det.refs.length + (bm.on ? 1 : 0)) + '|' + det.pret + '|' + det.attente.length + '|' + det.journal.length;
   if (force || cle !== det.ui.cle){
     det.ui.cle = cle;
     lampe.classList.toggle('on', !!on);
@@ -1484,9 +1573,16 @@ function detAfficher(force){
       $('detLampD').textContent = !det.refs.length ? 'En attente d\'un son à reconnaître'
         : bm.on ? `En écoute sur ${cfg.sources.length} flux` : 'Connexion aux flux…';
     }
-    $('detSum').textContent = det.refs.length ? `${det.refs.length} son${det.refs.length > 1 ? 's' : ''} à reconnaître · rien n'est enregistré` : 'Aucun son à reconnaître';
+    $('detSum').textContent = det.refs.length ? `${det.refs.length} son${det.refs.length > 1 ? 's' : ''} à reconnaître · seules les détections sont découpées` : 'Aucun son à reconnaître';
     for (const c of mon.cards || []) c.el.classList.toggle('detecte', !!on && c.id === d.id);
-    $('detLog').innerHTML = det.journal.length ? det.journal.slice(0, 6).map(x => `<li><time>${new Date(x.t).toLocaleTimeString('fr-FR')}</time><span>${esc(x.nom)} · ${esc(srcName(x.id))}</span><em>${Math.round(x.score * 100)} %</em></li>`).join('')
+    const action = x => {
+      const f = det.fichiers.get(x.t);
+      if (f) return `<span class="det-act"><button class="btn" type="button" data-ecouter="${x.t}">Écouter</button><button class="btn" type="button" data-telecharger="${x.t}" title="${esc(f.nom)}">Télécharger</button></span>`;
+      if (det.attente.some(p => p.e === x)) return '<span class="det-act det-vide">Découpe…</span>';
+      if (x.echec) return '<span class="det-act det-vide">Trop ancien pour être découpé</span>';
+      return '<span></span>';
+    };
+    $('detLog').innerHTML = det.journal.length ? det.journal.slice(0, 6).map(x => `<li><time>${new Date(x.t).toLocaleTimeString('fr-FR')}</time><span>${esc(x.nom)} · ${esc(srcName(x.id))}</span><em>${Math.round(x.score * 100)} %</em>${action(x)}</li>`).join('')
       : '<li class="det-vide">Aucune pour l\'instant.</li>';
   }
   for (const u of det.ui.sc){
@@ -1784,6 +1880,12 @@ async function init(){
     const bt = e.target.closest('[data-retirer]'); if (!bt) return;
     det.refs = det.refs.filter(r => r.cle !== bt.dataset.retirer); detGarderLocaux(); det.st = {}; detListe();
   });
+  $('detLog').addEventListener('click', e => {
+    const a = e.target.closest('[data-ecouter]'), t = e.target.closest('[data-telecharger]');
+    if (a) dEcouter(+a.dataset.ecouter);
+    if (t){ const f = det.fichiers.get(+t.dataset.telecharger); if (f) dTelecharger(f.url, f.nom); }
+  });
+  $('detAuto').addEventListener('change', e => { det.auto = e.target.checked; store.set('detection.auto', det.auto); });
   setInterval(() => detAfficher(false), 250);
   try { for (const k of Object.keys(localStorage)) if (k.startsWith('pige.titres.')) localStorage.removeItem(k); } catch(e){}   // ancien historique
   // Onglet en arrière-plan : on continue de surveiller (alerte dans le titre de l'onglet).
