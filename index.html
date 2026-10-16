@@ -254,11 +254,12 @@ button{cursor:pointer}
 .lamp{flex:none;display:inline-flex;align-items:center;gap:7px;font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-spacing:.02em;line-height:1;
   padding:5px 10px 5px 8px;border-radius:999px;color:var(--muted);background:var(--panel);white-space:nowrap;font-variant-numeric:tabular-nums;transition:background .3s,color .3s}
 .lamp::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.55}
-.mon.ok .lamp{font-size:0;gap:0;padding:8px;background:transparent}
-.mon.ok .lamp::before{width:10px;height:10px;background:var(--c);opacity:1;animation:pouls 2s ease-out infinite}
+.mon-half{display:flex;flex-direction:column;gap:10px;min-width:0;text-align:left;padding:0;border:0;background:none;position:relative}
+:is(.mon,.mon-half).ok .lamp{font-size:0;gap:0;padding:8px;background:transparent}
+:is(.mon,.mon-half).ok .lamp::before{width:10px;height:10px;background:var(--c);opacity:1;animation:pouls 2s ease-out infinite}
 @keyframes pouls{0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--c) 60%, transparent)}70%,100%{box-shadow:0 0 0 8px color-mix(in srgb, var(--c) 0%, transparent)}}
-.mon.alerte .lamp{color:#fff;background:var(--rec)}
-.mon.alerte .lamp::before{background:#fff;opacity:1;animation:clign 1s steps(1,end) infinite}
+:is(.mon,.mon-half).alerte .lamp{color:#fff;background:var(--rec)}
+:is(.mon,.mon-half).alerte .lamp::before{background:#fff;opacity:1;animation:clign 1s steps(1,end) infinite}
 @keyframes clign{50%{opacity:.25}}
 .meter{display:block;padding:10px 12px 6px 10px;border-radius:10px;
   background:var(--meter-bg);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),inset 0 0 0 1px rgba(0,0,0,.25)}
@@ -275,7 +276,7 @@ button{cursor:pointer}
 .m-scale span:last-child{transform:translateX(-100%)}
 .m-scale span::before{content:"";position:absolute;left:50%;top:-4px;width:1px;height:3px;background:var(--meter-dim);opacity:.6}
 .m-scale span:last-child::before{left:auto;right:0}
-.mon.off .m-rows{opacity:.4}
+:is(.mon,.mon-half).off .m-rows{opacity:.4}
 .np{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:center;min-width:0}
 .np-art{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;display:grid;place-items:center;
   background:color-mix(in srgb, var(--c) 12%, var(--panel));box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--c) 18%, transparent)}
@@ -465,7 +466,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   .keys{display:none}
   .tc{align-items:flex-start}
 }
-@media (prefers-reduced-motion:reduce){.mon.alerte,.mon.ok .lamp::before,.mon.alerte .lamp::before,.sv.alerte{animation:none}.mon.alerte{background:var(--rec-soft)}}
+@media (prefers-reduced-motion:reduce){.mon.alerte,.mon.duo.touche,:is(.mon,.mon-half).alerte .meter,:is(.mon,.mon-half).ok .lamp::before,:is(.mon,.mon-half).alerte .lamp::before,.sv.alerte{animation:none}.mon.alerte,.mon.duo.touche{background:var(--rec-soft)}}
 @media (prefers-reduced-motion:reduce){.src-state.on .dot,.tbtn.live .dot{animation:none!important}.lk-acc,.lk-tag,.deck,.tbtn.play{transition:none}}
 /* Surfaces : même matière que les tuiles d'accueil (fond, halo blanc discret, liseré clair en haut) */
 .mon,.det-haut,.det-card,.ev-list,.xt-list,.sv{background:var(--surf-halo),var(--surf);border-color:var(--surf-bord);box-shadow:var(--surf-hl),var(--surf-ombre)}
@@ -494,6 +495,35 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
 @keyframes onair{50%{opacity:.6}}
 @media (prefers-reduced-motion:reduce){.sv.joue::before{animation:none}}
 @media (max-width:860px){.strip{row-gap:20px}}
+/* Carte commune (Monte-Carlo + Paris) : un vu-mètre et un nom par départ, titres partagés */
+.mon.duo{grid-column:1 / -1;overflow:hidden;gap:14px}
+.duo-vus{position:relative;display:grid;grid-template-columns:repeat(var(--n, 2),minmax(0,1fr));gap:10px 25px}
+.duo-vus::before{content:"";position:absolute;left:50%;top:2px;bottom:2px;width:1px;background:var(--surf-bord)}
+.mon-half:hover .mon-name{color:color-mix(in srgb, var(--c) var(--c-mix), var(--c-to))}
+.mon-half[aria-pressed="true"]::after{content:"";position:absolute;top:-12px;left:0;right:0;height:3px;background:var(--c)}
+.duo-vus > .mon-half:first-child::after{left:-14px}
+.duo-vus > .mon-half:last-child::after{right:-14px}
+.duo-bas{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 25px;align-items:start;border-top:1px solid var(--line);padding-top:14px}
+.duo-bas .np-hist{border-top:0;padding-top:0}
+.duo .np{grid-template-columns:116px minmax(0,1fr);gap:16px}
+.duo .np-art{width:116px;height:116px;border-radius:10px}
+.duo .np-art svg{width:44px;height:44px}
+.duo .np-t{font-size:19px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.duo .np-a{font-size:14.5px}
+.mon.duo.touche{border-color:var(--rec);animation:alarme 1s steps(1,end) infinite}
+.mon.duo:has(.mon-half.detecte){border-color:var(--c);box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent)}
+/* Départ touché : son vu-mètre clignote en rouge, avec la carte */
+:is(.mon,.mon-half).alerte .meter{animation:vuAlarme 1s steps(1,end) infinite}
+@keyframes vuAlarme{50%{background:color-mix(in srgb, var(--rec) 26%, #111014);box-shadow:inset 0 0 0 1.5px var(--rec),0 0 18px color-mix(in srgb, var(--rec) 45%, transparent)}}
+@media (max-width:760px){
+  .duo-vus,.duo-bas{grid-template-columns:minmax(0,1fr)}
+  .duo-vus{gap:18px}
+  .duo-vus::before{left:0;right:0;top:50%;bottom:auto;width:auto;height:1px;margin-top:-1px}
+  .duo-vus > .mon-half:last-child::after{display:none}
+  .duo-bas .np-hist{border-top:1px solid var(--line);padding-top:10px}
+  .duo .np{grid-template-columns:80px minmax(0,1fr)}
+  .duo .np-art{width:80px;height:80px}
+}
 </style>
 </head>
 <body>
@@ -1077,7 +1107,7 @@ function renderSources(){
   $('srcWeb').innerHTML = html('webradio') || '<p class="side-help">Aucune webradio configurée.</p>';
   renderLive();
   applyAccent();
-  document.querySelectorAll('.mon').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === st.src));
+  document.querySelectorAll('#monGrid [data-id]').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === st.src));
 }
 const BRAND_RED = '#e4032e';
 const srcColor = s => /^#[0-9a-f]{6}$/i.test(s.color || '') ? s.color : BRAND_RED;
@@ -1471,7 +1501,7 @@ function bind(){
     if (b.dataset.src !== st.src){ if (live.on) stopLive(); st.src = b.dataset.src; store.set('src', st.src); st.seg = null; srv.url = null; renderSources(); }
     location.hash = '#piges'; seek(t - 5000, { autoplay: true, snapTo: t + 3 * HOUR });
   });
-  $('monGrid').addEventListener('click', e => { const b = e.target.closest('.mon'); if (b){ selectSource(b.dataset.id); location.hash = '#piges'; } });
+  $('monGrid').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b){ selectSource(b.dataset.id); location.hash = '#piges'; } });
   $('clipInSet').onclick = () => clipMarquer('a');
   $('clipOutSet').onclick = () => clipMarquer('b');
   $('clipIn').onchange = () => clipSaisie('a');
@@ -1589,19 +1619,29 @@ const vuPct = db => {
 function buildMonitor(){
   const scale = [[-40, '40'], [-20, '20'], [-12, '12'], [-6, '6'], [-3, '3'], [0, '0']].map(([d, t]) => `<span style="left:${vuPct(d).toFixed(1)}%">${t}</span>`).join('');
   const bar = ch => `<span class="m-ch">${ch}</span><span class="m-bar"><i class="m-fill"></i><i class="m-peak"></i></span>`;
-  $('monGrid').innerHTML = cfg.sources.map(s => `<button class="mon off" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" aria-pressed="${s.id === st.src}" title="Réécouter ${esc(s.name)} dans les piges">
-    <span class="mon-top"><svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="mon-id"><span class="mon-name">${esc(s.name)}</span>${Array.isArray(s.diffusion) && s.diffusion.length ? `<span class="mon-tags" aria-label="Diffusion">${s.diffusion.map(d => `<span class="mon-tag">${esc(d)}</span>`).join('')}</span>` : ''}</span><span class="lamp mon-txt">—</span></span>
-    <span class="meter" aria-hidden="true"><span class="m-rows">${bar('L')}${bar('R')}<span class="m-scale">${scale}</span></span></span>
-    <span class="np vide"><span class="np-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="np-txt"><span class="np-lbl">Now playing</span><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></span>
-    <span class="np-hist" aria-label="Derniers titres"></span></button>`).join('');
+  // Départs qui diffusent les mêmes programmes (« titresDe ») : une seule carte, un vu-mètre par départ, titres en commun.
+  const chefDe = s => { const c = s.titresDe && cfg.sources.find(x => x.id === s.titresDe); return c && c !== s && !c.titresDe ? c : null; };
+  const groupes = cfg.sources.filter(s => !chefDe(s)).map(s => [s, ...cfg.sources.filter(x => chefDe(x) === s)]);
+  const tete = s => `<span class="mon-top"><svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="mon-id"><span class="mon-name">${esc(s.name)}</span>${Array.isArray(s.diffusion) && s.diffusion.length ? `<span class="mon-tags" aria-label="Diffusion">${s.diffusion.map(d => `<span class="mon-tag">${esc(d)}</span>`).join('')}</span>` : ''}</span><span class="lamp mon-txt">—</span></span>
+    <span class="meter" aria-hidden="true"><span class="m-rows">${bar('L')}${bar('R')}<span class="m-scale">${scale}</span></span></span>`;
+  const titresHtml = `<span class="np vide"><span class="np-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="np-txt"><span class="np-lbl">Now playing</span><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></span>
+    <span class="np-hist" aria-label="Derniers titres"></span>`;
+  const attrs = s => `data-id="${esc(s.id)}" style="--c:${srcColor(s)}" aria-pressed="${s.id === st.src}" title="Réécouter ${esc(s.name)} dans les piges"`;
+  $('monGrid').innerHTML = groupes.map(g => g.length === 1
+    ? `<button class="mon off" type="button" ${attrs(g[0])}>${tete(g[0])}${titresHtml}</button>`
+    : `<div class="mon duo" style="--c:${srcColor(g[0])};--n:${g.length}"><div class="duo-vus">${g.map(s => `<button class="mon-half off" type="button" ${attrs(s)}>${tete(s)}</button>`).join('')}</div><div class="duo-bas">${titresHtml}</div></div>`).join('');
   $('strip').innerHTML = cfg.sources.map(s => `<button class="sv off" type="button" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" title="Écouter ${esc(s.name)} en direct"><span class="sv-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="sv-x"><span class="sv-n">${esc(s.court || s.name.replace(/^100\s*%\s*/, ''))}</span><span class="sv-t"><span class="sv-tt">—</span></span></span><span class="sv-m" aria-hidden="true"><i></i><i></i></span></button>`).join('');
   $('tileVu').innerHTML = cfg.sources.map(s => `<span class="tv-col" style="--c:${srcColor(s)}"><span class="tv-bar"><i></i></span><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span>${esc((s.court || s.name.replace(/^100\s*%\s*/, '')).split(/[\s-]+/).map((w, i, t) => t.length > 1 ? w[0] : w.slice(0, 2)).join('').slice(0, 2).toUpperCase())}</span></span>`).join('');
-  mon.cards = [...$('monGrid').querySelectorAll('.mon')].map(el => ({
-    id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'), np: el.querySelector('.np'), npI: el.querySelector('.np-art img'), npT: el.querySelector('.np-t'), npA: el.querySelector('.np-a'), npK: '', npH: el.querySelector('.np-hist'),
-    sv: $('strip').querySelector(`[data-id="${CSS.escape(el.dataset.id)}"]`),
-    tv: $('tileVu').children[[...$('monGrid').children].indexOf(el)].querySelector('i'), svK: '', ouvert: null,
-    d: [-99, -99], pk: [-99, -99], pt: [0, 0], cls: '', label: ''
-  }));
+  mon.cards = [...$('monGrid').querySelectorAll('[data-id]')].map(el => {
+    const box = el.closest('.mon'), chef = box === el || box.querySelector('.mon-half') === el;   // le premier départ d'une carte commune affiche les titres
+    return {
+      id: el.dataset.id, el, box, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'),
+      np: chef ? box.querySelector('.np') : null, npI: box.querySelector('.np-art img'), npT: box.querySelector('.np-t'), npA: box.querySelector('.np-a'), npK: '', npH: box.querySelector('.np-hist'),
+      sv: $('strip').querySelector(`[data-id="${CSS.escape(el.dataset.id)}"]`),
+      tv: $('tileVu').children[cfg.sources.findIndex(s => s.id === el.dataset.id)].querySelector('i'), svK: '', ouvert: null,
+      d: [-99, -99], pk: [-99, -99], pt: [0, 0], cls: '', label: ''
+    };
+  });
 }
 function connectMonitor(){
   if (!window.EventSource) return;
@@ -2335,18 +2375,20 @@ function afficherTitres(c){
   const cle = t.etat + '|' + t.titre;
   if (cle === c.npK) return;
   c.npK = cle;
-  c.np.hidden = t.etat === 'masque';
-  if (t.etat === 'ok'){
-    const d = decouper(t.titre);
-    c.np.classList.remove('vide');
-    c.npT.textContent = d.titre; c.npA.textContent = d.artiste; c.np.title = t.titre;
-  } else {
-    c.np.classList.add('vide');
-    c.npT.textContent = t.etat === 'vide' ? 'Aucun titre transmis' : t.etat === 'indispo' ? 'Titre indisponible' : 'Recherche du titre…';
-    c.npA.textContent = ''; c.np.title = '';
+  if (c.np){
+    c.np.hidden = t.etat === 'masque';
+    if (t.etat === 'ok'){
+      const d = decouper(t.titre);
+      c.np.classList.remove('vide');
+      c.npT.textContent = d.titre; c.npA.textContent = d.artiste; c.np.title = t.titre;
+    } else {
+      c.np.classList.add('vide');
+      c.npT.textContent = t.etat === 'vide' ? 'Aucun titre transmis' : t.etat === 'indispo' ? 'Titre indisponible' : 'Recherche du titre…';
+      c.npA.textContent = ''; c.np.title = '';
+    }
+    majPochette(c, t);
+    afficherHistorique(c, s, t.etat === 'ok' ? t.titre : '');
   }
-  majPochette(c, t);
-  afficherHistorique(c, s, t.etat === 'ok' ? t.titre : '');
   bandeauTitre(c, t);
 }
 function bandeauTitre(c, t){
@@ -2425,6 +2467,7 @@ function monFrame(now){
     afficherTitres(c);
     if (fresh && src) blancSuivre(c, src, cls);
   }
+  for (const b of $('monGrid').querySelectorAll('.duo')) b.classList.toggle('touche', !!b.querySelector('.mon-half.alerte'));
   const sum = $('monSum');
   let txt, alert = alertes.length > 0;
   if (!fresh) txt = 'Connexion aux flux…';
