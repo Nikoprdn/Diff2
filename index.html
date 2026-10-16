@@ -66,7 +66,13 @@ button{cursor:pointer}
 /* Bandeau logo */
 .top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"brand nav right" "strip strip strip";align-items:center;gap:12px 22px;padding-block:2px 14px;border-bottom:1px solid var(--line)}
 .brand{grid-area:brand;display:flex;align-items:center;gap:12px;min-width:0;text-decoration:none;color:inherit}
-/* Menus */
+/* Titre de l'onglet et retour à l'accueil */
+.tete-vue{grid-area:nav;display:flex;align-items:center;gap:12px;min-width:0}
+.home{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--panel);color:var(--ink);text-decoration:none;transition:background .15s,color .15s,transform .15s}
+.home svg{width:20px;height:20px;fill:currentColor}
+.home:hover{background:var(--ink);color:var(--bg);transform:scale(1.05)}
+.vue-t{margin:0;font-family:var(--font-display);font-weight:800;font-size:24px;line-height:1.1;letter-spacing:.005em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Menus (ancienne barre, gardée pour mémoire) */
 .nav{grid-area:nav;display:flex;gap:4px;min-width:0;overflow-x:auto;scrollbar-width:none}
 .nav a{display:inline-flex;align-items:center;gap:8px;padding:8px 13px 8px 9px;border-radius:999px;font-weight:700;font-size:15px;color:var(--ink-2);text-decoration:none;white-space:nowrap;transition:background .15s,color .15s}
 .nav a b{font-family:var(--font-display);font-size:12px;font-weight:800;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--panel);color:var(--muted)}
@@ -77,10 +83,23 @@ button{cursor:pointer}
 .nav-badge{font-style:normal;font-size:11.5px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:grid;place-items:center;background:var(--rec);color:#fff}
 /* Les 4 départs en direct, dans le bandeau */
 .strip{grid-area:strip;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.sv{display:grid;grid-template-columns:16px minmax(0,1fr) 70px;align-items:center;gap:9px;padding:7px 11px;border:1.5px solid var(--line);border-radius:10px;background:var(--panel-2);text-decoration:none;color:var(--ink);min-width:0;transition:border-color .2s,background .2s}
+.sv{display:grid;grid-template-columns:26px minmax(0,1fr) 56px;align-items:center;gap:9px;padding:4px 10px 4px 5px;border:1.5px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink);min-width:0;text-align:left;transition:border-color .2s,background .2s,box-shadow .2s}
 .sv:hover{border-color:var(--ink-2)}
-.sv-logo{width:16px;height:16px;fill:var(--c)}
-.sv-n{font-weight:700;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv-art{position:relative;width:26px;height:26px;border-radius:5px;overflow:hidden;display:grid;place-items:center;background:color-mix(in srgb, var(--c) 12%, var(--panel))}
+.sv-art svg{width:15px;height:15px;fill:var(--c)}
+.sv-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s}
+.sv-art img.ok{opacity:1}
+.sv-art::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .2s;
+  background:linear-gradient(currentColor,currentColor) 6px 100%/3px 40% no-repeat,linear-gradient(currentColor,currentColor) 11.5px 100%/3px 70% no-repeat,linear-gradient(currentColor,currentColor) 17px 100%/3px 55% no-repeat,rgba(0,0,0,.55);color:#fff}
+.sv.joue{border-color:var(--c);box-shadow:0 0 0 2px color-mix(in srgb, var(--c) 30%, transparent)}
+.sv.joue .sv-art::after{opacity:1;animation:eq .9s ease-in-out infinite alternate}
+@keyframes eq{0%{background-size:3px 30%,3px 80%,3px 50%,auto}50%{background-size:3px 85%,3px 35%,3px 70%,auto}100%{background-size:3px 55%,3px 65%,3px 30%,auto}}
+.sv-x{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.sv-n{font-weight:800;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv-t{font-size:11.5px;color:var(--muted);overflow:hidden;white-space:nowrap;min-width:0}
+.sv-tt{display:inline-block;white-space:nowrap}
+.sv-t.defile .sv-tt{animation:defile var(--dur, 12s) linear infinite}
+@keyframes defile{to{transform:translateX(-50%)}}
 .sv-m{display:flex;flex-direction:column;gap:3px}
 .sv-m i{position:relative;display:block;height:4px;border-radius:2px;background:var(--panel);overflow:hidden}
 .sv-m i::after{content:"";position:absolute;inset:0;background:var(--meter-grad);clip-path:inset(0 calc(100% - var(--v, 0%)) 0 0)}
@@ -88,15 +107,29 @@ button{cursor:pointer}
 .sv.alerte{border-color:var(--rec);background:var(--rec-soft);animation:clignsv 1s steps(1,end) infinite}
 @keyframes clignsv{50%{border-color:var(--line)}}
 /* Accueil */
-.v-accueil{display:flex;flex-direction:column;gap:14px;padding-top:6px}
-.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-.tile{display:flex;flex-direction:column;gap:10px;padding:24px 22px 18px;min-height:230px;border-radius:16px;background:var(--panel-2);border:1.5px solid var(--line);text-decoration:none;color:var(--ink);transition:border-color .2s,transform .2s,box-shadow .2s}
-.tile:hover{border-color:var(--ink-2);transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.08)}
-.tile-n{font-family:var(--font-display);font-weight:800;font-size:46px;line-height:1;color:var(--accent)}
-.tile b{font-family:var(--font-display);font-weight:800;font-size:23px;line-height:1.15}
-.tile p{margin:0;color:var(--ink-2);font-size:14.5px;flex:1}
-.tile-live{font-size:13px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:7px}
-.tile-live::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.7}
+.v-accueil{padding-top:8px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.tile{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:18px;min-height:340px;padding:22px 24px 22px;border-radius:20px;overflow:hidden;isolation:isolate;
+  background:radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--t, #e4032e) 22%, transparent), transparent 60%), var(--meter-bg);
+  color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.06);box-shadow:0 10px 30px rgba(0,0,0,.18);transition:transform .25s,box-shadow .25s,border-color .25s}
+.tile:hover{transform:translateY(-4px);border-color:color-mix(in srgb, var(--t, #e4032e) 60%, transparent);box-shadow:0 22px 50px color-mix(in srgb, var(--t, #e4032e) 30%, rgba(0,0,0,.25))}
+.tile-vis{flex:1;display:grid;place-items:center;min-height:170px}
+.tile-bas{display:flex;flex-direction:column;gap:4px}
+.tile-n{font-family:var(--font-display);font-weight:800;font-size:14px;letter-spacing:.24em;color:var(--t, #e4032e)}
+.tile b{font-family:var(--font-display);font-weight:800;font-size:30px;line-height:1.05;letter-spacing:-.005em}
+.tile-live{font-size:13px;font-weight:600;color:#9a95a4;min-height:1.3em}
+.tile-badge{position:absolute;top:18px;right:18px;font-style:normal;font-weight:800;font-size:13px;min-width:26px;height:26px;padding:0 8px;border-radius:13px;display:grid;place-items:center;background:var(--rec);color:#fff;box-shadow:0 0 0 4px rgba(228,3,46,.25)}
+.tv-vu{display:flex;align-items:flex-end;gap:14px;height:150px}
+.tv-col{display:flex;flex-direction:column;align-items:center;gap:8px;height:100%}
+.tv-bar{position:relative;flex:1;width:22px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden}
+.tv-bar i{position:absolute;inset:0;background:linear-gradient(0deg,#5fae2e 0%,#93c01f 50%,#e8d21d 66%,#f59c00 80%,#e4032e 92%);clip-path:inset(calc(100% - var(--v, 0%)) 0 0 0);transition:clip-path .08s linear}
+.tv-col span{font-family:var(--font-display);font-weight:800;font-size:11px;letter-spacing:.1em;color:var(--c)}
+.tv-wave{width:100%;max-width:300px;height:120px}
+.tv-wave rect{fill:rgba(255,255,255,.18)}
+.tv-wave rect.lu{fill:var(--t, #e4032e)}
+.tv-wave line{stroke:#fff;stroke-width:2}
+.tv-lamp{font-family:var(--font-display);font-weight:800;font-size:18px;letter-spacing:.24em;padding:16px 26px;border-radius:12px;background:rgba(255,255,255,.06);color:#6e6878;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);transition:background .2s,color .2s,box-shadow .2s}
+.tv-lamp.on{background:#e4032e;color:#fff;box-shadow:0 0 0 6px rgba(228,3,46,.22),0 0 46px rgba(228,3,46,.7);animation:detpouls .9s ease-in-out infinite alternate}
 .lockup{height:60px;width:auto;flex:none;display:block;overflow:visible}
 .lk-acc{fill:var(--accent);transition:fill .25s}
 .lk-radio{fill:var(--ink)}
@@ -360,7 +393,9 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   .top-right{justify-self:end}
   .strip{grid-template-columns:repeat(2,minmax(0,1fr))}
   .tiles{grid-template-columns:minmax(0,1fr)}
-  .tile{min-height:0}
+  .tile{min-height:250px}
+  .tile-vis{min-height:120px}
+  .vue-t{font-size:20px}
   .side{flex-direction:row;flex-wrap:wrap;gap:12px}
   .side section{flex:1 1 220px;min-width:0}
   .side-help{display:none}
@@ -374,12 +409,12 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   .app-name{display:none}
 }
 @media (max-width:520px){
+  .sv-n{font-size:11.5px}
   .nav-l{display:none}
   .nav-c{display:inline}
   .nav a{padding:7px 10px 7px 7px;font-size:14px;gap:6px}
-  .sv{grid-template-columns:14px minmax(0,1fr) 40px;gap:7px;padding:6px 9px}
-  .sv-logo{width:14px;height:14px}
-  .sv-n{font-size:12.5px}
+  .sv{grid-template-columns:24px minmax(0,1fr) 34px;gap:7px;padding:4px 8px 4px 4px}
+  .sv-art{width:24px;height:24px}
   .xt-list li{grid-template-columns:auto minmax(0,1fr)}
   .xt-act{grid-column:2;justify-content:flex-start}
   .lockup{height:50px}
@@ -413,11 +448,10 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
       </svg>
       <span id="station" hidden></span>
     </a>
-    <nav class="nav" aria-label="Menus">
-      <a href="#surveillance" data-vue="surveillance"><b>1</b><span class="nav-l">Surveillance des flux</span><span class="nav-c">Surveillance</span></a>
-      <a href="#piges" data-vue="piges"><b>2</b>Piges</a>
-      <a href="#podcaster" data-vue="podcaster"><b>3</b><span class="nav-l">Auto-Podcaster</span><span class="nav-c">Podcaster</span><i class="nav-badge" id="navBadge" hidden></i></a>
-    </nav>
+    <div class="tete-vue">
+      <a class="home" href="#accueil" id="homeBtn" aria-label="Accueil" title="Accueil" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2 2.5 11.1l1.3 1.5 1.7-1.4V20a1 1 0 0 0 1 1h4.2v-6h2.6v6h4.2a1 1 0 0 0 1-1v-8.8l1.7 1.4 1.3-1.5z"/></svg></a>
+      <h1 class="vue-t" id="vueTitre"></h1>
+    </div>
     <div class="top-right">
       <span class="who" id="who" hidden></span>
       <a class="btn" id="logout" href="/cdn-cgi/access/logout" hidden>Déconnexion</a>
@@ -427,11 +461,20 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   </header>
 
   <section class="vue v-accueil" data-vue="accueil" aria-label="Accueil" hidden>
-    <h1 class="label">Menus</h1>
     <div class="tiles">
-      <a class="tile" href="#surveillance"><span class="tile-n">1</span><b>Surveillance des flux</b><p>Les vu-mètres des quatre départs, le titre en cours et les derniers titres diffusés, avec leur pochette. Alerte en cas de blanc ou de coupure.</p><span class="tile-live" id="tileSurv">Connexion aux flux…</span></a>
-      <a class="tile" href="#piges"><span class="tile-n">2</span><b>Piges</b><p>Réécouter heure par heure les quatre départs, avancer ou reculer de 10 ou 30 secondes, et extraire une plage précise en MP3.</p><span class="tile-live" id="tilePiges">—</span></a>
-      <a class="tile" href="#podcaster"><span class="tile-n">3</span><b>Auto-Podcaster</b><p>La page écoute Monte-Carlo, reconnaît les jingles programmés et en extrait automatiquement le son, coupé au début et à la fin.</p><span class="tile-live" id="tilePod">—</span></a>
+      <a class="tile" href="#surveillance" style="--t:#93c01f">
+        <span class="tile-vis"><span class="tv-vu" id="tileVu"></span></span>
+        <span class="tile-bas"><span class="tile-n">01</span><b>Surveillance des flux</b><span class="tile-live" id="tileSurv"></span></span>
+      </a>
+      <a class="tile" href="#piges" style="--t:#e4032e">
+        <span class="tile-vis"><svg class="tv-wave" id="tileWave" viewBox="0 0 300 120" aria-hidden="true"></svg></span>
+        <span class="tile-bas"><span class="tile-n">02</span><b>Piges</b><span class="tile-live" id="tilePiges"></span></span>
+      </a>
+      <a class="tile" href="#podcaster" style="--t:#f59c00">
+        <i class="tile-badge" id="tileBadge" hidden></i>
+        <span class="tile-vis"><span class="tv-lamp" id="tileLamp">EXTRACTION</span></span>
+        <span class="tile-bas"><span class="tile-n">03</span><b>Auto-Podcaster</b><span class="tile-live" id="tilePod"></span></span>
+      </a>
     </div>
   </section>
 
@@ -439,6 +482,10 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   <section class="monitor" aria-label="Surveillance des flux">
     <div class="mon-head"><h2 class="label">Surveillance des flux</h2><span class="mon-sum" id="monSum" role="status">Connexion aux flux…</span></div>
     <div class="mon-grid" id="monGrid"></div>
+  </section>
+  <section class="events" aria-label="Blancs et coupures détectés">
+    <div class="events-head"><h2 class="label">Blancs et coupures détectés</h2><span class="events-sub" id="blSub"></span></div>
+    <div id="blancs"></div>
   </section>
   </div>
 
@@ -818,7 +865,7 @@ function streamHost(u){ try { return new URL(u).host; } catch(e){ return ''; } }
 function startLive(){
   const s = srcObj(st.src);
   if (!s.stream){ toast(`Aucun flux direct renseigné pour ${s.name || st.src}.`); return; }
-  media().pause(); setPlaying(false);
+  media().pause(); setPlaying(false); ecouteStop();
   live.on = true; live.ready = false;
   liveAudio.src = s.stream; liveAudio.volume = st.vol;
   liveAudio.play().catch(err => { if (live.on && err && err.name !== 'AbortError') failLive(); });
@@ -891,7 +938,7 @@ async function startPlay(){
   try { await media().play(); setPlaying(true); }
   catch(e){ setPlaying(false); }
 }
-function setPlaying(v){ st.playing = v; setIcons(); }
+function setPlaying(v){ st.playing = v; setIcons(); if (v) ecouteStop(); }
 function setIcons(){
   const v = st.playing || live.on;
   $('icoPlay').hidden = v; $('icoPause').hidden = !v;
@@ -1339,6 +1386,13 @@ function bind(){
   $('bP10').onclick = () => nudge(10);  $('bP30').onclick = () => nudge(30);
   $('bPrevH').onclick = () => stepHour(-1); $('bNextH').onclick = () => stepHour(1);
   document.querySelector('.side').addEventListener('click', e => { const b = e.target.closest('.src'); if (b) selectSource(b.dataset.id); });
+  $('strip').addEventListener('click', e => { const b = e.target.closest('.sv'); if (b) ecouterDirect(b.dataset.id); });
+  $('blancs').addEventListener('click', e => {
+    const b = e.target.closest('button[data-t]'); if (!b) return;
+    const t = +b.dataset.t;
+    if (b.dataset.src !== st.src){ if (live.on) stopLive(); st.src = b.dataset.src; store.set('src', st.src); st.seg = null; srv.url = null; renderSources(); }
+    location.hash = '#piges'; seek(t - 5000, { autoplay: true, snapTo: t + 3 * HOUR });
+  });
   $('monGrid').addEventListener('click', e => { const b = e.target.closest('.mon'); if (b){ selectSource(b.dataset.id); location.hash = '#piges'; } });
   $('clipInSet').onclick = () => clipMarquer('a');
   $('clipOutSet').onclick = () => clipMarquer('b');
@@ -1367,7 +1421,7 @@ function bind(){
     [...$('rates').children].forEach(x => x.setAttribute('aria-pressed', x === b));
   });
   $('vol').value = st.vol;
-  $('vol').oninput = e => { st.vol = +e.target.value; media().setVol(st.vol); audio.volume = st.vol; liveAudio.volume = st.vol; store.set('vol', st.vol); };
+  $('vol').oninput = e => { st.vol = +e.target.value; media().setVol(st.vol); audio.volume = st.vol; liveAudio.volume = st.vol; ecoute.a.volume = st.vol; store.set('vol', st.vol); };
   $('bLive').onclick = () => { if (live.on){ stopLive(); st.pos = Date.now() - 1000; renderData(); } else startLive(); };
   $('gotoForm').onsubmit = e => {
     e.preventDefault();
@@ -1404,6 +1458,25 @@ function bind(){
   window.addEventListener('hashchange', () => route(false));
 }
 
+/* ---------- Écoute du direct depuis le bandeau ---------- */
+const ecoute = { a: new Audio(), id: null };
+ecoute.a.preload = 'none';
+ecoute.a.addEventListener('error', () => { if (ecoute.id){ toast(`Le direct de ${srcName(ecoute.id)} ne répond pas.`); ecouteStop(); } });
+function ecouterDirect(id){
+  if (ecoute.id === id){ ecouteStop(); return; }
+  const s = cfg.sources.find(x => x.id === id); if (!s || !s.stream) return;
+  if (st.playing) togglePlay();                       // un seul son à la fois : on coupe la pige
+  if (live.on){ stopLive(); st.pos = Date.now() - 1000; renderData(); }
+  ecoute.id = id; ecoute.a.src = s.stream; ecoute.a.volume = st.vol;
+  ecoute.a.play().catch(err => { if (err && err.name !== 'AbortError'){ toast('Lecture impossible pour l\'instant.'); ecouteStop(); } });
+  majEcoute();
+}
+function ecouteStop(){
+  if (!ecoute.id) return;
+  ecoute.id = null; ecoute.a.pause(); ecoute.a.removeAttribute('src'); ecoute.a.load(); majEcoute();
+}
+function majEcoute(){ for (const c of mon.cards || []) c.sv.classList.toggle('joue', c.id === ecoute.id), c.sv.setAttribute('aria-pressed', c.id === ecoute.id); }
+
 /* ---------- Vues : accueil, surveillance, piges, auto-podcaster ---------- */
 const VUES = ['accueil', 'surveillance', 'piges', 'podcaster'];
 let vue = 'accueil';
@@ -1413,7 +1486,8 @@ function route(auDemarrage){
   if (lien && !auDemarrage && cfg.sources.some(s => s.id === lien.src)){ st.src = lien.src; renderSources(); seek(lien.t); }
   vue = v;
   for (const el of document.querySelectorAll('.vue')) el.hidden = el.dataset.vue !== v;
-  for (const a of document.querySelectorAll('.nav a')) a.setAttribute('aria-current', a.dataset.vue === v ? 'page' : 'false');
+  $('vueTitre').textContent = { accueil: '', surveillance: 'Surveillance des flux', piges: 'Piges', podcaster: 'Auto-Podcaster' }[v];
+  $('homeBtn').hidden = v === 'accueil';
   if (v === 'piges') requestAnimationFrame(() => { renderTime(); drawWave(); });
   if (v === 'podcaster'){ det.nonVus = 0; detAfficher(true); }
   if (!auDemarrage) window.scrollTo(0, 0);
@@ -1442,10 +1516,12 @@ function buildMonitor(){
     <span class="meter" aria-hidden="true"><span class="m-rows">${bar('L')}${bar('R')}<span class="m-scale">${scale}</span></span></span>
     <span class="np vide"><span class="np-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="np-txt"><span class="np-lbl">Now playing</span><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></span>
     <span class="np-hist" aria-label="Derniers titres"></span></button>`).join('');
-  $('strip').innerHTML = cfg.sources.map(s => `<a class="sv off" href="#surveillance" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" title="${esc(s.name)}"><svg class="sv-logo" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="sv-n">${esc(s.court || s.name.replace(/^100\s*%\s*/, ''))}</span><span class="sv-m" aria-hidden="true"><i></i><i></i></span></a>`).join('');
+  $('strip').innerHTML = cfg.sources.map(s => `<button class="sv off" type="button" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" title="Écouter ${esc(s.name)} en direct"><span class="sv-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="sv-x"><span class="sv-n">${esc(s.court || s.name.replace(/^100\s*%\s*/, ''))}</span><span class="sv-t"><span class="sv-tt">—</span></span></span><span class="sv-m" aria-hidden="true"><i></i><i></i></span></button>`).join('');
+  $('tileVu').innerHTML = cfg.sources.map(s => `<span class="tv-col" style="--c:${srcColor(s)}"><span class="tv-bar"><i></i></span><span>${esc((s.court || s.name.replace(/^100\s*%\s*/, '')).split(/[\s-]+/).map((w, i, t) => t.length > 1 ? w[0] : w.slice(0, 2)).join('').slice(0, 2).toUpperCase())}</span></span>`).join('');
   mon.cards = [...$('monGrid').querySelectorAll('.mon')].map(el => ({
     id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'), np: el.querySelector('.np'), npI: el.querySelector('.np-art img'), npT: el.querySelector('.np-t'), npA: el.querySelector('.np-a'), npK: '', npH: el.querySelector('.np-hist'),
     sv: $('strip').querySelector(`[data-id="${CSS.escape(el.dataset.id)}"]`),
+    tv: $('tileVu').children[[...$('monGrid').children].indexOf(el)].querySelector('i'), svK: '', ouvert: null,
     d: [-99, -99], pk: [-99, -99], pt: [0, 0], cls: '', label: ''
   }));
 }
@@ -1971,8 +2047,9 @@ function detAfficher(force){
       $('detLampD').textContent = !det.refs.length ? 'En attente d\'un fichier à analyser' : bm.on ? `En écoute sur ${ou}` : 'Connexion aux flux…';
     }
     const resume = det.refs.length ? `${det.refs.length} fichier${det.refs.length > 1 ? 's' : ''} à analyser · ${det.journal.length} détection${det.journal.length > 1 ? 's' : ''}` : 'Aucun fichier à analyser';
-    $('detSum').textContent = resume; $('tilePod').textContent = resume;
-    $('navBadge').hidden = !det.nonVus; $('navBadge').textContent = det.nonVus || '';
+    $('detSum').textContent = resume; $('tilePod').textContent = det.refs.length ? `${det.journal.length} détection${det.journal.length > 1 ? 's' : ''}` : '';
+    $('tileBadge').hidden = !det.nonVus; $('tileBadge').textContent = det.nonVus || '';
+    $('tileLamp').classList.toggle('on', !!on);
     for (const c of mon.cards || []) c.el.classList.toggle('detecte', !!on && c.id === d.id);
     const action = x => {
       const f = det.fichiers.get(x.t);
@@ -2192,6 +2269,48 @@ function afficherTitres(c){
   }
   majPochette(c, t);
   afficherHistorique(c, s, t.etat === 'ok' ? t.titre : '');
+  bandeauTitre(c, t);
+}
+function bandeauTitre(c, t){
+  // Bandeau : pochette et titre du départ ; le texte défile s'il est plus long que la place disponible.
+  const d = t.etat === 'ok' ? decouper(t.titre) : null, txt = d ? (d.artiste ? `${d.titre} — ${d.artiste}` : d.titre) : (t.etat === 'vide' ? 'Aucun titre transmis' : '—');
+  const box = c.sv.querySelector('.sv-t'), tt = box.firstElementChild, img = c.sv.querySelector('.sv-art img');
+  box.classList.remove('defile'); tt.textContent = txt;
+  if (tt.scrollWidth > box.clientWidth + 2){
+    tt.textContent = `${txt}\u2003•\u2003${txt}\u2003•\u2003`;
+    box.style.setProperty('--dur', Math.max(6, tt.scrollWidth / 2 / 28).toFixed(1) + 's');
+    box.classList.add('defile');
+  }
+  img.classList.remove('ok'); img.removeAttribute('src');
+  if (d) pochette(t.titre).then(url => { if (!url || tt.textContent.indexOf(txt) !== 0) return; img.onload = () => img.classList.add('ok'); img.onerror = () => img.removeAttribute('src'); img.src = url; });
+}
+
+/* Blancs et coupures vus en direct : notés à chaque alerte, gardés 24 heures dans ce navigateur. */
+const blancs = (() => { const l = store.get('blancs', []) || [], lim = Date.now() - 864e5; return l.filter(x => x && (x.fin || x.debut) > lim).slice(0, 60); })();
+blancs.forEach(x => { if (!x.fin) x.fin = x.vu || x.debut; });   // alerte restée ouverte à la fermeture de la page
+function blancSuivre(c, src, cls){
+  const type = cls === 'alerte' ? (src.etat === 'coupe' ? 'coupe' : 'blanc') : null, now = Date.now();
+  if (c.ouvert && (!type || c.ouvert.type !== type)){ c.ouvert.fin = now; c.ouvert = null; blancMaj(); }
+  if (type && !c.ouvert){
+    c.ouvert = { id: c.id, type, debut: now - (type === 'blanc' ? (src.silence || 0) * 1000 : 0), fin: null, vu: now };
+    blancs.unshift(c.ouvert); blancs.length = Math.min(blancs.length, 60); blancMaj();
+  } else if (c.ouvert && now - c.ouvert.vu > 5000){ c.ouvert.vu = now; blancMaj(true); }
+}
+function blancMaj(discret){
+  store.set('blancs', blancs);
+  const box = $('blancs');
+  const thr = cfg.silence?.thresholdDb ?? -50, min = cfg.silence?.minSeconds ?? 10;
+  $('blSub').textContent = `Blanc : sous ${thr} dB pendant ${min} s ou plus · vus par cette page, 24 dernières heures`;
+  if (!blancs.length){ box.innerHTML = '<p class="empty-msg">Aucun blanc ni coupure détecté.</p>'; return; }
+  if (discret && box.querySelector('.ev-list')){                  // mise à jour de la durée d'une alerte en cours
+    const el = box.querySelector('[data-encours]'); if (el){ const x = blancs.find(y => !y.fin); if (x) el.textContent = `${srcName(x.id)} · ${fmtDur((Date.now() - x.debut) / 1000)} · en cours`; }
+    return;
+  }
+  box.innerHTML = '<ol class="ev-list">' + blancs.slice(0, 30).map(x => `<li>
+    <span class="pill ${x.type === 'blanc' ? 'sil' : 'gap'}">${x.type === 'blanc' ? 'Blanc' : 'Coupure'}</span>
+    <span class="ev-time">${fmtClock(x.debut)}</span>
+    <span class="ev-dur"${x.fin ? '' : ' data-encours'}>${esc(srcName(x.id))} · ${fmtDur(((x.fin || Date.now()) - x.debut) / 1000)}${x.fin ? '' : ' · en cours'}</span>
+    <button class="btn" data-t="${x.debut}" data-src="${esc(x.id)}">Réécouter</button></li>`).join('') + '</ol>';
 }
 
 function fmtSilence(sec){ return `${Math.floor(sec / 60)}:${pad(sec % 60)}`; }
@@ -2210,7 +2329,7 @@ function monFrame(now){
     else if (src.etat === 'coupe'){ cls = 'alerte'; label = 'Coupé'; alertes.push(`${srcName(c.id)} : flux coupé`); }
     else if (src.etat === 'blanc'){ cls = 'alerte'; label = `Blanc ${fmtSilence(src.silence)}`; alertes.push(`${srcName(c.id)} : blanc depuis ${fmtSilence(src.silence)}`); }
     else { cls = 'ok'; label = 'En direct'; if (src.mesurable === false) nonMesures.push(srcName(c.id)); }
-    if (cls !== c.cls){ c.el.classList.remove('ok', 'off', 'alerte'); c.el.classList.add(cls); c.sv.classList.remove('ok', 'off', 'alerte'); c.sv.classList.add(cls); c.sv.title = `${srcName(c.id)} · ${label}`; c.cls = cls; }
+    if (cls !== c.cls){ c.el.classList.remove('ok', 'off', 'alerte'); c.el.classList.add(cls); c.sv.classList.remove('ok', 'off', 'alerte'); c.sv.classList.add(cls); c.sv.title = `Écouter ${srcName(c.id)} en direct · ${label}`; c.cls = cls; }
     if (label !== c.label){ c.txt.textContent = label; c.txt.title = label; c.label = label; }
     const target = [src && src.etat !== 'coupe' ? src.l : -99, src && src.etat !== 'coupe' ? src.r : -99];
     for (let i = 0; i < 2; i++){
@@ -2220,11 +2339,13 @@ function monFrame(now){
       c.fills[i].style.setProperty('--v', vuPct(c.d[i]).toFixed(1) + '%');
       if (!c.svF) c.svF = c.sv.querySelectorAll('.sv-m i');
       c.svF[i].style.setProperty('--v', vuPct(c.d[i]).toFixed(1) + '%');
+      if (i === 1 && vue === 'accueil') c.tv.style.setProperty('--v', vuPct(Math.max(c.d[0], c.d[1])).toFixed(1) + '%');
       const p = vuPct(c.pk[i]);
       c.peaks[i].style.setProperty('--p', p.toFixed(1) + '%');
       c.peaks[i].style.opacity = p > 1 ? '' : '0';
     }
     afficherTitres(c);
+    if (fresh && src) blancSuivre(c, src, cls);
   }
   const sum = $('monSum');
   let txt, alert = alertes.length > 0;
@@ -2232,7 +2353,7 @@ function monFrame(now){
   else if (alert) txt = (alertes.length > 1 ? `${alertes.length} alertes · ` : 'Alerte · ') + alertes.join(' · ');
   else txt = `${mon.cards.length} flux en direct`;
   if (fresh && !prog && nonMesures.length) txt += ` · niveau non mesurable : ${nonMesures.join(', ')}`;
-  if (sum.textContent !== txt){ sum.textContent = txt; sum.classList.toggle('alerte', alert || (mon.vu && !fresh)); $('tileSurv').textContent = txt; }
+  if (sum.textContent !== txt){ sum.textContent = txt; sum.classList.toggle('alerte', alert || (mon.vu && !fresh)); $('tileSurv').textContent = alert ? txt : fresh ? `${mon.cards.length} flux en direct` : ''; }
   const titre = alert ? `(!) ${alertes[0]} · ${TITRE}` : TITRE;
   if (document.title !== titre) document.title = titre;
 }
@@ -2255,7 +2376,7 @@ async function checkPige(){
   try { const r = await fetch(withAuth(base), { cache: 'no-store' }); ok = r.ok; } catch(e){}
   const n = $('setupNote');
   n.hidden = ok;
-  $('tilePiges').textContent = ok ? 'Enregistrements disponibles' : 'Programme de pige non joignable : direct seulement';
+  $('tilePiges').textContent = ok ? 'Enregistrements disponibles' : 'Direct seulement';
   if (ok) pigeVue = true;
   else if (pigeVue) n.innerHTML = `<strong>La pige ne répond plus.</strong> Le PC de pige est peut-être arrêté, ou votre session a expiré. <a href="">Recharger la page</a> pour vous reconnecter.`;
   else n.innerHTML = `<strong>Pige introuvable.</strong> La page ne trouve pas les enregistrements à l'adresse <code>${esc(base)}</code>. Le bouton Direct fonctionne ; pour réécouter les heures passées, le programme de pige doit tourner et <code>baseUrl</code> dans <code>config.json</code> doit pointer vers ses fichiers.`;
@@ -2297,6 +2418,11 @@ async function init(){
   const start = hash ? hash.t : slotAt(Date.now()).start;
   st.pos = start; st.day = localDay(start);
   buildMonitor();
+  $('tileWave').innerHTML = Array.from({ length: 50 }, (_, i) => {
+    const h = 14 + Math.round(Math.abs(Math.sin(i * 1.7) * 0.6 + Math.sin(i * 0.37) * 0.4) * 82);
+    return `<rect class="${i < 21 ? 'lu' : ''}" x="${i * 6}" y="${60 - h / 2}" width="3.6" height="${h}" rx="1.8"/>`;
+  }).join('') + '<line x1="127" y1="4" x2="127" y2="116"/>';
+  blancMaj();
   route(true);
   readColors(); bind(); clipMaj(); renderSources(); renderData(); renderExtraits(); checkPige();
   connectMonitor();
