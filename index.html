@@ -144,11 +144,12 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
 .tile:hover::before,.tile:focus-visible::before{opacity:1}
 .tile:hover{transform:translateY(-4px);border-color:color-mix(in srgb, var(--t) 50%, transparent);box-shadow:0 22px 50px color-mix(in srgb, var(--t) 24%, rgba(0,0,0,.25))}
 .tile-vis{flex:1;display:grid;place-items:center;min-height:170px}
-.tile-bas{display:flex;flex-direction:column;gap:4px}
-.tile-n{font-family:var(--font-display);font-weight:800;font-size:14px;letter-spacing:.24em;color:#77727f;transition:color .25s}
+/* Écriture des tuiles : grand numéro fin, titre en capitales espacées (comme les titres de section), sous-titre sur une ligne */
+.tile-bas{display:flex;flex-direction:column;gap:8px;min-width:0}
+.tile-n{font-family:var(--font-display);font-weight:400;font-size:46px;line-height:.9;letter-spacing:-.01em;color:rgb(var(--ton) / calc(.32 * var(--ton-k)));transition:color .25s}
 .tile:hover .tile-n,.tile:focus-visible .tile-n{color:var(--t, #e4032e)}
-.tile b{font-family:var(--font-display);font-weight:800;font-size:30px;line-height:1.05;letter-spacing:-.005em}
-.tile-live{font-size:13px;font-weight:600;color:var(--tile-live);min-height:1.3em}
+.tile b{font-family:var(--font-display);font-weight:700;font-size:15px;line-height:1.2;letter-spacing:.16em;text-transform:uppercase}
+.tile-live{font-size:13px;font-weight:500;color:var(--tile-live);min-height:1.3em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile-badge{position:absolute;top:18px;right:18px;font-style:normal;font-weight:800;font-size:13px;min-width:26px;height:26px;padding:0 8px;border-radius:13px;display:grid;place-items:center;background:var(--rec);color:#fff;box-shadow:0 0 0 4px rgba(228,3,46,.25)}
 .tv-vu{display:flex;align-items:flex-end;gap:14px;height:150px}
 .tv-col{display:flex;flex-direction:column;align-items:center;gap:8px;height:100%}
@@ -2593,7 +2594,7 @@ function monFrame(now){
   else if (alert) txt = (alertes.length > 1 ? `${alertes.length} alertes · ` : 'Alerte · ') + alertes.join(' · ');
   else txt = `${mon.cards.length} flux en direct`;
   if (fresh && !prog && nonMesures.length) txt += ` · niveau non mesurable : ${nonMesures.join(', ')}`;
-  if (sum.textContent !== txt){ sum.textContent = txt; sum.classList.toggle('alerte', alert || (mon.vu && !fresh)); $('tileSurv').textContent = alert ? txt : fresh ? `${mon.cards.length} flux en direct` : ''; }
+  if (sum.textContent !== txt){ sum.textContent = txt; sum.classList.toggle('alerte', alert || (mon.vu && !fresh)); $('tileSurv').textContent = $('tileSurv').title = alert ? txt : fresh ? `${mon.cards.length} flux en direct` : ''; }
   const titre = alert ? `(!) ${alertes[0]} · ${TITRE}` : TITRE;
   if (document.title !== titre) document.title = titre;
 }
