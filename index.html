@@ -24,7 +24,9 @@
   --accent-soft:color-mix(in srgb, var(--accent) 13%, var(--panel-2));
   --accent-text:color-mix(in srgb, var(--accent) 82%, #000);
   --tag:var(--accent);
-  --c-mix:88%; --c-to:#000;   /* couleur de chaîne en texte : assombrie en clair, éclaircie en sombre */
+  --c-mix:88%; --c-to:#000;
+  --surf:var(--panel-2); --surf-bord:var(--line); --surf-hl:inset 0 1px 0 rgba(255,255,255,.8); --surf-ombre:0 8px 24px rgba(20,16,30,.06);
+  --surf-halo:radial-gradient(90% 80% at 85% 0%, rgba(255,255,255,.5), transparent 70%);   /* couleur de chaîne en texte : assombrie en clair, éclaircie en sombre */
   --rec:#e4032e; --rec-soft:#fbdde3; --focus:#005ea1;
   --meter-bg:#1a181e; --meter-track:#0e0d11; --meter-ink:#f3f2f5; --meter-dim:#8d8896;   /* écran des vu-mètres, sombre dans les deux thèmes */
   --meter-grad:linear-gradient(90deg,#5fae2e 0%,#93c01f 52%,#e8d21d 66%,#f59c00 80%,#e4032e 91%,#e4032e 100%);
@@ -39,6 +41,8 @@
     --accent-soft:color-mix(in srgb, var(--accent) 22%, var(--panel-2));
     --accent-text:color-mix(in srgb, var(--accent) 62%, #fff);
     --rec:#ff2e52; --rec-soft:#3d1520; --focus:#6fb2ea; --tag:var(--accent-text); --c-mix:68%; --c-to:#fff;
+    --surf:#1a181e; --surf-bord:rgba(255,255,255,.08); --surf-hl:inset 0 1px 0 rgba(255,255,255,.07); --surf-ombre:0 10px 30px rgba(0,0,0,.18);
+    --surf-halo:radial-gradient(90% 70% at 85% 0%, rgba(255,255,255,.075), rgba(255,255,255,.02) 45%, transparent 70%);
     color-scheme:dark;
   }
 }
@@ -48,6 +52,8 @@
   --accent-soft:color-mix(in srgb, var(--accent) 22%, var(--panel-2));
   --accent-text:color-mix(in srgb, var(--accent) 62%, #fff);
   --rec:#ff2e52; --rec-soft:#3d1520; --focus:#6fb2ea; --tag:var(--accent-text); --c-mix:68%; --c-to:#fff;
+    --surf:#1a181e; --surf-bord:rgba(255,255,255,.08); --surf-hl:inset 0 1px 0 rgba(255,255,255,.07); --surf-ombre:0 10px 30px rgba(0,0,0,.18);
+    --surf-halo:radial-gradient(90% 70% at 85% 0%, rgba(255,255,255,.075), rgba(255,255,255,.02) 45%, transparent 70%);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -461,6 +467,33 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
 }
 @media (prefers-reduced-motion:reduce){.mon.alerte,.mon.ok .lamp::before,.mon.alerte .lamp::before,.sv.alerte{animation:none}.mon.alerte{background:var(--rec-soft)}}
 @media (prefers-reduced-motion:reduce){.src-state.on .dot,.tbtn.live .dot{animation:none!important}.lk-acc,.lk-tag,.deck,.tbtn.play{transition:none}}
+/* Surfaces : même matière que les tuiles d'accueil (fond, halo blanc discret, liseré clair en haut) */
+.mon,.det-haut,.det-card,.ev-list,.xt-list,.sv{background:var(--surf-halo),var(--surf);border-color:var(--surf-bord);box-shadow:var(--surf-hl),var(--surf-ombre)}
+.deck{background:var(--surf-halo),var(--surf);border-left-color:var(--surf-bord);border-right-color:var(--surf-bord);border-bottom-color:var(--surf-bord);box-shadow:var(--surf-hl),var(--surf-ombre)}
+.mon,.det-haut,.det-card,.deck{border-radius:18px}
+.ev-list,.xt-list{border-radius:14px}
+.mon{transition:border-color .25s,box-shadow .25s,transform .25s}
+.mon:hover{border-color:color-mix(in srgb, var(--c) 55%, transparent);box-shadow:var(--surf-hl),0 16px 40px color-mix(in srgb, var(--c) 16%, transparent)}
+.mon[aria-pressed="true"]{box-shadow:inset 0 3px 0 var(--c),var(--surf-hl),var(--surf-ombre)}
+.mon .meter{background:#111014}
+/* reflet coloré au survol, comme les tuiles d'accueil */
+.mon,.det-card,.det-haut,.deck{position:relative;isolation:isolate}
+.mon::before,.det-card::before,.det-haut::before,.deck::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;opacity:0;transition:opacity .3s;pointer-events:none;
+  background:radial-gradient(110% 90% at 100% 0%, color-mix(in srgb, var(--g, #f59c00) 20%, transparent), transparent 60%)}
+.mon{--g:var(--c)}
+.deck{--g:var(--accent)}
+.mon:hover::before,.det-card:hover::before,.det-haut:hover::before{opacity:1}
+.deck::before{opacity:.55}
+.det-card:hover,.det-haut:hover{border-color:color-mix(in srgb, #f59c00 45%, transparent)}
+.src[aria-pressed="true"]{background:var(--surf-halo),var(--surf);box-shadow:var(--surf-hl),var(--surf-ombre)}
+.strip{margin-top:8px}
+.sv{position:relative;overflow:visible}
+.sv::before{content:"\25CF  ON AIR";position:absolute;left:9px;bottom:calc(100% + 3px);font-family:var(--font-display);font-weight:800;font-size:10px;letter-spacing:.2em;line-height:1;white-space:pre;
+  color:color-mix(in srgb, var(--c) var(--c-mix), var(--c-to));text-shadow:0 0 10px color-mix(in srgb, var(--c) 55%, transparent);opacity:0;transform:translateY(3px);transition:opacity .25s,transform .25s;pointer-events:none}
+.sv.joue::before{opacity:1;transform:none;animation:onair 1.6s ease-in-out infinite}
+@keyframes onair{50%{opacity:.6}}
+@media (prefers-reduced-motion:reduce){.sv.joue::before{animation:none}}
+@media (max-width:860px){.strip{row-gap:20px}}
 </style>
 </head>
 <body>
