@@ -517,14 +517,12 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   .tc{align-items:flex-start}
 }
 /* Animations d'arrivée : l'en-tête au chargement, puis chaque page quand on y entre */
-/* Animation du logo au chargement : la vidéo joue au centre sur un voile, puis se pose sur le logo du bandeau.
+/* Logo animé au chargement : la vidéo se joue à la place exacte du logo du bandeau, puis le vrai logo prend le relais.
    Fond noir (sombre) ou blanc (clair) de la vidéo fondu dans la page par le mode de fusion. */
-.intro-voile{position:fixed;inset:0;z-index:50;background:var(--bg);animation:introSecours .4s 7.5s forwards}
-.intro-logo{position:fixed;left:0;top:0;z-index:51;width:1008px;height:424px;max-width:none;transform-origin:0 0;pointer-events:none;
-  mix-blend-mode:multiply;opacity:0;transition:opacity .25s}
+.intro-logo{position:absolute;left:0;top:0;z-index:2;max-width:none;pointer-events:none;mix-blend-mode:multiply;opacity:0;transition:opacity .25s}
 @media (prefers-color-scheme: dark){.intro-logo{mix-blend-mode:screen}}
-@keyframes introSecours{to{opacity:0;visibility:hidden}}   /* secours : si le script ne tourne pas, le voile s'efface seul */
-html.intro .top .brand{opacity:0}                            /* le vrai logo apparaît quand l'animation s'y pose */
+html:not(.logo-pret) .top .brand{opacity:0;animation:logoSecours .3s 6s forwards}   /* secours : le logo revient seul si le script ne tourne pas */
+@keyframes logoSecours{to{opacity:1}}
 .top::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;pointer-events:none;opacity:0;
   background:linear-gradient(90deg,transparent 0 38%,var(--hl-ui) 50%,transparent 62% 100%) 100% 0/300% 100% no-repeat;
   box-shadow:0 0 12px color-mix(in srgb, var(--hl-ui) 40%, transparent)}
@@ -532,7 +530,7 @@ html.intro .top .brand{opacity:0}                            /* le vrai logo app
 @media (prefers-reduced-motion:reduce){
   body::before,.det-lamp.on,.mon.alerte,.mon.duo.touche,:is(.mon,.mon-half).alerte .meter,:is(.mon,.mon-half).ok .lamp::before,
   :is(.mon,.mon-half).alerte .lamp::before,.sv.alerte,.sv.joue::before{animation:none}
-  .intro-voile,.intro-logo{display:none}
+  .intro-logo{display:none}
   .src-state.on .dot,.tbtn.live .dot{animation:none!important}
   .mon.alerte,.mon.duo.touche{background:var(--rec-soft)}
   .lk-acc,.lk-tag,.deck,.tbtn.play{transition:none}
@@ -541,7 +539,6 @@ html.intro .top .brand{opacity:0}                            /* le vrai logo app
 </style>
 </head>
 <body>
-<div class="intro-voile" id="introVoile" aria-hidden="true"></div>
 <video class="intro-logo" id="introLogo" muted playsinline preload="auto" aria-hidden="true" tabindex="-1"></video>
 <div class="app">
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><path id="rmMark" fill-rule="nonzero" d="M 140.05 62.27 L 140.05 140.08 L 124.49 140.08 L 124.49 77.84 L 108.93 77.84 L 108.93 140.08 L 93.37 140.08 L 93.37 77.84 L 77.81 77.84 L 77.81 140.08 L 62.25 140.08 L 62.25 62.27 Z M 140.05 62.27 M 108.93 155.64 L 140.05 155.64 C 148.65 155.64 155.62 148.68 155.62 140.08 L 155.62 62.27 C 155.62 53.68 148.65 46.71 140.05 46.71 L 62.25 46.71 C 53.65 46.71 46.68 53.68 46.68 62.27 L 46.68 140.08 C 46.68 148.68 53.65 155.64 62.25 155.64 L 93.37 155.64 L 93.37 171.2 L 62.25 171.2 C 45.09 171.2 31.12 157.24 31.12 140.08 L 31.12 62.27 C 31.12 45.11 45.09 31.15 62.25 31.15 L 140.05 31.15 C 157.21 31.15 171.18 45.11 171.18 62.27 L 171.18 140.08 C 171.18 157.24 157.21 171.2 140.05 171.2 L 108.93 171.2 Z M 108.93 155.64"/></defs></svg>
@@ -1133,6 +1130,7 @@ function majLogo(){
   const id = sourceEcoutee();
   if (id === logoId) return;
   logoId = id;
+  if (id) intro.finir();   // on écoute un départ pendant l'animation : le vrai logo, à sa couleur, reprend la main
   const rs = document.documentElement.style, couleur = id ? srcColor(srcObj(id)) : '';
   rs.setProperty('--halo', couleur || 'transparent');
   // Surbrillance des boutons : couleur du départ écouté, blanche (neutre) quand rien ne joue.
@@ -1627,8 +1625,8 @@ function montrer(v, auDemarrage){
   if (v === 'piges') requestAnimationFrame(() => { renderTime(); drawWave(); });
   if (v === 'podcaster'){ det.nonVus = 0; detAfficher(true); }
   if (!auDemarrage) window.scrollTo(0, 0);
-  if (auDemarrage) introPret.then(() => { animerEntete(); animerVue(v, true); });
-  else animerVue(v, false);
+  if (auDemarrage) animerEntete();
+  animerVue(v, auDemarrage);
 }
 /* Animations d'arrivée des pages : les blocs montent l'un après l'autre en sortant d'un léger flou. */
 const calme = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1642,7 +1640,7 @@ const BLOCS = {
 const anim = (el, kf, o) => el && el.animate(kf, Object.assign({ easing: EASE, fill: 'backwards' }, o));
 function animerVue(v, premier){
   if (calme() || !Element.prototype.animate) return;
-  const base = premier ? (intro.joue ? 350 : 280) : 30;
+  const base = premier ? 280 : 30;
   document.querySelectorAll(BLOCS[v]).forEach((el, i) => anim(el,
     [{ opacity: 0, transform: 'translateY(28px) scale(.985)', filter: 'blur(8px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }],
     { duration: 850, delay: base + i * 80 }));
@@ -1654,72 +1652,50 @@ function animerVue(v, premier){
   if (v === 'accueil') animerTuiles(base);
 }
 function animerEntete(){
-  // Bandeau : l'heure puis les quatre départs arrivent ; le logo, lui, vient de l'intro (ou glisse s'il n'y en a pas eu).
+  // Bandeau : l'heure puis les quatre départs arrivent ; le logo, lui, se dessine sur place (ou glisse sans animation).
   if (calme() || !Element.prototype.animate) return;
   const f = [{ opacity: 0, transform: 'translateY(12px)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }];
-  if (!intro.joue) anim(document.querySelector('.top .brand'), [{ opacity: 0, transform: 'translateX(-18px)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }], { duration: 900, delay: 50 });
+  if (!intro.actif()) anim(document.querySelector('.top .brand'), [{ opacity: 0, transform: 'translateX(-18px)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }], { duration: 900, delay: 50 });
   anim(document.querySelector('.top .top-right'), f, { duration: 900, delay: 150 });
   document.querySelectorAll('.strip .sv').forEach((el, i) => anim(el, f, { duration: 800, delay: 180 + i * 70 }));
 }
-/* ---------- Animation du logo au chargement ----------
-   La vidéo du logo (intro-sombre / intro-clair, en WebM ou MP4 selon le navigateur) joue au centre de l'écran ;
-   quand le logo est complet, il s'envole et se pose exactement sur celui du bandeau, qui prend le relais et reste
-   fixe. Pendant le vol, le voile s'efface et la page fait son entrée. Un clic ou une touche abrège l'animation ;
-   sans vidéo (lecture refusée, chargement trop lent, mouvements réduits), la page s'affiche directement. */
-const INTRO = { L: 18, T: 37, W: 971, H: 350, POSE: 4.1, FIN: 4.3 };   // logo complet dans la vidéo (pixels) ; secondes
-let introOk;
-const introPret = new Promise(r => { introOk = r; });
+/* ---------- Logo animé au chargement ----------
+   Le logo du bandeau se dessine sur place avec l'animation officielle (vidéo intro-sombre / intro-clair, en WebM ou
+   MP4 selon le navigateur), puis le vrai logo prend le relais et reste fixe. La page est utilisable tout de suite ;
+   sans vidéo (lecture refusée, trop lente, mouvements réduits), le logo s'affiche directement. */
+const INTRO = { L: 18, T: 37, W: 971, H: 350, VW: 1008, VH: 424, POSE: 4.15 };   // logo complet dans la vidéo (pixels) ; secondes
 const intro = (() => {
-  const voile = $('introVoile'), v = $('introLogo'), racine = document.documentElement, etat = { joue: false };
+  const v = $('introLogo'), racine = document.documentElement;
   let phase = 'attente';
-  const fini = () => { voile.remove(); v.remove(); racine.classList.remove('intro'); };
-  const sans = () => { if (phase === 'fini') return; phase = 'fini'; fini(); introOk(); };
-  if (!voile || !v || calme() || !Element.prototype.animate || !v.canPlayType){ sans(); return etat; }
-  racine.classList.add('intro');
-  const sombre = matchMedia('(prefers-color-scheme: dark)').matches;
-  v.src = 'intro-' + (sombre ? 'sombre' : 'clair') + (v.canPlayType('video/webm; codecs="vp9"') ? '.webm' : '.mp4');
-  const place = (s, x, y) => `translate(${x}px, ${y}px) scale(${s})`;
-  const centre = () => { const s = Math.min(innerWidth * .62, 560) / INTRO.W;
-    return place(s, innerWidth / 2 - (INTRO.L + INTRO.W / 2) * s, innerHeight * .46 - (INTRO.T + INTRO.H / 2) * s); };
-  const cible = () => {                                  // le logo visible du bandeau (sans la mention de la chaîne)
+  const etat = { actif: () => phase !== 'fini', finir };
+  function finir(){
+    if (phase === 'fini') return;
+    phase = 'fini'; racine.classList.add('logo-pret'); removeEventListener('resize', placer);
+    if (v){ v.style.opacity = '0'; setTimeout(() => { v.pause(); v.remove(); }, 400); }
+  }
+  function placer(){                                     // la vidéo recouvre exactement le logo visible du bandeau
     let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
     for (const el of document.querySelectorAll('.top .lockup .lk-acc, .top .lockup .lk-radio, .top .lockup .lk-monaco')){
       const r = el.getBoundingClientRect(); if (!r.width) continue;
       a = Math.min(a, r.left); b = Math.min(b, r.top); c = Math.max(c, r.right); d = Math.max(d, r.bottom);
     }
     const sx = (c - a) / INTRO.W, sy = (d - b) / INTRO.H;
-    return isFinite(sx) && sx > 0 && sy > 0 ? `translate(${a - INTRO.L * sx}px, ${b - INTRO.T * sy}px) scale(${sx}, ${sy})` : null;
-  };
-  v.style.transform = centre();
-  const garde = setTimeout(() => { if (phase === 'attente') sans(); }, 1800);   // vidéo trop lente à démarrer
-  const secours = setTimeout(() => poser(), 7000);                              // vidéo bloquée en route
-  async function poser(){
-    if (phase !== 'joue') { if (phase === 'attente') sans(); return; }
-    phase = 'pose'; clearTimeout(secours); v.pause();
-    if (v.currentTime < INTRO.POSE){                     // abrégée : on saute au logo complet avant de l'envoyer
-      await new Promise(r => { const t = setTimeout(r, 400); v.addEventListener('seeked', () => { clearTimeout(t); r(); }, { once: true }); v.currentTime = INTRO.FIN; });
-    }
-    const arrivee = cible();
-    introOk();
-    voile.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 750, delay: 150, easing: 'ease', fill: 'forwards' });
-    if (!arrivee){ v.style.opacity = '0'; setTimeout(() => { phase = 'fini'; fini(); }, 800); return; }
-    const vol = v.animate([{ transform: v.style.transform }, { transform: arrivee }], { duration: 950, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' });
-    vol.onfinish = () => {
-      racine.classList.remove('intro');                  // le vrai logo prend le relais, la vidéo s'efface
-      v.style.opacity = '0';
-      setTimeout(() => { phase = 'fini'; fini(); }, 300);
-    };
+    if (!(sx > 0 && sy > 0)) return false;
+    Object.assign(v.style, { width: INTRO.VW * sx + 'px', height: INTRO.VH * sy + 'px', left: a + scrollX - INTRO.L * sx + 'px', top: b + scrollY - INTRO.T * sy + 'px' });
+    return true;
   }
-  const abreger = () => { if (phase === 'joue') poser(); else if (phase === 'attente') sans(); };
-  addEventListener('pointerdown', abreger, { once: true }); addEventListener('keydown', abreger, { once: true });
-  v.addEventListener('error', sans);
-  v.addEventListener('ended', poser);
+  if (!v || calme() || !v.canPlayType || !placer()){ finir(); return etat; }
+  addEventListener('resize', placer);
+  v.src = 'intro-' + (matchMedia('(prefers-color-scheme: dark)').matches ? 'sombre' : 'clair') + (v.canPlayType('video/webm; codecs="vp9"') ? '.webm' : '.mp4');
+  const garde = setTimeout(() => { if (phase === 'attente') finir(); }, 1500);   // vidéo trop lente : logo fixe
+  v.addEventListener('error', finir);
+  v.addEventListener('ended', finir);
   v.play().then(() => {
     if (phase !== 'attente') return;
-    phase = 'joue'; etat.joue = true; clearTimeout(garde); v.style.opacity = '1';
-    const suivre = () => { if (phase !== 'joue') return; if (v.currentTime >= INTRO.POSE) poser(); else requestAnimationFrame(suivre); };
+    phase = 'joue'; clearTimeout(garde); placer(); v.style.opacity = '1';
+    const suivre = () => { if (phase !== 'joue') return; if (v.currentTime >= INTRO.POSE) finir(); else requestAnimationFrame(suivre); };
     requestAnimationFrame(suivre);
-  }).catch(sans);
+  }).catch(finir);
   return etat;
 })();
 function animerTuiles(base){
