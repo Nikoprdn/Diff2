@@ -110,7 +110,9 @@ button{cursor:pointer}
 .v-accueil{padding-top:8px}
 .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
 .tile{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:18px;min-height:340px;padding:22px 24px 22px;border-radius:20px;overflow:hidden;isolation:isolate;
-  background:var(--meter-bg);color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.07);box-shadow:0 10px 30px rgba(0,0,0,.18);transition:transform .25s,box-shadow .25s,border-color .25s}
+  background:radial-gradient(90% 70% at 85% 0%, rgba(255,255,255,.085), rgba(255,255,255,.02) 45%, transparent 70%), var(--meter-bg);
+  color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.08);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 10px 30px rgba(0,0,0,.18);transition:transform .25s,box-shadow .25s,border-color .25s}
 .tile::before{content:"";position:absolute;inset:0;z-index:-1;opacity:0;transition:opacity .3s;
   background:radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--t, #e4032e) 24%, transparent), transparent 62%)}
 .tile:hover::before,.tile:focus-visible::before{opacity:1}
@@ -125,16 +127,39 @@ button{cursor:pointer}
 .tv-vu{display:flex;align-items:flex-end;gap:14px;height:150px}
 .tv-col{display:flex;flex-direction:column;align-items:center;gap:8px;height:100%}
 .tv-bar{position:relative;flex:1;width:22px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden}
-.tv-bar i{position:absolute;inset:0;background:linear-gradient(0deg,#5fae2e 0%,#93c01f 50%,#e8d21d 66%,#f59c00 80%,#e4032e 92%);clip-path:inset(calc(100% - var(--v, 0%)) 0 0 0);transition:clip-path .08s linear}
-.tv-col span{font-family:var(--font-display);font-weight:800;font-size:11px;letter-spacing:.1em;color:var(--c)}
-.tv-col svg{width:20px;height:20px;flex:none;fill:var(--c);margin-bottom:-3px}
+.tv-bar i{position:absolute;inset:0;clip-path:inset(calc(100% - var(--v, 0%)) 0 0 0);transition:clip-path .08s linear}
+.tv-bar i::before,.tv-bar i::after{content:"";position:absolute;inset:0;transition:opacity .3s}
+.tv-bar i::before{background:linear-gradient(0deg, rgba(255,255,255,.28), rgba(255,255,255,.82))}
+.tv-bar i::after{background:linear-gradient(0deg,#5fae2e 0%,#93c01f 50%,#e8d21d 66%,#f59c00 80%,#e4032e 92%);opacity:0}
+.tile:hover .tv-bar i::after,.tile:focus-visible .tv-bar i::after{opacity:1}
+.tv-col span{font-family:var(--font-display);font-weight:800;font-size:11px;letter-spacing:.1em;color:#8d8896;transition:color .3s}
+.tv-col svg{width:20px;height:20px;flex:none;fill:#8d8896;margin-bottom:-3px;transition:fill .3s}
+.tile:hover .tv-col span,.tile:focus-visible .tv-col span{color:var(--c)}
+.tile:hover .tv-col svg,.tile:focus-visible .tv-col svg{fill:var(--c)}
 .tv-wave{width:100%;max-width:300px;height:120px}
 .tv-wave rect{fill:rgba(255,255,255,.18)}
 .tv-wave rect.lu{fill:rgba(255,255,255,.55);transition:fill .25s}
 .tile:hover .tv-wave rect.lu,.tile:focus-visible .tv-wave rect.lu{fill:var(--t, #e4032e)}
 .tv-wave line{stroke:#fff;stroke-width:2}
-.tv-lamp{font-family:var(--font-display);font-weight:800;font-size:18px;letter-spacing:.24em;padding:16px 26px;border-radius:12px;background:rgba(255,255,255,.06);color:#6e6878;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);transition:background .2s,color .2s,box-shadow .2s}
-.tv-lamp.on{background:#e4032e;color:#fff;box-shadow:0 0 0 6px rgba(228,3,46,.22),0 0 46px rgba(228,3,46,.7);animation:detpouls .9s ease-in-out infinite alternate}
+.tv-ext{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%}
+.tv-cut{width:100%;max-width:300px;height:132px;overflow:visible}
+.tv-cut .fond rect{fill:rgba(255,255,255,.16)}
+.tv-cut .trou{fill:none;stroke:rgba(255,255,255,.22);stroke-width:1.5;stroke-dasharray:3 4}
+.tv-cut .clip{transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.tv-cut .clip .cap{fill:rgba(255,255,255,.07);stroke:rgba(255,255,255,.35);stroke-width:1.2;transition:fill .3s,stroke .3s}
+.tv-cut .clip rect.b{fill:rgba(255,255,255,.85);transition:fill .3s}
+.tv-cut .lien{stroke:rgba(255,255,255,.25);stroke-width:1.2;stroke-dasharray:2 3;transition:stroke .3s}
+.tv-cut-t{font-family:var(--font-display);font-weight:800;font-size:11.5px;letter-spacing:.32em;color:#8d8896;transition:color .3s}
+.tile:hover .tv-cut .clip,.tile:focus-visible .tv-cut .clip{transform:translateY(-6px)}
+.tile:hover .tv-cut .cap,.tile:focus-visible .tv-cut .cap{fill:color-mix(in srgb, var(--t) 20%, transparent);stroke:var(--t)}
+.tile:hover .tv-cut rect.b,.tile:focus-visible .tv-cut rect.b{fill:var(--t)}
+.tile:hover .tv-cut .lien{stroke:color-mix(in srgb, var(--t) 70%, transparent)}
+.tile:hover .tv-cut-t,.tile:focus-visible .tv-cut-t{color:var(--t)}
+.tv-ext.on .cap{fill:rgba(228,3,46,.28);stroke:#e4032e;filter:drop-shadow(0 0 10px rgba(228,3,46,.8))}
+.tv-ext.on rect.b{fill:#fff}
+.tv-ext.on .clip{animation:souleve .9s ease-in-out infinite alternate}
+.tv-ext.on .tv-cut-t{color:#ff5a76}
+@keyframes souleve{from{transform:translateY(-2px)}to{transform:translateY(-9px)}}
 .lockup{height:60px;width:auto;flex:none;display:block;overflow:visible}
 .lk-acc{fill:var(--lk, var(--accent));transition:fill .25s}
 .lk-radio{fill:var(--ink);transition:fill .25s}
@@ -479,7 +504,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
       </a>
       <a class="tile" href="#podcaster" style="--t:#f59c00">
         <i class="tile-badge" id="tileBadge" hidden></i>
-        <span class="tile-vis"><span class="tv-lamp" id="tileLamp">EXTRACTION</span></span>
+        <span class="tile-vis"><span class="tv-ext" id="tileLamp"><svg class="tv-cut" id="tileCut" viewBox="0 0 300 132" aria-hidden="true"></svg><span class="tv-cut-t">EXTRACTION</span></span></span>
         <span class="tile-bas"><span class="tile-n">03</span><b>Auto-Podcaster</b><span class="tile-live" id="tilePod"></span></span>
       </a>
     </div>
@@ -2443,6 +2468,19 @@ async function init(){
     const h = 14 + Math.round(Math.abs(Math.sin(i * 1.7) * 0.6 + Math.sin(i * 0.37) * 0.4) * 82);
     return `<rect class="${i < 21 ? 'lu' : ''}" x="${i * 6}" y="${60 - h / 2}" width="3.6" height="${h}" rx="1.8"/>`;
   }).join('') + '<line x1="127" y1="4" x2="127" y2="116"/>';
+  (() => {
+    const N = 46, a = 18, z = 29, haut = i => 10 + Math.round(Math.abs(Math.sin(i * 1.3) * 0.55 + Math.sin(i * 0.41 + 1) * 0.45) * 46);
+    let fond = '', clip = '';
+    for (let i = 0; i < N; i++){
+      const x = 6 + i * 6.3, h = haut(i);
+      if (i >= a && i <= z) clip += `<rect class="b" x="${x}" y="${50 - h / 2}" width="3.4" height="${h}" rx="1.7"/>`;
+      else fond += `<rect x="${x}" y="${104 - h / 3}" width="3.4" height="${h / 1.5}" rx="1.7"/>`;
+    }
+    const x0 = 6 + a * 6.3 - 6, x1 = 6 + z * 6.3 + 9.4;
+    $('tileCut').innerHTML = `<g class="fond">${fond}</g><rect class="trou" x="${x0}" y="86" width="${x1 - x0}" height="36" rx="8"/>`
+      + `<line class="lien" x1="${x0}" y1="86" x2="${x0}" y2="76"/><line class="lien" x1="${x1}" y1="86" x2="${x1}" y2="76"/>`
+      + `<g class="clip"><rect class="cap" x="${x0}" y="12" width="${x1 - x0}" height="76" rx="12"/>${clip}</g>`;
+  })();
   blancMaj();
   route(true);
   readColors(); bind(); clipMaj(); renderSources(); renderData(); renderExtraits(); checkPige();
