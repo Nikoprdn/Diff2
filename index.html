@@ -517,22 +517,22 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   .tc{align-items:flex-start}
 }
 /* Animations d'arrivée : l'en-tête au chargement, puis chaque page quand on y entre */
-@keyframes arriveG{from{opacity:0;transform:translateX(-18px);filter:blur(6px)}}
-@keyframes arrive{from{opacity:0;transform:translateY(12px);filter:blur(6px)}}
-.top .brand{animation:arriveG .9s cubic-bezier(.16,1,.3,1) .05s backwards}
-.top .top-right{animation:arrive .9s cubic-bezier(.16,1,.3,1) .15s backwards}
-:where(.strip) .sv{animation:arrive .8s cubic-bezier(.16,1,.3,1) backwards}
-:where(.strip) .sv:nth-child(1){animation-delay:.18s}
-:where(.strip) .sv:nth-child(2){animation-delay:.25s}
-:where(.strip) .sv:nth-child(3){animation-delay:.32s}
-:where(.strip) .sv:nth-child(4){animation-delay:.39s}
+/* Animation du logo au chargement : la vidéo joue au centre sur un voile, puis se pose sur le logo du bandeau.
+   Fond noir (sombre) ou blanc (clair) de la vidéo fondu dans la page par le mode de fusion. */
+.intro-voile{position:fixed;inset:0;z-index:50;background:var(--bg);animation:introSecours .4s 7.5s forwards}
+.intro-logo{position:fixed;left:0;top:0;z-index:51;width:1008px;height:424px;max-width:none;transform-origin:0 0;pointer-events:none;
+  mix-blend-mode:multiply;opacity:0;transition:opacity .25s}
+@media (prefers-color-scheme: dark){.intro-logo{mix-blend-mode:screen}}
+@keyframes introSecours{to{opacity:0;visibility:hidden}}   /* secours : si le script ne tourne pas, le voile s'efface seul */
+html.intro .top .brand{opacity:0}                            /* le vrai logo apparaît quand l'animation s'y pose */
 .top::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;pointer-events:none;opacity:0;
   background:linear-gradient(90deg,transparent 0 38%,var(--hl-ui) 50%,transparent 62% 100%) 100% 0/300% 100% no-repeat;
   box-shadow:0 0 12px color-mix(in srgb, var(--hl-ui) 40%, transparent)}
 /* Mouvements réduits (réglage de l'ordinateur) : ni clignotements ni animations */
 @media (prefers-reduced-motion:reduce){
   body::before,.det-lamp.on,.mon.alerte,.mon.duo.touche,:is(.mon,.mon-half).alerte .meter,:is(.mon,.mon-half).ok .lamp::before,
-  :is(.mon,.mon-half).alerte .lamp::before,.sv.alerte,.sv.joue::before,.top .brand,.top .top-right,:where(.strip) .sv{animation:none}
+  :is(.mon,.mon-half).alerte .lamp::before,.sv.alerte,.sv.joue::before{animation:none}
+  .intro-voile,.intro-logo{display:none}
   .src-state.on .dot,.tbtn.live .dot{animation:none!important}
   .mon.alerte,.mon.duo.touche{background:var(--rec-soft)}
   .lk-acc,.lk-tag,.deck,.tbtn.play{transition:none}
@@ -541,6 +541,8 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
 </style>
 </head>
 <body>
+<div class="intro-voile" id="introVoile" aria-hidden="true"></div>
+<video class="intro-logo" id="introLogo" muted playsinline preload="auto" aria-hidden="true" tabindex="-1"></video>
 <div class="app">
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><path id="rmMark" fill-rule="nonzero" d="M 140.05 62.27 L 140.05 140.08 L 124.49 140.08 L 124.49 77.84 L 108.93 77.84 L 108.93 140.08 L 93.37 140.08 L 93.37 77.84 L 77.81 77.84 L 77.81 140.08 L 62.25 140.08 L 62.25 62.27 Z M 140.05 62.27 M 108.93 155.64 L 140.05 155.64 C 148.65 155.64 155.62 148.68 155.62 140.08 L 155.62 62.27 C 155.62 53.68 148.65 46.71 140.05 46.71 L 62.25 46.71 C 53.65 46.71 46.68 53.68 46.68 62.27 L 46.68 140.08 C 46.68 148.68 53.65 155.64 62.25 155.64 L 93.37 155.64 L 93.37 171.2 L 62.25 171.2 C 45.09 171.2 31.12 157.24 31.12 140.08 L 31.12 62.27 C 31.12 45.11 45.09 31.15 62.25 31.15 L 140.05 31.15 C 157.21 31.15 171.18 45.11 171.18 62.27 L 171.18 140.08 C 171.18 157.24 157.21 171.2 140.05 171.2 L 108.93 171.2 Z M 108.93 155.64"/></defs></svg>
   <header class="top">
@@ -1485,7 +1487,8 @@ async function clipExtraire(){
   clip.occupe = true; const bt = $('clipGo'), lib = bt.textContent; bt.textContent = 'Extraction…'; clipMaj();
   try {
     const src = st.src, segs = [];
-    for (const j of new Set([localDay(a), localDay(b - 1)])) for (const x of (await ensureDay(src, j)) || []) if (!segs.some(y => y.url === x.url)) segs.push(x);
+    // Liste relue à l'instant : une liste gardée en mémoire couperait une plage qui finit dans la dernière minute.
+    for (const j of new Set([localDay(a), localDay(b - 1)])) for (const x of (await ensureDay(src, j, true)) || []) if (!segs.some(y => y.url === x.url)) segs.push(x);
     segs.sort((x, y) => x.start - y.start);
     const parts = []; let couvert = 0;
     for (const sg of segs){
@@ -1624,7 +1627,8 @@ function montrer(v, auDemarrage){
   if (v === 'piges') requestAnimationFrame(() => { renderTime(); drawWave(); });
   if (v === 'podcaster'){ det.nonVus = 0; detAfficher(true); }
   if (!auDemarrage) window.scrollTo(0, 0);
-  animerVue(v, auDemarrage);
+  if (auDemarrage) introPret.then(() => { animerEntete(); animerVue(v, true); });
+  else animerVue(v, false);
 }
 /* Animations d'arrivée des pages : les blocs montent l'un après l'autre en sortant d'un léger flou. */
 const calme = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1638,7 +1642,7 @@ const BLOCS = {
 const anim = (el, kf, o) => el && el.animate(kf, Object.assign({ easing: EASE, fill: 'backwards' }, o));
 function animerVue(v, premier){
   if (calme() || !Element.prototype.animate) return;
-  const base = premier ? 280 : 30;
+  const base = premier ? (intro.joue ? 350 : 280) : 30;
   document.querySelectorAll(BLOCS[v]).forEach((el, i) => anim(el,
     [{ opacity: 0, transform: 'translateY(28px) scale(.985)', filter: 'blur(8px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }],
     { duration: 850, delay: base + i * 80 }));
@@ -1649,6 +1653,75 @@ function animerVue(v, premier){
     { duration: 1300, delay: premier ? 450 : 60, easing: 'cubic-bezier(.45,0,.25,1)', fill: 'none', pseudoElement: '::after' }); } catch(e){}
   if (v === 'accueil') animerTuiles(base);
 }
+function animerEntete(){
+  // Bandeau : l'heure puis les quatre départs arrivent ; le logo, lui, vient de l'intro (ou glisse s'il n'y en a pas eu).
+  if (calme() || !Element.prototype.animate) return;
+  const f = [{ opacity: 0, transform: 'translateY(12px)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }];
+  if (!intro.joue) anim(document.querySelector('.top .brand'), [{ opacity: 0, transform: 'translateX(-18px)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }], { duration: 900, delay: 50 });
+  anim(document.querySelector('.top .top-right'), f, { duration: 900, delay: 150 });
+  document.querySelectorAll('.strip .sv').forEach((el, i) => anim(el, f, { duration: 800, delay: 180 + i * 70 }));
+}
+/* ---------- Animation du logo au chargement ----------
+   La vidéo du logo (intro-sombre / intro-clair, en WebM ou MP4 selon le navigateur) joue au centre de l'écran ;
+   quand le logo est complet, il s'envole et se pose exactement sur celui du bandeau, qui prend le relais et reste
+   fixe. Pendant le vol, le voile s'efface et la page fait son entrée. Un clic ou une touche abrège l'animation ;
+   sans vidéo (lecture refusée, chargement trop lent, mouvements réduits), la page s'affiche directement. */
+const INTRO = { L: 18, T: 37, W: 971, H: 350, POSE: 4.1, FIN: 4.3 };   // logo complet dans la vidéo (pixels) ; secondes
+let introOk;
+const introPret = new Promise(r => { introOk = r; });
+const intro = (() => {
+  const voile = $('introVoile'), v = $('introLogo'), racine = document.documentElement, etat = { joue: false };
+  let phase = 'attente';
+  const fini = () => { voile.remove(); v.remove(); racine.classList.remove('intro'); };
+  const sans = () => { if (phase === 'fini') return; phase = 'fini'; fini(); introOk(); };
+  if (!voile || !v || calme() || !Element.prototype.animate || !v.canPlayType){ sans(); return etat; }
+  racine.classList.add('intro');
+  const sombre = matchMedia('(prefers-color-scheme: dark)').matches;
+  v.src = 'intro-' + (sombre ? 'sombre' : 'clair') + (v.canPlayType('video/webm; codecs="vp9"') ? '.webm' : '.mp4');
+  const place = (s, x, y) => `translate(${x}px, ${y}px) scale(${s})`;
+  const centre = () => { const s = Math.min(innerWidth * .62, 560) / INTRO.W;
+    return place(s, innerWidth / 2 - (INTRO.L + INTRO.W / 2) * s, innerHeight * .46 - (INTRO.T + INTRO.H / 2) * s); };
+  const cible = () => {                                  // le logo visible du bandeau (sans la mention de la chaîne)
+    let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+    for (const el of document.querySelectorAll('.top .lockup .lk-acc, .top .lockup .lk-radio, .top .lockup .lk-monaco')){
+      const r = el.getBoundingClientRect(); if (!r.width) continue;
+      a = Math.min(a, r.left); b = Math.min(b, r.top); c = Math.max(c, r.right); d = Math.max(d, r.bottom);
+    }
+    const sx = (c - a) / INTRO.W, sy = (d - b) / INTRO.H;
+    return isFinite(sx) && sx > 0 && sy > 0 ? `translate(${a - INTRO.L * sx}px, ${b - INTRO.T * sy}px) scale(${sx}, ${sy})` : null;
+  };
+  v.style.transform = centre();
+  const garde = setTimeout(() => { if (phase === 'attente') sans(); }, 1800);   // vidéo trop lente à démarrer
+  const secours = setTimeout(() => poser(), 7000);                              // vidéo bloquée en route
+  async function poser(){
+    if (phase !== 'joue') { if (phase === 'attente') sans(); return; }
+    phase = 'pose'; clearTimeout(secours); v.pause();
+    if (v.currentTime < INTRO.POSE){                     // abrégée : on saute au logo complet avant de l'envoyer
+      await new Promise(r => { const t = setTimeout(r, 400); v.addEventListener('seeked', () => { clearTimeout(t); r(); }, { once: true }); v.currentTime = INTRO.FIN; });
+    }
+    const arrivee = cible();
+    introOk();
+    voile.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 750, delay: 150, easing: 'ease', fill: 'forwards' });
+    if (!arrivee){ v.style.opacity = '0'; setTimeout(() => { phase = 'fini'; fini(); }, 800); return; }
+    const vol = v.animate([{ transform: v.style.transform }, { transform: arrivee }], { duration: 950, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' });
+    vol.onfinish = () => {
+      racine.classList.remove('intro');                  // le vrai logo prend le relais, la vidéo s'efface
+      v.style.opacity = '0';
+      setTimeout(() => { phase = 'fini'; fini(); }, 300);
+    };
+  }
+  const abreger = () => { if (phase === 'joue') poser(); else if (phase === 'attente') sans(); };
+  addEventListener('pointerdown', abreger, { once: true }); addEventListener('keydown', abreger, { once: true });
+  v.addEventListener('error', sans);
+  v.addEventListener('ended', poser);
+  v.play().then(() => {
+    if (phase !== 'attente') return;
+    phase = 'joue'; etat.joue = true; clearTimeout(garde); v.style.opacity = '1';
+    const suivre = () => { if (phase !== 'joue') return; if (v.currentTime >= INTRO.POSE) poser(); else requestAnimationFrame(suivre); };
+    requestAnimationFrame(suivre);
+  }).catch(sans);
+  return etat;
+})();
 function animerTuiles(base){
   // Chaque tuile s'anime de l'intérieur : vu-mètres qui montent, forme d'onde qui se dessine, extrait qui se pose.
   document.querySelectorAll('.tile-bas').forEach((b, k) => [...b.children].forEach((el, j) => anim(el,
