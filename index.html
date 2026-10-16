@@ -60,7 +60,7 @@ button{cursor:pointer}
 .num{font-variant-numeric:tabular-nums}
 
 .app{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:16px 40px;display:grid;gap:18px;
-  grid-template-columns:240px minmax(0,1fr);grid-template-areas:"top top" "mon mon" "note note" "side main"}
+  grid-template-columns:240px minmax(0,1fr);grid-template-areas:"top top" "mon mon" "det det" "note note" "side main"}
 
 /* Bandeau logo */
 .top{grid-area:top;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-block:2px 14px;border-bottom:1px solid var(--line)}
@@ -79,6 +79,40 @@ button{cursor:pointer}
 
 /* Surveillance des flux — vu-mètres façon console de régie : écran sombre, barres dégradées, pastille d'état */
 .monitor{grid-area:mon;display:flex;flex-direction:column;gap:8px}
+/* Reconnaissance en direct */
+.det{grid-area:det;display:flex;flex-direction:column;gap:8px}
+.det-box{display:grid;grid-template-columns:minmax(240px,340px) minmax(0,1fr);gap:18px;background:var(--panel-2);border:1.5px solid var(--line);border-radius:14px;padding:14px}
+.det-lamp{--dc:#e4032e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:168px;border-radius:12px;padding:18px;text-align:center;
+  background:var(--meter-bg);color:#57525e;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);transition:background .2s,color .2s,box-shadow .2s}
+.det-lamp b{font-family:var(--font-display);font-weight:800;font-size:clamp(28px,3.4vw,42px);letter-spacing:.14em;line-height:1}
+.det-lamp small{font-size:13.5px;font-weight:600;color:var(--meter-dim);line-height:1.35}
+.det-lamp.on{background:var(--dc);color:#fff;animation:detpouls .9s ease-in-out infinite alternate;
+  box-shadow:0 0 0 4px color-mix(in srgb, var(--dc) 30%, transparent),0 0 42px color-mix(in srgb, var(--dc) 70%, transparent)}
+.det-lamp.on small{color:#fff}
+@keyframes detpouls{to{box-shadow:0 0 0 9px color-mix(in srgb, var(--dc) 16%, transparent),0 0 64px color-mix(in srgb, var(--dc) 90%, transparent)}}
+.det-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.det-h{font-family:var(--font-display);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
+.det-refs{display:flex;flex-direction:column;gap:6px}
+.det-ref{display:flex;align-items:center;gap:10px;min-width:0;font-size:14px}
+.det-ref b{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.det-ref span{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.det-ref .btn{margin-left:auto;padding:2px 8px;font-size:12.5px}
+.det-vide{font-size:13.5px;color:var(--muted)}
+.det-add{align-self:flex-start;cursor:pointer}
+.det-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px 16px}
+.det-sc{display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:2px 8px;align-items:center;font-size:12.5px}
+.det-sc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2);font-weight:600}
+.det-sc em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
+.det-bar{grid-column:1 / -1;position:relative;height:6px;border-radius:3px;background:var(--panel);overflow:hidden}
+.det-bar i{position:absolute;inset:0 auto 0 0;width:var(--v,0%);background:var(--c);border-radius:3px;transition:width .2s}
+.det-bar u{position:absolute;top:0;bottom:0;left:var(--s,60%);width:2px;background:var(--ink-2);opacity:.6}
+.det-log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:13px}
+.det-log li{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:8px;color:var(--ink-2)}
+.det-log time,.det-log em{font-variant-numeric:tabular-nums;color:var(--muted);font-style:normal}
+.det-log span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mon.detecte{border-color:var(--c);box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent)}
+@media (max-width:760px){.det-box{grid-template-columns:minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){.det-lamp.on{animation:none}}
 .mon-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .mon-sum{font-size:13.5px;font-weight:600;color:var(--muted)}
 .mon-sum.alerte{color:var(--rec)}
@@ -260,7 +294,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   background:var(--monaco);color:#fff;padding:10px 14px;border-radius:10px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:10;word-break:break-word}
 
 @media (max-width:860px){
-  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "mon" "note" "side" "main"}
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "mon" "det" "note" "side" "main"}
   .side{flex-direction:row;flex-wrap:wrap;gap:12px}
   .side section{flex:1 1 220px;min-width:0}
   .side-help{display:none}
@@ -318,6 +352,19 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   <section class="monitor" aria-label="Surveillance des flux">
     <div class="mon-head"><h2 class="label">Surveillance des flux</h2><span class="mon-sum" id="monSum" role="status">Connexion aux flux…</span></div>
     <div class="mon-grid" id="monGrid"></div>
+  </section>
+
+  <section class="det" aria-label="Reconnaissance en direct">
+    <div class="mon-head"><h2 class="label">Reconnaissance en direct</h2><span class="mon-sum" id="detSum">Aucun son à reconnaître</span></div>
+    <div class="det-box">
+      <div class="det-lamp" id="detLamp" role="status" aria-live="assertive"><b>DÉTECTION</b><small id="detLampD">En attente d'un son à reconnaître</small></div>
+      <div class="det-side">
+        <div><p class="det-h">Sons à reconnaître</p><div class="det-refs" id="detRefs"></div></div>
+        <label class="btn det-add"><input type="file" id="detFile" accept="audio/*,.mp3,.wav,.m4a,.aac" hidden>Ajouter un son à reconnaître…</label>
+        <div><p class="det-h">Ressemblance en direct</p><div class="det-scores" id="detScores"></div></div>
+        <div><p class="det-h">Dernières détections</p><ol class="det-log" id="detLog"><li class="det-vide">Aucune pour l'instant.</li></ol></div>
+      </div>
+    </div>
   </section>
 
   <p class="note" id="setupNote" hidden></p>
@@ -422,6 +469,8 @@ const DEFAULT_CONFIG = {
   bitrateKbps: 128,
   retentionDays: 35,
   silence: { thresholdDb: -50, minSeconds: 10 },
+  // Sons reconnus en direct par la page : { nom, fichier (adresse du son), seuil (0,6 par défaut), sources (toutes par défaut) }
+  detection: [],
   sources: [
     { id: 'montecarlo',  name: 'Monte-Carlo',   group: 'depart',   note: 'Antenne principale', color: '#e4032e', stream: 'https://radiomonaco.ice.infomaniak.ch/radiomonaco-128.mp3', diffusion: ['FM', 'DAB+', 'WEB'] },
     { id: 'paris',       name: 'Paris',         group: 'depart',   note: 'Antenne Paris',      color: '#e4032e', stream: 'https://radiomonacoparis.ice.infomaniak.ch/radiomonacoparis-320.aac', titresDe: 'montecarlo', diffusion: ['DAB+', 'WEB'] },
@@ -1215,30 +1264,50 @@ async function bmLire(m){
   } catch(e){}
   if (!m.mort && m.mode === 'mesure') bmEchec(m);
 }
+const ADTS_HZ = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+function dureeTrame(b, i){
+  // Durée d'une trame en secondes : 1024 échantillons en AAC, 1152 (ou 576) en MP3.
+  const b1 = b[i + 1];
+  if ((b1 & 0xF6) === 0xF0){ const hz = ADTS_HZ[(b[i + 2] >> 2) & 15]; return hz ? 1024 / hz : 0; }
+  const ver = (b1 >> 3) & 3, hz = SRT[ver] && SRT[ver][(b[i + 2] >> 2) & 3];
+  return hz ? (ver === 3 ? 1152 : 576) / hz : 0;
+}
 function bmDecoder(m, bloc){
   let b = bloc;
   if (m.reste){ b = joindre([m.reste, bloc], m.reste.length + bloc.length); m.reste = null; }
   let i = premiereTrame(b, 0);
   if (i < 0){ m.reste = b.slice(-6); return; }
-  const i0 = i; let iN = i;
+  const i0 = i, debuts = []; let iN = i, duree = 0;
   while (i < b.length){
     const n = trame(b, i);
     if (!n){ const j = premiereTrame(b, i + 1); if (j < 0) break; i = j; continue; }
     if (i + n > b.length) break;
+    debuts.push(i); duree += dureeTrame(b, i);
     i += n; iN = i;
   }
   m.reste = b.slice(iN);                              // la trame incomplète attend le morceau suivant
   if (iN <= i0) return;
-  const morceau = b.slice(i0, iN).buffer;
+  // Chaque morceau est décodé précédé des 3 dernières trames du morceau d'avant, puis on ne garde que la durée
+  // exacte de ses propres trames : le son reste continu et calé sur le temps réel, quel que soit le navigateur.
+  const morceau = b.subarray(i0, iN), pre = m.prefixe;
+  m.prefixe = b.slice(debuts[Math.max(0, debuts.length - 3)], iN);
+  const donnees = pre ? joindre([pre, morceau], pre.length + morceau.length) : morceau.slice();
   m.chaine = m.chaine.then(() => new Promise(fin => {
-    const ok = buf => { fin(); if (!m.mort && buf) bmEnveloppe(m, buf); };
+    const ok = buf => {
+      fin();
+      if (m.mort || !buf) return;
+      const n = buf.length, E = Math.max(1, Math.round(duree * buf.sampleRate));
+      const canal = c => { const x = buf.getChannelData(c); if (n >= E) return x.subarray(n - E); const o = new Float32Array(E); o.set(x, E - n); return o; };
+      const c0 = canal(0), c1 = buf.numberOfChannels > 1 ? canal(1) : c0;
+      bmEnveloppe(m, c0, c1, buf.sampleRate);
+      if (det.refs.length) detEcoute(m.s.id, c0, c1, buf.sampleRate);
+    };
     const ko = () => { fin(); m.echecs++; if (m.echecs > 8 && !m.mesurable && !m.mort) bmEcoute(m, false); };
-    try { const pr = bm.dec.decodeAudioData(morceau, ok, ko); if (pr && pr.catch) pr.catch(() => {}); } catch(e){ ko(); }
+    try { const pr = bm.dec.decodeAudioData(donnees.buffer, ok, ko); if (pr && pr.catch) pr.catch(() => {}); } catch(e){ ko(); }
   }));
 }
-function bmEnveloppe(m, buf){
-  const n = Math.max(1, Math.round(buf.sampleRate * FEN / 1000));
-  const c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : c0;
+function bmEnveloppe(m, c0, c1, sr){
+  const n = Math.max(1, Math.round(sr * FEN / 1000));
   for (let k = 0; k + n <= c0.length; k += n){
     let a = 0, b = 0;
     for (let j = k; j < k + n; j++){ a += c0[j] * c0[j]; b += c1[j] * c1[j]; }
@@ -1247,6 +1316,185 @@ function bmEnveloppe(m, buf){
   if (m.q.length > 80) m.q.splice(0, m.q.length - 40);   // rester proche du direct
   m.echecs = 0;
   if (!m.mesurable){ m.mesurable = true; m.etat = 'ok'; m.essais = 0; }
+}
+
+/* ---------- Reconnaissance en direct ----------
+   Empreinte d'un son : énergie dans 24 bandes de fréquence (150 à 3 800 Hz), en échelle log, recentrée à chaque
+   instant pour ignorer le volume ; 31 empreintes par seconde. Le son du direct, décodé par la page, est comparé en
+   continu à l'empreinte de chaque son programmé (corrélation de -1 à 1, comme pour les extraits automatiques).
+   Au-dessus du seuil, le voyant DÉTECTION s'allume. Rien n'est enregistré. */
+const D_SR = 44100, D_N = 4096, D_HOP = 1411, D_NB = 24, D_MAX_S = 8, D_ALLUME = 10000;
+const det = { refs: [], st: {}, scores: {}, dernier: null, jusqua: 0, journal: store.get('detections', []) || [] };
+const dFen = new Float32Array(D_N).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (D_N - 1)));
+const dBandes = (() => {
+  const f = k => k * D_SR / D_N, cherche = hz => { let k = 0; while (k <= D_N / 2 && f(k) < hz) k++; return k; };
+  const bords = Array.from({ length: D_NB + 1 }, (_, i) => 150 * Math.pow(3800 / 150, i / D_NB));
+  return Array.from({ length: D_NB }, (_, i) => { const lo = cherche(bords[i]); return [lo, Math.max(cherche(bords[i + 1]), lo + 1)]; });
+})();
+const dFft = (() => {
+  const N = D_N, rev = new Uint32Array(N), cos = new Float64Array(N / 2), sin = new Float64Array(N / 2);
+  for (let i = 0, bits = Math.log2(N); i < N; i++){ let r = 0; for (let b = 0; b < bits; b++) r = (r << 1) | ((i >> b) & 1); rev[i] = r; }
+  for (let k = 0; k < N / 2; k++){ cos[k] = Math.cos(2 * Math.PI * k / N); sin[k] = Math.sin(2 * Math.PI * k / N); }
+  const re = new Float64Array(N), im = new Float64Array(N);
+  return (x, o) => {                                 // spectre de puissance de x[o … o+N[
+    for (let i = 0; i < N; i++){ re[rev[i]] = x[o + i] * dFen[i]; im[rev[i]] = 0; }
+    for (let t = 2; t <= N; t <<= 1){
+      const h = t >> 1, pas = N / t;
+      for (let i = 0; i < N; i += t) for (let j = 0, k = 0; j < h; j++, k += pas){
+        const a = i + j, b = a + h, tr = cos[k] * re[b] + sin[k] * im[b], ti = cos[k] * im[b] - sin[k] * re[b];
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+      }
+    }
+    return [re, im];
+  };
+})();
+function dTrame(x, o){
+  const [re, im] = dFft(x, o), v = new Float32Array(D_NB);
+  let moy = 0;
+  for (let b = 0; b < D_NB; b++){
+    let e = 0; for (let k = dBandes[b][0]; k < dBandes[b][1]; k++) e += re[k] * re[k] + im[k] * im[k];
+    v[b] = Math.log10(e + 1e-7); moy += v[b];
+  }
+  moy /= D_NB; for (let b = 0; b < D_NB; b++) v[b] -= moy;
+  return v;
+}
+function dEmpreinteRef(mono){
+  // Son de référence : on retire le silence au début et à la fin, et on garde au plus 8 secondes.
+  let a = 0, z = mono.length - 1;
+  while (a < z && Math.abs(mono[a]) <= 0.01) a++;
+  while (z > a && Math.abs(mono[z]) <= 0.01) z--;
+  const x = mono.subarray(a, Math.min(z + 1, a + D_MAX_S * D_SR));
+  const T = [];
+  for (let o = 0; o + D_N <= x.length; o += D_HOP) T.push(dTrame(x, o));
+  if (T.length < 31) return null;                   // moins d'une seconde de son utile
+  const m = T.length, t = new Float32Array(m * D_NB);
+  for (let b = 0; b < D_NB; b++){ let s = 0; for (let i = 0; i < m; i++) s += T[i][b]; s /= m; for (let i = 0; i < m; i++) t[i * D_NB + b] = T[i][b] - s; }
+  let nrm = 0; for (let i = 0; i < t.length; i++) nrm += t[i] * t[i];
+  nrm = Math.sqrt(nrm) + 1e-9; for (let i = 0; i < t.length; i++) t[i] /= nrm;
+  return { m, t, duree: x.length / D_SR };
+}
+async function dDecoder(octets){
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const ctx = new OAC(2, D_SR, D_SR);
+  const buf = await new Promise((ok, ko) => { const pr = ctx.decodeAudioData(octets, ok, ko); if (pr && pr.catch) pr.catch(ko); });
+  const c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : c0, x = new Float32Array(c0.length);
+  for (let i = 0; i < x.length; i++) x[i] = (c0[i] + c1[i]) / 2;
+  return x;
+}
+function detEcoute(id, c0, c1, sr){
+  if (sr !== D_SR) return;
+  let st = det.st[id];
+  if (!st) st = det.st[id] = { x: new Float32Array(D_N + 4 * D_SR), n: 0, F: [], k: 0, repos: {} };
+  if (st.n + c0.length > st.x.length){ const y = new Float32Array(st.n + c0.length + D_SR); y.set(st.x.subarray(0, st.n)); st.x = y; }
+  for (let i = 0; i < c0.length; i++) st.x[st.n + i] = (c0[i] + c1[i]) / 2;
+  st.n += c0.length;
+  const maxM = Math.max(...det.refs.map(r => r.m));
+  let o = 0;
+  while (st.n - o >= D_N){
+    st.F.push(dTrame(st.x, o)); o += D_HOP; st.k++;
+    if (st.F.length > maxM) st.F.splice(0, st.F.length - maxM);
+    detCompare(id, st);
+  }
+  st.x.copyWithin(0, o, st.n); st.n -= o;
+}
+function detCompare(id, st){
+  let mieux = -1;
+  for (const r of det.refs){
+    if (r.sources && !r.sources.includes(id)) continue;
+    const m = r.m, F = st.F;
+    if (F.length < m) continue;
+    let num = 0, varT = 0;
+    for (let b = 0; b < D_NB; b++){
+      let s1 = 0, s2 = 0;
+      for (let i = 0, f = F.length - m; i < m; i++){ const v = F[f + i][b]; s1 += v; s2 += v * v; num += v * r.t[i * D_NB + b]; }
+      varT += s2 - s1 * s1 / m;
+    }
+    const sc = num / Math.sqrt(Math.max(varT, 1e-6));
+    if (sc > mieux) mieux = sc;
+    const d = det.dernier;
+    if (d && d.id === id && d.ref === r.cle && st.k - d.k < 32 && sc > d.score){ d.score = sc; detSauver(); }   // pic juste après le déclenchement
+    if (sc >= r.seuil && st.k >= (st.repos[r.cle] || 0)){
+      st.repos[r.cle] = st.k + m;                    // pas de second déclenchement pendant la durée du son
+      det.dernier = { id, ref: r.cle, nom: r.nom, score: sc, t: Date.now(), k: st.k };
+      det.jusqua = performance.now() + D_ALLUME;
+      det.journal.unshift(det.dernier); det.journal.length = Math.min(det.journal.length, 20);
+      detSauver();
+    }
+  }
+  det.scores[id] = { v: mieux, t: performance.now() };
+}
+function detSauver(){ store.set('detections', det.journal.map(({ id, nom, score, t }) => ({ id, nom, score, t }))); }
+
+/* Sons de référence : ceux du site (config « detection ») et ceux ajoutés sur cette page (gardés dans ce navigateur). */
+const b64 = { de: a => { let s = ''; const u = new Uint8Array(a.buffer, a.byteOffset, a.byteLength); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); },
+              vers: s => { const r = atob(s), u = new Uint8Array(r.length); for (let i = 0; i < r.length; i++) u[i] = r.charCodeAt(i); return new Float32Array(u.buffer); } };
+async function detCharger(){
+  const refs = [];
+  for (const [i, d] of (cfg.detection || []).entries()){
+    if (!d || !d.fichier) continue;
+    try {
+      const r = await fetch(d.fichier, { cache: 'force-cache' });
+      if (!r.ok) throw new Error(r.status);
+      const e = dEmpreinteRef(await dDecoder(await r.arrayBuffer()));
+      if (!e) throw new Error('trop court');
+      refs.push({ cle: 'site' + i, nom: d.nom || d.fichier, seuil: +d.seuil || 0.6, sources: Array.isArray(d.sources) ? d.sources : null, site: true, ...e });
+    } catch(err){ console.warn('Son à reconnaître ignoré :', d.fichier, err); }
+  }
+  for (const d of store.get('detection.refs', []) || []){
+    try { const t = b64.vers(d.t); refs.push({ cle: d.cle, nom: d.nom, seuil: d.seuil || 0.6, sources: null, m: t.length / D_NB, t, duree: d.duree }); } catch(e){}
+  }
+  det.refs = refs; det.st = {};
+  detListe();
+}
+function detGarderLocaux(){
+  store.set('detection.refs', det.refs.filter(r => !r.site).map(r => ({ cle: r.cle, nom: r.nom, seuil: r.seuil, duree: r.duree, t: b64.de(r.t) })));
+}
+async function detAjouter(fichier){
+  const nom = fichier.name.replace(/\.[^.]+$/, '');
+  $('detLampD').textContent = `Analyse de « ${nom} »…`;
+  try {
+    const e = dEmpreinteRef(await dDecoder(await fichier.arrayBuffer()));
+    if (!e) { toast('Ce son est trop court : il faut au moins une seconde de son.'); detListe(); return; }
+    det.refs.push({ cle: 'local' + Date.now(), nom, seuil: 0.6, sources: null, ...e });
+    detGarderLocaux(); det.st = {};
+    toast(`« ${nom} » sera reconnu sur toutes les chaînes.`);
+  } catch(err){ toast('Ce fichier audio ne peut pas être lu par le navigateur.'); }
+  detListe();
+}
+function detListe(){
+  $('detRefs').innerHTML = det.refs.length ? det.refs.map(r => `<div class="det-ref"><b title="${esc(r.nom)}">${esc(r.nom)}</b><span>${r.duree.toFixed(1).replace('.', ',')} s · seuil ${r.seuil.toFixed(2).replace('.', ',')}${r.site ? ' · programmé sur le site' : ''}</span>${r.site ? '' : `<button class="btn" type="button" data-retirer="${esc(r.cle)}">Retirer</button>`}</div>`).join('')
+    : '<p class="det-vide">Aucun pour l\'instant. Ajoutez le son à reconnaître (jingle, virgule, top horaire…).</p>';
+  $('detScores').innerHTML = cfg.sources.map(s => `<div class="det-sc" data-id="${esc(s.id)}" style="--c:${srcColor(s)}"><span>${esc(s.name)}</span><em>—</em><span class="det-bar"><i></i><u></u></span></div>`).join('');
+  det.ui = { sc: [...$('detScores').querySelectorAll('.det-sc')].map(el => ({ id: el.dataset.id, el, v: el.querySelector('em'), i: el.querySelector('i'), u: el.querySelector('u') })), cle: '' };
+  detAfficher(true);
+}
+function detAfficher(force){
+  if (!det.ui) return;
+  const now = performance.now(), on = now < det.jusqua && det.dernier, d = det.dernier;
+  const lampe = $('detLamp'), seuil = det.refs.length ? Math.min(...det.refs.map(r => r.seuil)) : 0.6;
+  const cle = on ? 'on' + d.t + d.score.toFixed(2) : 'off' + det.refs.length + (bm.on ? 1 : 0);
+  if (force || cle !== det.ui.cle){
+    det.ui.cle = cle;
+    lampe.classList.toggle('on', !!on);
+    if (on){
+      const s = cfg.sources.find(x => x.id === d.id) || {};
+      lampe.style.setProperty('--dc', srcColor(s));
+      $('detLampD').textContent = `${d.nom} · ${srcName(d.id)} · ${new Date(d.t).toLocaleTimeString('fr-FR')} · ${Math.round(d.score * 100)} %`;
+    } else {
+      $('detLampD').textContent = !det.refs.length ? 'En attente d\'un son à reconnaître'
+        : bm.on ? `En écoute sur ${cfg.sources.length} flux` : 'Connexion aux flux…';
+    }
+    $('detSum').textContent = det.refs.length ? `${det.refs.length} son${det.refs.length > 1 ? 's' : ''} à reconnaître · rien n'est enregistré` : 'Aucun son à reconnaître';
+    for (const c of mon.cards || []) c.el.classList.toggle('detecte', !!on && c.id === d.id);
+    $('detLog').innerHTML = det.journal.length ? det.journal.slice(0, 6).map(x => `<li><time>${new Date(x.t).toLocaleTimeString('fr-FR')}</time><span>${esc(x.nom)} · ${esc(srcName(x.id))}</span><em>${Math.round(x.score * 100)} %</em></li>`).join('')
+      : '<li class="det-vide">Aucune pour l\'instant.</li>';
+  }
+  for (const u of det.ui.sc){
+    const s = det.scores[u.id], v = s && now - s.t < 5000 && det.refs.length ? Math.max(0, s.v) : null;
+    u.v.textContent = v == null ? '—' : String(Math.round(v * 100)) + ' %';
+    u.i.style.setProperty('--v', v == null ? '0%' : (Math.min(1, v) * 100).toFixed(0) + '%');
+    u.u.style.setProperty('--s', (seuil * 100).toFixed(0) + '%');
+  }
 }
 function bmEcoute(m, apresRefus){
   // Le son ne peut pas être analysé : on vérifie au moins que le flux arrive (lecture muette, autorisée sans clic).
@@ -1271,7 +1519,7 @@ function bmEchec(m){
 setInterval(() => {
   const now = performance.now();
   // Le programme de pige fournit les niveaux : inutile de lire les flux en double.
-  if (progActif()){ if (bm.on) bmStop(); return; }
+  if (progActif() && !det.refs.length){ if (bm.on) bmStop(); return; }
   if (!bm.on && now > 2500){ bmStart(); return; }
   for (const id in bm.m){                          // chien de garde : un flux qui n'arrive plus depuis 8 s est relancé
     const m = bm.m[id];
@@ -1530,6 +1778,13 @@ async function init(){
   readColors(); bind(); renderSources(); renderData(); renderExtraits(); checkPige();
   connectMonitor();
   lireTitres(); setInterval(lireTitres, 10e3);
+  detCharger();
+  $('detFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) detAjouter(f); e.target.value = ''; });
+  $('detRefs').addEventListener('click', e => {
+    const bt = e.target.closest('[data-retirer]'); if (!bt) return;
+    det.refs = det.refs.filter(r => r.cle !== bt.dataset.retirer); detGarderLocaux(); det.st = {}; detListe();
+  });
+  setInterval(() => detAfficher(false), 250);
   try { for (const k of Object.keys(localStorage)) if (k.startsWith('pige.titres.')) localStorage.removeItem(k); } catch(e){}   // ancien historique
   // Onglet en arrière-plan : on continue de surveiller (alerte dans le titre de l'onglet).
   setInterval(() => { if (document.hidden) monFrame(performance.now()); }, 1000);
