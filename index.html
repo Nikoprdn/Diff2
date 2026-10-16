@@ -422,6 +422,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
 .pill{font-family:var(--font-display);font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;border-radius:6px;padding:2px 7px;text-align:center}
 .pill.sil{background:var(--rec-soft);color:var(--rec)}
 .pill.gap{background:var(--panel);color:var(--ink-2);border:1px solid var(--line)}
+.pill.fig{background:rgba(74,144,226,.16);color:color-mix(in srgb, #4a90e2 75%, var(--ink))}
 .ev-time{font-weight:600;font-variant-numeric:tabular-nums}
 .ev-dur{color:var(--muted);min-width:0}
 .extraits{display:flex;flex-direction:column;gap:8px}
@@ -609,8 +610,8 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
     <div class="mon-head"><h2 class="label">Surveillance des flux</h2><span class="mon-sum" id="monSum" role="status">Connexion aux flux…</span></div>
     <div class="mon-grid" id="monGrid"></div>
   </section>
-  <section class="events" aria-label="Blancs et coupures détectés">
-    <div class="events-head"><h2 class="label">Blancs et coupures détectés</h2><span class="events-sub" id="blSub"></span></div>
+  <section class="events" aria-label="Blancs, coupures et sons figés">
+    <div class="events-head"><h2 class="label">Blancs, coupures et sons figés</h2><span class="events-sub" id="blSub"></span></div>
     <div id="blancs"></div>
   </section>
   </div>
@@ -756,6 +757,8 @@ const DEFAULT_CONFIG = {
   bitrateKbps: 128,
   retentionDays: 35,
   silence: { thresholdDb: -50, minSeconds: 10 },
+  // Son figé : le même petit morceau de son qui se répète. Alerte après minSeconds ; seuil de ressemblance (0 à 1).
+  fige: { minSeconds: 10, seuil: 0.995 },
   // Sons reconnus en direct par la page : { nom, fichier (adresse du son), seuil (0,6 par défaut), sources (toutes par défaut) }
   detection: [],
   detectionSources: ['montecarlo'],   // départs écoutés par l'Auto-Podcaster
@@ -1856,15 +1859,63 @@ function bmDecoder(m, bloc){
   }));
 }
 function bmEnveloppe(m, c0, c1, sr){
-  const n = Math.max(1, Math.round(sr * FEN / 1000));
+  const n = Math.max(1, Math.round(sr * FEN / 1000)), fige = fzAjouter(m, c0, c1);
   for (let k = 0; k + n <= c0.length; k += n){
     let a = 0, b = 0;
     for (let j = k; j < k + n; j++){ a += c0[j] * c0[j]; b += c1[j] * c1[j]; }
-    m.q.push([dbms(a / n), dbms(b / n)]);
+    m.q.push([dbms(a / n), dbms(b / n), fige]);
   }
   if (m.q.length > 80) m.q.splice(0, m.q.length - 40);   // rester proche du direct
   m.echecs = 0;
   if (!m.mesurable){ m.mesurable = true; m.etat = 'ok'; m.essais = 0; }
+}
+
+/* ---------- Son figé ----------
+   Quand un maillon de la chaîne se bloque, le flux continue mais répète à l'identique un petit morceau de son
+   (un tampon, une trame). Toutes les 0,5 s, la dernière demi-seconde (mono, 11 kHz) est comparée à elle-même
+   décalée de 2 à 250 ms. Un son figé lui ressemble presque parfaitement (0,998 et plus dans nos essais, même après
+   réencodage MP3) ; la musique bien moins (0,35 à 0,6 ; 0,99 au plus pour une nappe d'ambiance très statique).
+   Au-dessus du seuil (0,995) pendant 10 s : alerte « Figé ». Le silence n'est pas concerné (c'est un blanc). */
+const FZ_B = 5512, FZ_L = 2756;                    // bloc de 0,5 s et décalage maximal de 0,25 s, à 11 025 Hz
+function fzRepetition(x){
+  const N = x.length, n = N >> 2, c = new Float32Array(n);
+  for (let i = 0; i < n; i++) c[i] = (x[4 * i] + x[4 * i + 1] + x[4 * i + 2] + x[4 * i + 3]) * .25;
+  const cumul = v => { const P = new Float64Array(v.length + 1); for (let i = 0; i < v.length; i++) P[i + 1] = P[i] + v[i] * v[i]; return P; };
+  const corr = (v, P, a, b, L) => {
+    const e = P[b - L] - P[a - L], ey = P[b] - P[a];
+    if (!(e > 0 && ey > 0)) return 0;
+    let s = 0; for (let i = a; i < b; i++) s += v[i] * v[i - L];
+    return s / Math.sqrt(ey * e);
+  };
+  // recherche grossière à 2,8 kHz, puis affinage à 11 kHz autour des 6 meilleurs pics
+  const Pc = cumul(c), ac = n - (FZ_B >> 2), l0 = 6, rc = [];
+  for (let L = l0; L <= FZ_L >> 2; L++) rc.push(corr(c, Pc, ac, n, L));
+  let pics = []; for (let i = 1; i < rc.length - 1; i++) if (rc[i] >= rc[i - 1] && rc[i] >= rc[i + 1]) pics.push(i);
+  if (!pics.length) pics = [rc.indexOf(Math.max(...rc))];
+  pics = pics.sort((p, q) => rc[q] - rc[p]).slice(0, 6);
+  const P = cumul(x), a = N - FZ_B; let best = 0;
+  for (const p of pics){
+    const L0 = (p + l0) * 4;
+    for (let L = Math.max(8, L0 - 5); L <= Math.min(FZ_L, L0 + 5); L++){ const r = corr(x, P, a, N, L); if (r > best) best = r; }
+  }
+  return best;
+}
+function fzAjouter(m, c0, c1){
+  const z = m.fz || (m.fz = { x: new Float32Array(FZ_B + FZ_L), n: 0, r: 0, acc: 0, k: 0, t: 0, tmp: new Float32Array(FZ_B) });
+  for (let i = 0; i < c0.length; i++){
+    z.acc += c0[i] + c1[i];
+    if (++z.k === 4){                                 // 44,1 kHz stéréo → 11 025 Hz mono
+      z.tmp[z.t++] = z.acc * .125; z.acc = 0; z.k = 0;
+      if (z.t === FZ_B){ fzBloc(z); z.t = 0; }
+    }
+  }
+  return z.r >= (cfg.fige?.seuil ?? 0.995);
+}
+function fzBloc(z){
+  z.x.copyWithin(0, FZ_B); z.x.set(z.tmp, FZ_L); z.n = Math.min(z.x.length, z.n + FZ_B);
+  if (z.n < z.x.length){ z.r = 0; return; }
+  let e = 0; for (let j = FZ_L; j < z.x.length; j++) e += z.x[j] * z.x[j];
+  z.r = Math.sqrt(e / FZ_B) > Math.pow(10, (cfg.silence?.thresholdDb ?? -50) / 20) ? fzRepetition(z.x) : 0;
 }
 
 /* ---------- Reconnaissance en direct ----------
@@ -2305,7 +2356,7 @@ setInterval(() => {
   }
 }, 1000);
 function bmSnapshot(now){
-  const seuil = cfg.silence?.thresholdDb ?? -50, min = cfg.silence?.minSeconds ?? 10, out = {};
+  const seuil = cfg.silence?.thresholdDb ?? -50, min = cfg.silence?.minSeconds ?? 10, fmin = cfg.fige?.minSeconds ?? 10, out = {};
   for (const s of cfg.sources){
     const m = bm.m[s.id];
     if (!m) continue;
@@ -2321,13 +2372,14 @@ function bmSnapshot(now){
           if (f){
             m.l = f[0]; m.r = f[1];
             if (Math.max(m.l, m.r) < seuil){ if (!m.silence) m.silence = now; } else m.silence = null;
+            if (f[2]){ if (!m.figeT) m.figeT = now; } else m.figeT = null;
           }
           if (!m.q.length) m.joue = false;            // réserve vide : on attend le morceau suivant
         }
       }
     }
-    const sil = m.silence ? Math.floor((now - m.silence) / 1000) : 0;
-    out[s.id] = { etat: sil >= min ? 'blanc' : 'ok', l: m.mesurable ? m.l : -99, r: m.mesurable ? m.r : -99, silence: sil, mesurable: m.mesurable };
+    const sil = m.silence ? Math.floor((now - m.silence) / 1000) : 0, fz = m.figeT ? Math.floor((now - m.figeT) / 1000) : 0;
+    out[s.id] = { etat: sil >= min ? 'blanc' : fz >= fmin ? 'fige' : 'ok', l: m.mesurable ? m.l : -99, r: m.mesurable ? m.r : -99, silence: sil, fige: fz, mesurable: m.mesurable };
   }
   return out;
 }
@@ -2496,10 +2548,10 @@ function bandeauTitre(c, t){
 const blancs = (() => { const l = store.get('blancs', []) || [], lim = Date.now() - 864e5; return l.filter(x => x && (x.fin || x.debut) > lim).slice(0, 60); })();
 blancs.forEach(x => { if (!x.fin) x.fin = x.vu || x.debut; });   // alerte restée ouverte à la fermeture de la page
 function blancSuivre(c, src, cls){
-  const type = cls === 'alerte' ? (src.etat === 'coupe' ? 'coupe' : 'blanc') : null, now = Date.now();
+  const type = cls === 'alerte' ? (src.etat === 'coupe' ? 'coupe' : src.etat === 'fige' ? 'fige' : 'blanc') : null, now = Date.now();
   if (c.ouvert && (!type || c.ouvert.type !== type)){ c.ouvert.fin = now; c.ouvert = null; blancMaj(); }
   if (type && !c.ouvert){
-    c.ouvert = { id: c.id, type, debut: now - (type === 'blanc' ? (src.silence || 0) * 1000 : 0), fin: null, vu: now };
+    c.ouvert = { id: c.id, type, debut: now - (type === 'blanc' ? (src.silence || 0) * 1000 : type === 'fige' ? (src.fige || 0) * 1000 : 0), fin: null, vu: now };
     blancs.unshift(c.ouvert); blancs.length = Math.min(blancs.length, 60); blancMaj();
   } else if (c.ouvert && now - c.ouvert.vu > 5000){ c.ouvert.vu = now; blancMaj(true); }
 }
@@ -2507,14 +2559,14 @@ function blancMaj(discret){
   store.set('blancs', blancs);
   const box = $('blancs');
   const thr = cfg.silence?.thresholdDb ?? -50, min = cfg.silence?.minSeconds ?? 10;
-  $('blSub').textContent = `Blanc : sous ${thr} dB pendant ${min} s ou plus · vus par cette page, 24 dernières heures`;
-  if (!blancs.length){ box.innerHTML = '<p class="empty-msg">Aucun blanc ni coupure détecté.</p>'; return; }
+  $('blSub').textContent = `Blanc : sous ${thr} dB pendant ${min} s ou plus · Figé : le même son qui se répète pendant ${cfg.fige?.minSeconds ?? 10} s ou plus · 24 dernières heures`;
+  if (!blancs.length){ box.innerHTML = '<p class="empty-msg">Aucun blanc, coupure ni son figé détecté.</p>'; return; }
   if (discret && box.querySelector('.ev-list')){                  // mise à jour de la durée d'une alerte en cours
     const el = box.querySelector('[data-encours]'); if (el){ const x = blancs.find(y => !y.fin); if (x) el.textContent = `${srcName(x.id)} · ${fmtDur((Date.now() - x.debut) / 1000)} · en cours`; }
     return;
   }
   box.innerHTML = '<ol class="ev-list">' + blancs.slice(0, 30).map(x => `<li>
-    <span class="pill ${x.type === 'blanc' ? 'sil' : 'gap'}">${x.type === 'blanc' ? 'Blanc' : 'Coupure'}</span>
+    <span class="pill ${{ blanc: 'sil', fige: 'fig' }[x.type] || 'gap'}">${{ blanc: 'Blanc', fige: 'Figé' }[x.type] || 'Coupure'}</span>
     <span class="ev-time">${fmtClock(x.debut)}</span>
     <span class="ev-dur"${x.fin ? '' : ' data-encours'}>${esc(srcName(x.id))} · ${fmtDur(((x.fin || Date.now()) - x.debut) / 1000)}${x.fin ? '' : ' · en cours'}</span>
     <button class="btn" data-t="${x.debut}" data-src="${esc(x.id)}">Réécouter</button></li>`).join('') + '</ol>';
@@ -2535,6 +2587,7 @@ function monFrame(now){
     else if (src.etat === 'connexion'){ cls = 'off'; label = 'Connexion…'; }
     else if (src.etat === 'coupe'){ cls = 'alerte'; label = 'Coupé'; alertes.push(`${srcName(c.id)} : flux coupé`); }
     else if (src.etat === 'blanc'){ cls = 'alerte'; label = `Blanc ${fmtSilence(src.silence)}`; alertes.push(`${srcName(c.id)} : blanc depuis ${fmtSilence(src.silence)}`); }
+    else if (src.etat === 'fige'){ cls = 'alerte'; label = `Figé ${fmtSilence(src.fige || 0)}`; alertes.push(`${srcName(c.id)} : son figé depuis ${fmtSilence(src.fige || 0)}`); }
     else { cls = 'ok'; label = 'En direct'; if (src.mesurable === false) nonMesures.push(srcName(c.id)); }
     if (cls !== c.cls){ c.el.classList.remove('ok', 'off', 'alerte'); c.el.classList.add(cls); c.sv.classList.remove('ok', 'off', 'alerte'); c.sv.classList.add(cls); c.sv.title = `Écouter ${srcName(c.id)} en direct · ${label}`; c.cls = cls; }
     if (label !== c.label){ c.txt.textContent = label; c.txt.title = label; c.label = label; }
