@@ -90,7 +90,7 @@ button{cursor:pointer}
 .sv-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s}
 .sv-art img.ok{opacity:1}
 .sv-art::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .2s;
-  background:linear-gradient(currentColor,currentColor) 6px 100%/3px 40% no-repeat,linear-gradient(currentColor,currentColor) 11.5px 100%/3px 70% no-repeat,linear-gradient(currentColor,currentColor) 17px 100%/3px 55% no-repeat,rgba(0,0,0,.6);color:color-mix(in srgb, var(--c) 78%, #fff)}
+  background:linear-gradient(currentColor,currentColor) 6px 100%/3px 40% no-repeat,linear-gradient(currentColor,currentColor) 11.5px 100%/3px 70% no-repeat,linear-gradient(currentColor,currentColor) 17px 100%/3px 55% no-repeat,rgba(0,0,0,.62);color:var(--c)}
 .sv.joue{border-color:var(--c);box-shadow:0 0 0 2px color-mix(in srgb, var(--c) 30%, transparent)}
 .sv.joue .sv-art::after{opacity:1;animation:eq .9s ease-in-out infinite alternate}
 @keyframes eq{0%{background-size:3px 30%,3px 80%,3px 50%,auto}50%{background-size:3px 85%,3px 35%,3px 70%,auto}100%{background-size:3px 55%,3px 65%,3px 30%,auto}}
@@ -125,8 +125,9 @@ button{cursor:pointer}
 .tv-vu{display:flex;align-items:flex-end;gap:14px;height:150px}
 .tv-col{display:flex;flex-direction:column;align-items:center;gap:8px;height:100%}
 .tv-bar{position:relative;flex:1;width:22px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden}
-.tv-bar i{position:absolute;inset:0;background:linear-gradient(0deg, color-mix(in srgb, var(--c) 72%, #000), var(--c) 60%, color-mix(in srgb, var(--c) 65%, #fff));clip-path:inset(calc(100% - var(--v, 0%)) 0 0 0);transition:clip-path .08s linear}
+.tv-bar i{position:absolute;inset:0;background:linear-gradient(0deg,#5fae2e 0%,#93c01f 50%,#e8d21d 66%,#f59c00 80%,#e4032e 92%);clip-path:inset(calc(100% - var(--v, 0%)) 0 0 0);transition:clip-path .08s linear}
 .tv-col span{font-family:var(--font-display);font-weight:800;font-size:11px;letter-spacing:.1em;color:var(--c)}
+.tv-col svg{width:20px;height:20px;flex:none;fill:var(--c);margin-bottom:-3px}
 .tv-wave{width:100%;max-width:300px;height:120px}
 .tv-wave rect{fill:rgba(255,255,255,.18)}
 .tv-wave rect.lu{fill:rgba(255,255,255,.55);transition:fill .25s}
@@ -236,8 +237,7 @@ button{cursor:pointer}
 .m-bar::before,.m-fill{content:"";position:absolute;inset:0;border-radius:3px;background:var(--meter-grad);
   -webkit-mask:repeating-linear-gradient(90deg,#000 0 3px,transparent 3px 4px);mask:repeating-linear-gradient(90deg,#000 0 3px,transparent 3px 4px)}
 .m-bar::before{opacity:.16}
-.m-fill{clip-path:inset(0 calc(100% - var(--v, 0%)) 0 0);filter:brightness(1.08) drop-shadow(0 0 3px color-mix(in srgb, var(--c) 55%, transparent))}
-.mon,.sv{--meter-grad:linear-gradient(90deg, color-mix(in srgb, var(--c) 72%, #000) 0%, var(--c) 60%, color-mix(in srgb, var(--c) 65%, #fff) 100%)}
+.m-fill{clip-path:inset(0 calc(100% - var(--v, 0%)) 0 0);filter:brightness(1.12) drop-shadow(0 0 3px rgba(147,192,31,.5))}
 .m-peak{position:absolute;top:0;bottom:0;width:2px;left:var(--p, 0%);margin-left:-2px;background:#fff;border-radius:1px;box-shadow:0 0 6px rgba(255,255,255,.7);z-index:1}
 .m-scale{grid-column:2;position:relative;height:12px;font-size:9.5px;font-weight:600;color:var(--meter-dim);font-variant-numeric:tabular-nums}
 .m-scale span{position:absolute;top:1px;transform:translateX(-50%)}
@@ -1537,7 +1537,7 @@ function buildMonitor(){
     <span class="np vide"><span class="np-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="np-txt"><span class="np-lbl">Now playing</span><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></span>
     <span class="np-hist" aria-label="Derniers titres"></span></button>`).join('');
   $('strip').innerHTML = cfg.sources.map(s => `<button class="sv off" type="button" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" title="Écouter ${esc(s.name)} en direct"><span class="sv-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="sv-x"><span class="sv-n">${esc(s.court || s.name.replace(/^100\s*%\s*/, ''))}</span><span class="sv-t"><span class="sv-tt">—</span></span></span><span class="sv-m" aria-hidden="true"><i></i><i></i></span></button>`).join('');
-  $('tileVu').innerHTML = cfg.sources.map(s => `<span class="tv-col" style="--c:${srcColor(s)}"><span class="tv-bar"><i></i></span><span>${esc((s.court || s.name.replace(/^100\s*%\s*/, '')).split(/[\s-]+/).map((w, i, t) => t.length > 1 ? w[0] : w.slice(0, 2)).join('').slice(0, 2).toUpperCase())}</span></span>`).join('');
+  $('tileVu').innerHTML = cfg.sources.map(s => `<span class="tv-col" style="--c:${srcColor(s)}"><span class="tv-bar"><i></i></span><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span>${esc((s.court || s.name.replace(/^100\s*%\s*/, '')).split(/[\s-]+/).map((w, i, t) => t.length > 1 ? w[0] : w.slice(0, 2)).join('').slice(0, 2).toUpperCase())}</span></span>`).join('');
   mon.cards = [...$('monGrid').querySelectorAll('.mon')].map(el => ({
     id: el.dataset.id, el, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'), np: el.querySelector('.np'), npI: el.querySelector('.np-art img'), npT: el.querySelector('.np-t'), npA: el.querySelector('.np-a'), npK: '', npH: el.querySelector('.np-hist'),
     sv: $('strip').querySelector(`[data-id="${CSS.escape(el.dataset.id)}"]`),
