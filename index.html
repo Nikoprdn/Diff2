@@ -40,7 +40,7 @@
     --hatch:#3a3642; --wave:#5d5867; --rec-bar:#a7a1b3;
     --accent-soft:color-mix(in srgb, var(--accent) 22%, var(--panel-2));
     --accent-text:color-mix(in srgb, var(--accent) 62%, #fff);
-    --rec:#ff2e52; --rec-soft:#3d1520; --focus:#6fb2ea; --tag:var(--accent-text); --c-mix:68%; --c-to:#fff;
+    --rec:#ff2e52; --rec-soft:#3d1520; --focus:#6fb2ea; --tag:var(--accent-text); --c-mix:68%; --c-to:#fff; --halo-k:30%;
     --surf:#1a181e; --surf-bord:rgba(255,255,255,.08); --surf-hl:inset 0 1px 0 rgba(255,255,255,.07); --surf-ombre:0 10px 30px rgba(0,0,0,.18);
     --surf-halo:radial-gradient(90% 70% at 85% 0%, rgba(255,255,255,.075), rgba(255,255,255,.02) 45%, transparent 70%);
     color-scheme:dark;
@@ -51,7 +51,7 @@
   --hatch:#3a3642; --wave:#5d5867; --rec-bar:#a7a1b3;
   --accent-soft:color-mix(in srgb, var(--accent) 22%, var(--panel-2));
   --accent-text:color-mix(in srgb, var(--accent) 62%, #fff);
-  --rec:#ff2e52; --rec-soft:#3d1520; --focus:#6fb2ea; --tag:var(--accent-text); --c-mix:68%; --c-to:#fff;
+  --rec:#ff2e52; --rec-soft:#3d1520; --focus:#6fb2ea; --tag:var(--accent-text); --c-mix:68%; --c-to:#fff; --halo-k:30%;
     --surf:#1a181e; --surf-bord:rgba(255,255,255,.08); --surf-hl:inset 0 1px 0 rgba(255,255,255,.07); --surf-ombre:0 10px 30px rgba(0,0,0,.18);
     --surf-halo:radial-gradient(90% 70% at 85% 0%, rgba(255,255,255,.075), rgba(255,255,255,.02) 45%, transparent 70%);
   color-scheme:dark;
@@ -59,13 +59,22 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--ink)}
-body{font-family:var(--font-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body{margin:0;font-family:var(--font-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .num{font-variant-numeric:tabular-nums}
 
-.app{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:14px 40px;display:flex;flex-direction:column;gap:20px}
+.app{position:relative;z-index:1;max-width:1240px;min-height:100vh;min-height:100dvh;margin:0 auto;padding-inline:24px;padding-block:22px 48px;display:flex;flex-direction:column;gap:20px}
+/* Halo de page : prend doucement la couleur du départ écouté, s'éteint quand rien ne joue */
+@property --halo{syntax:'<color>';inherits:true;initial-value:transparent}
+html{--halo-k:15%;transition:--halo 1.4s ease}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(75% 60% at 50% -12%, color-mix(in srgb, var(--halo) var(--halo-k), transparent), transparent 72%),
+    radial-gradient(55% 45% at 50% 112%, color-mix(in srgb, var(--halo) calc(var(--halo-k) * .55), transparent), transparent 70%);
+  animation:respire 7s ease-in-out infinite}
+@keyframes respire{50%{opacity:.72}}
+@media (prefers-reduced-motion:reduce){body::before{animation:none}}
 .v-piges{display:grid;gap:18px;grid-template-columns:240px minmax(0,1fr);grid-template-areas:"note note" "side main"}
 .v-surv,.v-podcast{display:flex;flex-direction:column;gap:20px}
 
@@ -113,9 +122,12 @@ button{cursor:pointer}
 .sv.alerte{border-color:var(--rec);background:var(--rec-soft);animation:clignsv 1s steps(1,end) infinite}
 @keyframes clignsv{50%{border-color:var(--line)}}
 /* Accueil */
-.v-accueil{padding-top:8px}
+/* Les tuiles sont centrées dans la fenêtre : la marge du bas compense la hauteur de l'en-tête (--h-top, mesurée) */
+.v-accueil{flex:1;display:flex;flex-direction:column;padding-block:8px calc(var(--h-top, 140px) + 2px)}
+.v-accueil .tiles{margin-block:auto}
+@media (max-height:760px),(max-width:860px){.v-accueil{padding-bottom:8px}}
 .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-.tile{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:18px;min-height:340px;padding:22px 24px 22px;border-radius:20px;overflow:hidden;isolation:isolate;
+.tile{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:18px;min-height:clamp(320px, 44vh, 470px);padding:22px 24px 22px;border-radius:20px;overflow:hidden;isolation:isolate;
   background:radial-gradient(90% 70% at 85% 0%, rgba(255,255,255,.085), rgba(255,255,255,.02) 45%, transparent 70%), var(--meter-bg);
   color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.08);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 10px 30px rgba(0,0,0,.18);transition:transform .25s,box-shadow .25s,border-color .25s}
@@ -489,7 +501,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
 .src[aria-pressed="true"]{background:var(--surf-halo),var(--surf);box-shadow:var(--surf-hl),var(--surf-ombre)}
 .strip{margin-top:8px}
 .sv{position:relative;overflow:visible}
-.sv::before{content:"\25CF  ON AIR";position:absolute;left:9px;bottom:calc(100% + 3px);font-family:var(--font-display);font-weight:800;font-size:10px;letter-spacing:.2em;line-height:1;white-space:pre;
+.sv::before{content:"\25CF  ON AIR";position:absolute;right:9px;bottom:calc(100% + 3px);font-family:var(--font-display);font-weight:800;font-size:10px;letter-spacing:.2em;line-height:1;white-space:pre;
   color:color-mix(in srgb, var(--c) var(--c-mix), var(--c-to));text-shadow:0 0 10px color-mix(in srgb, var(--c) 55%, transparent);opacity:0;transform:translateY(3px);transition:opacity .25s,transform .25s;pointer-events:none}
 .sv.joue::before{opacity:1;transform:none;animation:onair 1.6s ease-in-out infinite}
 @keyframes onair{50%{opacity:.6}}
@@ -1121,6 +1133,7 @@ function majLogo(){
   const id = sourceEcoutee();
   if (id === logoId) return;
   logoId = id;
+  document.documentElement.style.setProperty('--halo', id ? srcColor(srcObj(id)) : 'transparent');
   const lk = document.querySelector('.lockup');
   lk.classList.toggle('neutre', !id);
   if (!id){ lk.style.removeProperty('--lk'); lk.setAttribute('aria-label', 'Radio Monaco'); return; }
@@ -1601,6 +1614,8 @@ function route(auDemarrage){
   if (!auDemarrage) window.scrollTo(0, 0);
 }
 
+/* Hauteur de l'en-tête, pour centrer l'accueil dans la fenêtre */
+if (window.ResizeObserver) new ResizeObserver(([e]) => document.documentElement.style.setProperty('--h-top', Math.round(e.target.offsetHeight) + 'px')).observe(document.querySelector('.top'));
 /* Boucle d'affichage */
 let lastDraw = 0;
 /* ---------- Surveillance des flux (niveaux en direct envoyés par le programme de pige) ---------- */
