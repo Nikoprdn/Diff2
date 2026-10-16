@@ -723,10 +723,10 @@ const DEFAULT_CONFIG = {
   detection: [],
   detectionSources: ['montecarlo'],   // départs écoutés par l'Auto-Podcaster
   sources: [
-    { id: 'montecarlo',  name: 'Monte-Carlo',   group: 'depart',   note: 'Antenne principale', color: '#e4032e', stream: 'https://radiomonaco.ice.infomaniak.ch/radiomonaco-128.mp3', diffusion: ['FM', 'DAB+', 'WEB'] },
-    { id: 'paris',       name: 'Paris',         group: 'depart',   note: 'Antenne Paris',      color: '#e4032e', stream: 'https://radiomonacoparis.ice.infomaniak.ch/radiomonacoparis-320.aac', titresDe: 'montecarlo', diffusion: ['DAB+', 'WEB'] },
-    { id: 'mixdj',       name: '100 % Mix DJ',  group: 'webradio', note: 'Webradio',           color: '#f59c00', stream: 'https://mixdj.ice.infomaniak.ch/mixdj-128.aac', diffusion: ['WEB'] },
-    { id: 'nightmood',   name: 'Night Mood',    group: 'webradio', note: 'Webradio',           color: '#8a5aa1', stream: 'https://nightmood.ice.infomaniak.ch/nightmood-128.aac', diffusion: ['WEB'] }
+    { id: 'montecarlo',  name: 'Monte-Carlo',   group: 'depart',   note: 'Antenne principale', color: '#e4032e', sigle: 'MC', stream: 'https://radiomonaco.ice.infomaniak.ch/radiomonaco-128.mp3', diffusion: ['FM', 'DAB+', 'WEB'] },
+    { id: 'paris',       name: 'Paris',         group: 'depart',   note: 'Antenne Paris',      color: '#e4032e', sigle: 'IDF', stream: 'https://radiomonacoparis.ice.infomaniak.ch/radiomonacoparis-320.aac', titresDe: 'montecarlo', diffusion: ['DAB+', 'WEB'] },
+    { id: 'mixdj',       name: '100 % Mix DJ',  group: 'webradio', note: 'Webradio',           color: '#f59c00', sigle: 'DJ', stream: 'https://mixdj.ice.infomaniak.ch/mixdj-128.aac', diffusion: ['WEB'] },
+    { id: 'nightmood',   name: 'Night Mood',    group: 'webradio', note: 'Webradio',           color: '#8a5aa1', sigle: 'NM', stream: 'https://nightmood.ice.infomaniak.ch/nightmood-128.aac', diffusion: ['WEB'] }
   ]
 };
 let cfg = DEFAULT_CONFIG;
@@ -1677,7 +1677,7 @@ function buildMonitor(){
     ? `<button class="mon off" type="button" ${attrs(g[0])}>${tete(g[0])}${titresHtml}</button>`
     : `<div class="mon duo" style="--c:${srcColor(g[0])};--n:${g.length}"><div class="duo-vus">${g.map(s => `<button class="mon-half off" type="button" ${attrs(s)}>${tete(s)}</button>`).join('')}</div><div class="duo-bas">${titresHtml}</div></div>`).join('');
   $('strip').innerHTML = cfg.sources.map(s => `<button class="sv off" type="button" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" title="Écouter ${esc(s.name)} en direct"><span class="sv-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="sv-x"><span class="sv-n">${esc(s.court || s.name.replace(/^100\s*%\s*/, ''))}</span><span class="sv-t"><span class="sv-tt">—</span></span></span><span class="sv-m" aria-hidden="true"><i></i><i></i></span></button>`).join('');
-  $('tileVu').innerHTML = cfg.sources.map(s => `<span class="tv-col" style="--c:${srcColor(s)}"><span class="tv-bar"><i></i></span><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span>${esc((s.court || s.name.replace(/^100\s*%\s*/, '')).split(/[\s-]+/).map((w, i, t) => t.length > 1 ? w[0] : w.slice(0, 2)).join('').slice(0, 2).toUpperCase())}</span></span>`).join('');
+  $('tileVu').innerHTML = cfg.sources.map(s => `<span class="tv-col" style="--c:${srcColor(s)}"><span class="tv-bar"><i></i></span><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span>${esc(s.sigle || (s.court || s.name.replace(/^100\s*%\s*/, '')).split(/[\s-]+/).map((w, i, t) => t.length > 1 ? w[0] : w.slice(0, 2)).join('').slice(0, 2).toUpperCase())}</span></span>`).join('');
   mon.cards = [...$('monGrid').querySelectorAll('[data-id]')].map(el => {
     const box = el.closest('.mon'), chef = box === el || box.querySelector('.mon-half') === el;   // le premier départ d'une carte commune affiche les titres
     return {
