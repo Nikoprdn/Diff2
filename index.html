@@ -365,7 +365,7 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
       <div class="det-lamp" id="detLamp" role="status" aria-live="assertive"><b>DÉTECTION</b><small id="detLampD">En attente d'un son à reconnaître</small></div>
       <div class="det-side">
         <div><p class="det-h">Sons à reconnaître</p><div class="det-refs" id="detRefs"></div></div>
-        <label class="btn det-add"><input type="file" id="detFile" accept="audio/*,.mp3,.wav,.m4a,.aac" hidden>Ajouter un son à reconnaître…</label>
+        <label class="btn det-add"><input type="file" id="detFile" accept="audio/*,.mp3,.mp2,.mpa,.wav,.bwf,.aif,.aiff,.aifc,.m4a,.aac,.flac,.ogg" hidden>Ajouter un son à reconnaître…</label>
         <div><p class="det-h">Ressemblance en direct</p><div class="det-scores" id="detScores"></div></div>
         <div><p class="det-h">Dernières détections</p><ol class="det-log" id="detLog"><li class="det-vide">Aucune pour l'instant.</li></ol>
           <label class="det-auto"><input type="checkbox" id="detAuto" checked>Télécharger automatiquement le fichier de chaque son détecté</label></div>
@@ -1384,13 +1384,143 @@ function dEmpreinteRef(mono){
   nrm = Math.sqrt(nrm) + 1e-9; for (let i = 0; i < t.length; i++) t[i] /= nrm;
   return { m, t, duree: x.length / D_SR, total: Math.min(tout.length / D_SR, D_MAX_FICHIER), debut: dReduire(tout.subarray(0, D_SR)) };
 }
+/* Lecture des sons de référence. Le navigateur lit lui-même MP3, WAV, FLAC, Ogg et (selon le navigateur) AAC/M4A.
+   Pour les formats courants en radio qu'il ne lit pas, la page a ses propres lecteurs : AIFF / AIFF-C (fichiers Mac),
+   WAV de toutes sortes (24 et 32 bits, flottant, BWF, RF64, WAV contenant du MPEG) et MPEG Layer II (.mp2, logiciels
+   de diffusion), ce dernier grâce au décodeur mpg123 chargé seulement si besoin. */
 async function dDecoder(octets){
+  const u8 = new Uint8Array(octets.slice(0));       // copie : le navigateur « consomme » le tampon qu'on lui donne
+  try {
+    const x = await dNavigateur(octets);
+    let pic = 0; for (let i = 0; i < x.length; i += 7) pic = Math.max(pic, Math.abs(x[i]));
+    if (pic > 1e-4) return x;                        // un résultat muet veut dire que le navigateur n'a pas su lire le son
+  } catch(e){}
+  const { canaux, hz } = await dSecours(u8);
+  const mono = new Float32Array(canaux[0].length);
+  for (const c of canaux) for (let i = 0; i < mono.length; i++) mono[i] += c[i] / canaux.length;
+  return hz === D_SR ? mono : dReechantillonner(mono, hz);
+}
+async function dNavigateur(octets){
   const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   const ctx = new OAC(2, D_SR, D_SR);
   const buf = await new Promise((ok, ko) => { const pr = ctx.decodeAudioData(octets, ok, ko); if (pr && pr.catch) pr.catch(ko); });
   const c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : c0, x = new Float32Array(c0.length);
   for (let i = 0; i < x.length; i++) x[i] = (c0[i] + c1[i]) / 2;
   return x;
+}
+async function dReechantillonner(x, hz){
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const ctx = new OAC(1, Math.max(1, Math.ceil(x.length * D_SR / hz)), D_SR);
+  const b = ctx.createBuffer(1, x.length, hz); b.getChannelData(0).set(x);
+  const src = ctx.createBufferSource(); src.buffer = b; src.connect(ctx.destination); src.start();
+  return (await ctx.startRendering()).getChannelData(0);
+}
+const dTxt = (u, o, n = 4) => String.fromCharCode(...u.subarray(o, o + n));
+function dErreur(msg){ const e = new Error(msg); e.lisible = true; return e; }
+async function dSecours(u){
+  const t = dTxt(u, 0), t8 = dTxt(u, 8);
+  if (t === 'FORM' && (t8 === 'AIFF' || t8 === 'AIFC')) return dAiff(u);
+  if ((t === 'RIFF' || t === 'RF64' || t === 'BW64') && t8 === 'WAVE') return dWave(u);
+  if (dTxt(u, 4) === 'ftyp') throw dErreur('fichier AAC/M4A que ce navigateur ne sait pas lire (essayez avec Safari ou Chrome à jour)');
+  if (t === 'fLaC') throw dErreur('fichier FLAC que ce navigateur ne sait pas lire');
+  if (t === 'OggS') throw dErreur('fichier Ogg que ce navigateur ne sait pas lire');
+  if (u[0] === 0x30 && u[1] === 0x26 && u[2] === 0xB2 && u[3] === 0x75) throw dErreur('fichier WMA, format Windows non pris en charge');
+  if (dTxt(u, 0, 3) === 'ID3' || dSyncMpeg(u) >= 0) return dMpeg(u);
+  throw dErreur('format audio non reconnu');
+}
+function dLongMpeg(u, i){                             // longueur d'une trame MPEG audio (couches I, II, III), 0 si ce n'en est pas une
+  if (i + 4 > u.length || u[i] !== 0xFF || (u[i + 1] & 0xE0) !== 0xE0) return 0;
+  const ver = (u[i + 1] >> 3) & 3, couche = (u[i + 1] >> 1) & 3, br = u[i + 2] >> 4, sr = (u[i + 2] >> 2) & 3, pad = (u[i + 2] >> 1) & 1;
+  if (ver === 1 || couche === 0 || br === 0 || br === 15 || sr === 3) return 0;
+  const T = { 3: [[0,32,64,96,128,160,192,224,256,288,320,352,384,416,448],[0,32,48,56,64,80,96,112,128,160,192,224,256,320,384],[0,32,40,48,56,64,80,96,112,128,160,192,224,256,320]],
+              2: [[0,32,48,56,64,80,96,112,128,144,160,176,192,224,256],[0,8,16,24,32,40,48,56,64,80,96,112,128,144,160],[0,8,16,24,32,40,48,56,64,80,96,112,128,144,160]] };
+  const kb = T[ver === 3 ? 3 : 2][3 - couche][br], hz = SRT[ver][sr];
+  if (couche === 3) return (Math.floor(12000 * kb / hz) + pad) * 4;                       // couche I
+  return Math.floor((couche === 1 && ver !== 3 ? 72000 : 144000) * kb / hz) + pad;
+}
+function dSyncMpeg(u){                                // première trame MPEG audio suivie d'une autre trame valide
+  for (let i = 0; i < Math.min(u.length - 4, 65536); i++){ const n = dLongMpeg(u, i); if (n && dLongMpeg(u, i + n)) return i; }
+  return -1;
+}
+function dExtendu(u, o){                              // nombre à virgule de 80 bits (fréquence d'échantillonnage AIFF)
+  const exp = ((u[o] & 0x7F) << 8) | u[o + 1];
+  let m = 0; for (let i = 0; i < 8; i++) m = m * 256 + u[o + 2 + i];
+  return (u[o] & 0x80 ? -1 : 1) * m * Math.pow(2, exp - 16383 - 63);
+}
+function dPcm(u, o, n, nc, bits, mode){
+  // mode : 'le' / 'be' (entiers signés), 'u8' (8 bits non signés), 'f32le', 'f64le', 'f32be', 'f64be'
+  const v = new DataView(u.buffer, u.byteOffset), oct = bits >> 3, canaux = Array.from({ length: nc }, () => new Float32Array(n));
+  for (let i = 0; i < n; i++) for (let c = 0; c < nc; c++){
+    const p = o + (i * nc + c) * oct; let s;
+    switch (mode){
+      case 'u8': s = (u[p] - 128) / 128; break;
+      case 'f32le': s = v.getFloat32(p, true); break;  case 'f32be': s = v.getFloat32(p, false); break;
+      case 'f64le': s = v.getFloat64(p, true); break;  case 'f64be': s = v.getFloat64(p, false); break;
+      default: {
+        let x = 0;
+        if (mode === 'le') for (let b = oct - 1; b >= 0; b--) x = x * 256 + u[p + b]; else for (let b = 0; b < oct; b++) x = x * 256 + u[p + b];
+        const max = Math.pow(2, bits - 1); if (x >= max) x -= 2 * max; s = x / max;
+      }
+    }
+    canaux[c][i] = s;
+  }
+  return canaux;
+}
+function dAiff(u){
+  const v = new DataView(u.buffer, u.byteOffset), aifc = dTxt(u, 8) === 'AIFC';
+  let nc = 0, n = 0, bits = 16, hz = 0, comp = 'NONE', data = -1;
+  for (let o = 12; o + 8 <= u.length;){
+    const id = dTxt(u, o), taille = v.getUint32(o + 4, false);
+    if (id === 'COMM'){ nc = v.getUint16(o + 8); n = v.getUint32(o + 10); bits = v.getUint16(o + 14); hz = dExtendu(u, o + 16); if (aifc) comp = dTxt(u, o + 26); }
+    if (id === 'SSND') data = o + 16 + v.getUint32(o + 8);
+    o += 8 + taille + (taille & 1);
+  }
+  if (!nc || data < 0) throw dErreur('fichier AIFF incomplet');
+  const modes = { NONE: 'be', twos: 'be', sowt: 'le', fl32: 'f32be', FL32: 'f32be', fl64: 'f64be', FL64: 'f64be', raw: 'u8' };
+  if (!modes[comp]) throw dErreur(`fichier AIFF-C compressé (${comp.trim()}), non pris en charge`);
+  if (comp.toLowerCase().startsWith('fl')) bits = comp.endsWith('64') ? 64 : 32;
+  n = Math.min(n, Math.floor((u.length - data) / (nc * (bits >> 3))));
+  return { canaux: dPcm(u, data, n, nc, bits, bits === 8 && comp === 'NONE' ? 'be' : modes[comp]), hz };
+}
+async function dWave(u){
+  const v = new DataView(u.buffer, u.byteOffset);
+  let fmt = -1, nc = 0, hz = 0, bits = 0, data = -1, taille = 0;
+  for (let o = 12; o + 8 <= u.length;){
+    const id = dTxt(u, o); let t = v.getUint32(o + 4, true);
+    if (id === 'fmt '){
+      fmt = v.getUint16(o + 8, true); nc = v.getUint16(o + 10, true); hz = v.getUint32(o + 12, true); bits = v.getUint16(o + 22, true);
+      if (fmt === 0xFFFE && t >= 40) fmt = v.getUint16(o + 32, true);   // WAVE_FORMAT_EXTENSIBLE : vrai format dans le sous-format
+    }
+    if (id === 'data'){ data = o + 8; taille = (t === 0xFFFFFFFF || o + 8 + t > u.length) ? u.length - data : t; break; }   // RF64 : taille dans ds64
+    if (t === 0xFFFFFFFF) break;
+    o += 8 + t + (t & 1);
+  }
+  if (fmt < 0 || data < 0) throw dErreur('fichier WAV incomplet');
+  const corps = u.subarray(data, data + taille);
+  if (fmt === 0x50 || fmt === 0x55) return dMpeg(corps);           // WAV contenant du MPEG (MP2 ou MP3), fréquent en radio
+  if (fmt !== 1 && fmt !== 3) throw dErreur(`fichier WAV compressé (code ${fmt}), non pris en charge`);
+  const oct = bits >> 3, n = Math.floor(taille / (nc * oct));
+  const mode = fmt === 3 ? (bits === 64 ? 'f64le' : 'f32le') : bits === 8 ? 'u8' : 'le';
+  return { canaux: dPcm(u, data, n, nc, bits, mode), hz };
+}
+let dMpg = null;
+function dChargerMpg(){
+  return dMpg || (dMpg = new Promise((ok, ko) => {
+    const s = document.createElement('script');
+    s.src = 'mpg123-decoder.min.js';
+    s.onload = () => window['mpg123-decoder'] ? ok(window['mpg123-decoder']) : ko(new Error('décodeur absent'));
+    s.onerror = () => { dMpg = null; ko(dErreur('le lecteur MP2 n\'a pas pu être chargé')); };
+    document.head.appendChild(s);
+  }));
+}
+async function dMpeg(u){
+  const lib = await dChargerMpg(), dec = new lib.MPEGDecoder();
+  await dec.ready;
+  try {
+    const r = dec.decode(u);
+    if (!r || !r.samplesDecoded) throw dErreur('fichier MPEG illisible');
+    return { canaux: r.channelData.map(c => c.subarray(0, r.samplesDecoded)), hz: r.sampleRate };
+  } finally { dec.free(); }
 }
 function detEcoute(id, c0, c1, sr){
   if (sr !== D_SR) return;
@@ -1541,11 +1671,14 @@ async function detAjouter(fichier){
   $('detLampD').textContent = `Analyse de « ${nom} »…`;
   try {
     const e = dEmpreinteRef(await dDecoder(await fichier.arrayBuffer()));
-    if (!e) { toast('Ce son est trop court : il faut au moins une seconde de son.'); detListe(); return; }
+    if (!e) { toast(`« ${nom} » : il faut au moins une seconde de son audible.`); detListe(); return; }
     det.refs.push({ cle: 'local' + Date.now(), nom, seuil: 0.6, sources: null, ...e });
     detGarderLocaux(); det.st = {}; det.attente = [];
     toast(`« ${nom} » sera reconnu sur toutes les chaînes.`);
-  } catch(err){ toast('Ce fichier audio ne peut pas être lu par le navigateur.'); }
+  } catch(err){
+    console.warn('Son illisible :', fichier.name, err);
+    toast(err && err.lisible ? `« ${nom} » : ${err.message}. Exportez-le en WAV ou en MP3.` : `« ${nom} » ne peut pas être lu. Exportez-le en WAV ou en MP3.`);
+  }
   detListe();
 }
 const dSec = v => v.toFixed(1).replace('.', ',');
