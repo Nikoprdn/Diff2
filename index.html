@@ -222,6 +222,8 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
 .det-ref b{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .det-ref span{color:var(--muted);font-size:12.5px;white-space:nowrap}
 .det-ref .btn{margin-left:auto;padding:2px 8px;font-size:12.5px}
+.det-ref .btn.confirmer{color:var(--rec);border-color:var(--rec);background:var(--rec-soft)}
+.det-add:has(input:disabled){opacity:.45;cursor:not-allowed}
 .det-vide{font-size:13.5px;color:var(--muted)}
 .det-add{align-self:flex-start;cursor:pointer}
 .det-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px 16px}
@@ -608,7 +610,7 @@ html:not(.logo-pret) .top .brand{opacity:0;animation:logoSecours .3s 6s forwards
         <p class="det-h">Fichiers à analyser</p>
         <div class="det-refs" id="detRefs"></div>
         <label class="btn det-add"><input type="file" id="detFile" accept="audio/*,.mp3,.mp2,.mpa,.wav,.bwf,.aif,.aiff,.aifc,.m4a,.aac,.flac,.ogg" hidden>Ajouter un fichier à analyser…</label>
-        <p class="det-note">La page les reconnaît sur le direct de Monte-Carlo. Seul le son détecté est gardé, le temps d'en faire le fichier.</p>
+        <p class="det-note" id="detNote">La page les reconnaît sur le direct de Monte-Carlo. Seul le son détecté est gardé, le temps d'en faire le fichier.</p>
       </div>
       <div class="det-card">
         <p class="det-h">Fichiers détectés</p>
@@ -618,7 +620,7 @@ html:not(.logo-pret) .top .brand{opacity:0;animation:logoSecours .3s 6s forwards
     </div>
   </section>
   <section class="extraits" aria-label="Extraits automatiques">
-    <div class="events-head"><h2 class="label">Extraits automatiques</h2><span class="events-sub">Découpés par le programme de pige du Mac, quand un jingle est reconnu ou à heure fixe</span></div>
+    <div class="events-head"><h2 class="label">Extraits automatiques</h2><span class="events-sub">Découpés par le PC de pige, quand un jingle est reconnu ou à heure fixe</span></div>
     <div id="extraits"></div>
   </section>
   </div>
@@ -1762,11 +1764,89 @@ function connectMonitor(){
   if (!window.EventSource) return;
   const url = '/api/surveillance';
   try { mon.es = new EventSource(url); } catch(e){ return; }
-  mon.es.onmessage = e => { try { mon.data = JSON.parse(e.data); mon.at = performance.now(); mon.vu = true; } catch(err){} };
+  mon.es.onmessage = e => {
+    try { mon.data = JSON.parse(e.data); mon.at = performance.now(); mon.vu = true; } catch(err){ return; }
+    if (mem.srv && mon.data.v){ memSuivre(mon.data.v); memDirect(mon.data.detection); }
+  };
   mon.es.onerror = () => {
     if (mon.es && mon.es.readyState === 2){ mon.es = null; clearTimeout(mon.retry); mon.retry = setTimeout(connectMonitor, 15000); }
   };
 }
+/* ---------- Mémoire commune (servie par le programme de pige) ----------
+   Quand la page est servie par le PC de pige, tout ce qui doit être pareil pour tout le monde vient de lui : journal des
+   blancs, coupures et sons figés, titres passés et pochettes, sons à reconnaître et sons détectés par l'Auto-Podcaster.
+   Le flux de surveillance donne un numéro de version pour chacun ; la page ne relit une liste que quand il change.
+   Ailleurs (copie de la page sur Cloudflare Pages ou GitHub), la page garde son fonctionnement autonome : ce qu'elle
+   voit est alors gardé dans ce navigateur seulement. */
+const mem = { srv: false, v: {}, lu: {}, t: {}, poch: new Map(), titresV: 0 };
+const MEM_LIRE = { alertes: memAlertes, titres: memTitres, detection: memDetection };
+async function memInit(){
+  try {
+    const r = await fetch('/api/detection', { cache: 'no-store' });
+    if (!r.ok || !/json/.test(r.headers.get('content-type') || '')) return;
+    const j = await r.json();
+    mem.srv = true;
+    blancs.length = 0; for (const k in histo) delete histo[k];
+    mem.v.detection = j.version; memDetection(j, true);
+    memLire('alertes'); memLire('titres');
+  } catch(e){}
+}
+function memSuivre(v){
+  const now = performance.now();
+  for (const k in MEM_LIRE) if (v[k] != null && v[k] !== mem.v[k] && !mem.lu[k] && now - (mem.t[k] || 0) > 1000) memLire(k);
+}
+async function memLire(k){
+  mem.lu[k] = true; mem.t[k] = performance.now();
+  try {
+    const r = await fetch('/api/' + k, { cache: 'no-store' });
+    if (r.ok){ const j = await r.json(); mem.v[k] = j.version; MEM_LIRE[k](j); }
+  } catch(e){}
+  mem.lu[k] = false;
+}
+function memAlertes(j){
+  blancs.length = 0;
+  for (const a of j.alertes || []) blancs.push({ id: a.src, type: a.type, debut: Math.round(a.debut * 1000), fin: a.fin ? Math.round(a.fin * 1000) : null });
+  blancMaj();
+}
+function memTitres(j){
+  for (const [id, t] of Object.entries(j.sources || {})){
+    titres[id] = { titre: t.titre || '', etat: t.etat || 'attente' };
+    histo[id] = (t.historique || []).map(x => ({ titre: x.titre, t: x.t * 1000 }));
+    if (t.titre) mem.poch.set(t.titre, t.pochette || '');
+    for (const x of t.historique || []) mem.poch.set(x.titre, x.pochette || '');
+  }
+  while (mem.poch.size > 400) mem.poch.delete(mem.poch.keys().next().value);
+}
+function memDetection(j, premier){
+  det.srv = { actif: !!j.actif, raison: j.raison || '' };
+  det.refs = (j.sons || []).map(x => ({ cle: x.id, nom: x.nom, seuil: x.seuil || 0.6, duree: x.duree, total: x.duree, site: x.origine === 'site', par: x.par || '', srv: true }));
+  const neufs = [];
+  det.fichiers = new Map();
+  det.journal = (j.detections || []).map(x => {
+    const e = { id: x.src, nom: x.nom, score: x.score || 0, t: Math.round(x.t * 1000), echec: !!x.echec };
+    if (x.nomFichier) det.fichiers.set(e.t, { url: '/api/detection/fichier/' + encodeURIComponent(x.id), nom: x.nomFichier, duree: x.duree || 0 });
+    if (!det.vus.has(x.id)){ det.vus.add(x.id); if (!premier) neufs.push(e); }
+    return e;
+  });
+  det.srvV = j.version;
+  if (neufs.length){
+    if (vue !== 'podcaster') det.nonVus = (det.nonVus || 0) + neufs.length;
+    if (det.auto) for (const e of neufs){ const f = det.fichiers.get(e.t); if (f) dTelecharger(f.url, f.nom); }
+  }
+  detListe();
+}
+function memDirect(d){
+  if (!d) return;
+  const now = performance.now();
+  for (const [id, v] of Object.entries(d.scores || {})) det.scores[id] = { v, t: now };
+  const x = d.dernier;
+  if (x){
+    const t = Math.round(x.t * 1000);
+    if (!det.dernier || det.dernier.t !== t) det.dernier = { id: x.src, nom: x.nom, score: x.score || 0, t };
+    det.jusqua = now + 1000;                       // allumé tant que le PC de pige le dit
+  }
+}
+
 /* Mesure dans le navigateur, dès l'ouverture de la page : la page lit elle-même les flux, décode le son
    sans le jouer et en calcule le niveau. Comme rien n'est diffusé, aucun clic n'est nécessaire.
    Utilisée quand le programme de pige ne fournit pas les niveaux (page ouverte depuis GitHub, par exemple). */
@@ -1877,7 +1957,7 @@ function bmDecoder(m, bloc){
       const canal = c => { const x = buf.getChannelData(c); if (n >= E) return x.subarray(n - E); const o = new Float32Array(E); o.set(x, E - n); return o; };
       const c0 = canal(0), c1 = buf.numberOfChannels > 1 ? canal(1) : c0;
       bmEnveloppe(m, c0, c1, buf.sampleRate);
-      if (det.refs.length && detSources().includes(m.s.id)) detEcoute(m.s.id, c0, c1, buf.sampleRate);
+      if (!mem.srv && det.refs.length && detSources().includes(m.s.id)) detEcoute(m.s.id, c0, c1, buf.sampleRate);
     };
     const ko = () => { fin(); m.echecs++; if (m.echecs > 8 && !m.mesurable && !m.mort) bmEcoute(m, false); };
     try { const pr = bm.dec.decodeAudioData(donnees.buffer, ok, ko); if (pr && pr.catch) pr.catch(() => {}); } catch(e){ ko(); }
@@ -1952,7 +2032,7 @@ function fzBloc(z){
    chaque flux sont gardées en mémoire, le temps de la découpe ; rien d'autre n'est enregistré. */
 const D_SR = 44100, D_N = 4096, D_HOP = 1411, D_NB = 24, D_MAX_S = 8, D_ALLUME = 10000, D_MAX_FICHIER = 60, D_FONDU = 0.01;
 const det = { refs: [], st: {}, scores: {}, dernier: null, jusqua: 0, journal: store.get('detections', []) || [],
-              attente: [], fichiers: new Map(), pret: 0, auto: store.get('detection.auto', true) !== false };
+              attente: [], fichiers: new Map(), pret: 0, auto: store.get('detection.auto', true) !== false, vus: new Set(), srv: null, srvV: 0 };
 const dFen = new Float32Array(D_N).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (D_N - 1)));
 const dBandes = (() => {
   const f = k => k * D_SR / D_N, cherche = hz => { let k = 0; while (k <= D_N / 2 && f(k) < hz) k++; return k; };
@@ -2289,6 +2369,7 @@ function detGarderLocaux(){
 }
 async function detAjouter(fichier){
   const nom = fichier.name.replace(/\.[^.]+$/, '');
+  if (mem.srv) return detEnvoyer(fichier, nom);
   $('detLampD').textContent = `Analyse de « ${nom} »…`;
   try {
     const e = dEmpreinteRef(await dDecoder(await fichier.arrayBuffer()));
@@ -2302,9 +2383,44 @@ async function detAjouter(fichier){
   }
   detListe();
 }
+async function detEnvoyer(fichier, nom){
+  // Mode partagé : le fichier est envoyé au PC de pige, qui l'analyse et le reconnaît pour tous les postes.
+  const point = x => String(x || '').replace(/\.$/, '');
+  if (fichier.size > 30 * 1024 * 1024){ toast(`« ${nom} » : fichier trop lourd (30 Mo au plus).`); return; }
+  $('detLampD').textContent = `Envoi de « ${nom} » au PC de pige…`;
+  try {
+    const r = await fetch('/api/detection/sons?nom=' + encodeURIComponent(nom), { method: 'POST', body: fichier, headers: { 'X-Pige': '1', 'Content-Type': 'application/octet-stream' } });
+    const j = await r.json().catch(() => ({}));
+    toast(r.ok ? `« ${nom} » sera reconnu par le PC de pige, pour tous les postes.` : `« ${nom} » : ${point(j.erreur) || 'envoi refusé'}.`);
+  } catch(e){ toast(`« ${nom} » : le PC de pige ne répond pas.`); }
+  await memLire('detection');
+  detAfficher(true);
+}
+async function detRetirer(bt){
+  const r = det.refs.find(x => x.cle === bt.dataset.retirer);
+  if (!r) return;
+  if (!mem.srv){ det.refs = det.refs.filter(x => x !== r); detGarderLocaux(); det.st = {}; detListe(); return; }
+  // Le retrait vaut pour tous les postes : un second clic confirme.
+  if (bt.dataset.confirmer !== '1'){
+    bt.dataset.confirmer = '1'; bt.textContent = 'Confirmer'; bt.classList.add('confirmer');
+    setTimeout(() => { if (bt.isConnected){ bt.dataset.confirmer = ''; bt.textContent = 'Retirer'; bt.classList.remove('confirmer'); } }, 3000);
+    return;
+  }
+  bt.disabled = true;
+  try {
+    const x = await fetch('/api/detection/sons/' + encodeURIComponent(r.cle), { method: 'DELETE', headers: { 'X-Pige': '1' } });
+    toast(x.ok ? `« ${r.nom} » retiré pour tous les postes.` : `« ${r.nom} » n'a pas pu être retiré.`);
+  } catch(e){ toast('Le PC de pige ne répond pas.'); }
+  memLire('detection');
+}
 const dSec = v => v.toFixed(1).replace('.', ',');
 function detListe(){
-  $('detRefs').innerHTML = det.refs.length ? det.refs.map(r => `<div class="det-ref"><b title="${esc(r.nom)}">${esc(r.nom)}</b><span>${dSec(r.total || r.duree)} s · seuil ${r.seuil.toFixed(2).replace('.', ',')}${r.site ? ' · programmé sur le site' : ''}${!r.site && !r.debut ? ' · à ajouter de nouveau pour une découpe au plus juste' : ''}</span>${r.site ? '' : `<button class="btn" type="button" data-retirer="${esc(r.cle)}">Retirer</button>`}</div>`).join('')
+  const ou = detSources().map(srcName).join(', ');
+  $('detNote').textContent = !mem.srv ? `Cette page les reconnaît sur le direct de ${ou} tant qu'elle reste ouverte. Fichiers et détections sont gardés dans ce navigateur seulement.`
+    : det.srv && det.srv.actif ? `Le PC de pige les reconnaît en continu sur le direct de ${ou}, même quand aucune page n'est ouverte. Fichiers à analyser et fichiers détectés sont les mêmes pour tous les postes.`
+    : `Reconnaissance indisponible sur le PC de pige${det.srv && det.srv.raison ? ' : ' + det.srv.raison : ''}.`;
+  $('detFile').disabled = !!(mem.srv && !(det.srv && det.srv.actif));
+  $('detRefs').innerHTML = det.refs.length ? det.refs.map(r => `<div class="det-ref"><b title="${esc(r.nom)}">${esc(r.nom)}</b><span title="${r.par ? 'Ajouté par ' + esc(r.par) : ''}">${dSec(r.total || r.duree)} s · seuil ${r.seuil.toFixed(2).replace('.', ',')}${r.site ? ' · programmé sur le site' : ''}${!r.site && !r.debut && !r.srv ? ' · à ajouter de nouveau pour une découpe au plus juste' : ''}</span>${r.site ? '' : `<button class="btn" type="button" data-retirer="${esc(r.cle)}">Retirer</button>`}</div>`).join('')
     : '<p class="det-vide">Aucun pour l\'instant. Ajoutez le jingle, la virgule ou le top à reconnaître.</p>';
   $('detScores').innerHTML = cfg.sources.filter(s => detSources().includes(s.id)).map(s => `<div class="det-sc" data-id="${esc(s.id)}" style="--c:${srcColor(s)}"><span>${esc(s.name)}</span><em>—</em><span class="det-bar"><i></i><u></u></span></div>`).join('');
   det.ui = { sc: [...$('detScores').querySelectorAll('.det-sc')].map(el => ({ id: el.dataset.id, el, v: el.querySelector('em'), i: el.querySelector('i'), u: el.querySelector('u') })), cle: '' };
@@ -2315,7 +2431,7 @@ function detAfficher(force){
   if (!det.ui) return;
   const now = performance.now(), on = now < det.jusqua && det.dernier, d = det.dernier;
   const lampe = $('detLamp'), seuil = det.refs.length ? Math.min(...det.refs.map(r => r.seuil)) : 0.6;
-  const cle = (on ? 'on' + d.t + d.score.toFixed(2) : 'off' + det.refs.length + (bm.on ? 1 : 0)) + '|' + det.pret + '|' + det.attente.length + '|' + det.journal.length + '|' + (det.nonVus || 0);
+  const cle = (on ? 'on' + d.t + d.score.toFixed(2) : 'off' + det.refs.length + (bm.on ? 1 : 0) + (mem.srv ? (progActif() ? 1 : 0) : '')) + '|' + det.pret + '|' + det.attente.length + '|' + det.journal.length + '|' + (det.nonVus || 0) + '|' + det.srvV;
   if (force || cle !== det.ui.cle){
     det.ui.cle = cle;
     lampe.classList.toggle('on', !!on);
@@ -2325,7 +2441,10 @@ function detAfficher(force){
       $('detLampD').textContent = `${d.nom} détecté sur ${srcName(d.id)} à ${new Date(d.t).toLocaleTimeString('fr-FR')} · ${Math.round(d.score * 100)} %`;
     } else {
       const ou = detSources().map(srcName).join(', ');
-      $('detLampD').textContent = !det.refs.length ? 'En attente d\'un fichier à analyser' : bm.on ? `En écoute sur ${ou}` : 'Connexion aux flux…';
+      $('detLampD').textContent = mem.srv && !(det.srv && det.srv.actif) ? 'Reconnaissance indisponible sur le PC de pige'
+        : !det.refs.length ? 'En attente d\'un fichier à analyser'
+        : mem.srv ? (progActif() ? `En écoute sur ${ou}, par le PC de pige` : 'Le PC de pige ne répond pas')
+        : bm.on ? `En écoute sur ${ou}` : 'Connexion aux flux…';
     }
     const resume = det.refs.length ? `${det.refs.length} fichier${det.refs.length > 1 ? 's' : ''} à analyser · ${det.journal.length} détection${det.journal.length > 1 ? 's' : ''}` : 'Aucun fichier à analyser';
     $('detSum').textContent = resume; $('tilePod').textContent = det.refs.length ? `${det.journal.length} détection${det.journal.length > 1 ? 's' : ''}` : '';
@@ -2372,7 +2491,7 @@ function bmEchec(m){
 setInterval(() => {
   const now = performance.now();
   // Le programme de pige fournit les niveaux : inutile de lire les flux en double.
-  if (progActif() && !det.refs.length){ if (bm.on) bmStop(); return; }
+  if (progActif() && (mem.srv || !det.refs.length)){ if (bm.on) bmStop(); return; }
   if (!bm.on && now > 2500){ bmStart(); return; }
   for (const id in bm.m){                          // chien de garde : un flux qui n'arrive plus depuis 8 s est relancé
     const m = bm.m[id];
@@ -2451,6 +2570,7 @@ function afficherHistorique(c, s, courant){
 }
 const hhmmT = t => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 function lireTitres(){
+  if (mem.srv) return;                             // le PC de pige les lit pour tout le monde
   // Onglet en arrière-plan : une lecture sur trois suffit.
   if (document.hidden && titresTour++ % 3) return;
   for (const s of cfg.sources) if (!s.titresDe) lireTitre(s);
@@ -2500,6 +2620,7 @@ async function chercherDeezer(q, d){
   return r ? r.album.cover_medium : '';
 }
 function pochette(brut){
+  if (mem.srv) return Promise.resolve(mem.poch.get(brut) || '');   // cherchée par le PC de pige
   const cle = sansAccents(brut.toLowerCase()).replace(/\s+/g, ' ').trim();
   if (pochettes.has(cle)) return Promise.resolve(pochettes.get(cle));
   if (enCours.has(cle)) return enCours.get(cle);
@@ -2536,9 +2657,14 @@ function majPochette(c, t){
 function afficherTitres(c){
   const s = cfg.sources.find(x => x.id === c.id) || {};
   const t = titres[s.titresDe || c.id] || { etat: 'attente', titre: '' };
-  const cle = t.etat + '|' + t.titre;
-  if (cle === c.npK) return;
-  c.npK = cle;
+  // En mode partagé, la pochette et les titres passés arrivent du PC de pige, parfois après le titre lui-même.
+  const cle = t.etat + '|' + t.titre + (mem.srv ? '|' + (mem.poch.get(t.titre) || '') : '');
+  const hk = mem.srv && c.np ? (histo[s.titresDe || c.id] || []).map(x => x.titre + '|' + (mem.poch.get(x.titre) || '')).join('§') : '';
+  if (cle === c.npK){
+    if (hk !== c.npHK){ c.npHK = hk; afficherHistorique(c, s, t.etat === 'ok' ? t.titre : ''); }
+    return;
+  }
+  c.npK = cle; c.npHK = hk;
   if (c.np){
     c.np.hidden = t.etat === 'masque';
     if (t.etat === 'ok'){
@@ -2573,6 +2699,7 @@ function bandeauTitre(c, t){
 const blancs = (() => { const l = store.get('blancs', []) || [], lim = Date.now() - 864e5; return l.filter(x => x && (x.fin || x.debut) > lim).slice(0, 60); })();
 blancs.forEach(x => { if (!x.fin) x.fin = x.vu || x.debut; });   // alerte restée ouverte à la fermeture de la page
 function blancSuivre(c, src, cls){
+  if (mem.srv) return;                             // noté par le PC de pige pour tout le monde
   const type = cls === 'alerte' ? (src.etat === 'coupe' ? 'coupe' : src.etat === 'fige' ? 'fige' : 'blanc') : null, now = Date.now();
   if (!type && c.ouvert && c.ouvert.type === 'coupe' && src.etat === 'connexion') return;   // tentative de reconnexion : la coupure continue
   if (c.ouvert && (!type || c.ouvert.type !== type)){ c.ouvert.fin = now; c.ouvert = null; blancMaj(); }
@@ -2582,10 +2709,10 @@ function blancSuivre(c, src, cls){
   } else if (c.ouvert && now - c.ouvert.vu > 5000){ c.ouvert.vu = now; blancMaj(true); }
 }
 function blancMaj(discret){
-  store.set('blancs', blancs);
+  if (!mem.srv) store.set('blancs', blancs);
   const box = $('blancs');
   const thr = cfg.silence?.thresholdDb ?? -50, min = cfg.silence?.minSeconds ?? 10;
-  $('blSub').textContent = `Blanc : sous ${thr} dB pendant ${min} s ou plus · Figé : le même son qui se répète pendant ${cfg.fige?.minSeconds ?? 10} s ou plus · 24 dernières heures`;
+  $('blSub').textContent = `Blanc : sous ${thr} dB pendant ${min} s ou plus · Figé : le même son qui se répète pendant ${cfg.fige?.minSeconds ?? 10} s ou plus · 24 dernières heures${mem.srv ? ', notées par le PC de pige' : ', vues par ce navigateur'}`;
   if (!blancs.length){ box.innerHTML = '<p class="empty-msg">Aucun blanc, coupure ni son figé détecté.</p>'; return; }
   if (discret && box.querySelector('.ev-list')){                  // mise à jour de la durée des alertes en cours
     for (const el of box.querySelectorAll('[data-encours]')){
@@ -2705,6 +2832,7 @@ async function init(){
     if (r.ok){ const j = await r.json(); if (j && Array.isArray(j.sources) && j.sources.length){ cfg = Object.assign({}, DEFAULT_CONFIG, j); } }
   } catch(e){}
   checkSession();
+  await memInit();
   st.vol = store.get('vol', .8);
   const saved = store.get('src', null), hash = parseHash();
   st.src = (hash && cfg.sources.some(s => s.id === hash.src) && hash.src) || (cfg.sources.some(s => s.id === saved) ? saved : cfg.sources[0].id);
@@ -2733,12 +2861,10 @@ async function init(){
   readColors(); bind(); clipMaj(); renderSources(); renderData(); renderExtraits(); checkPige();
   connectMonitor();
   lireTitres(); setInterval(lireTitres, 10e3);
-  detCharger();
+  if (!mem.srv) detCharger();
+  else setInterval(() => { if (blancs.some(x => !x.fin)) blancMaj(true); }, 5000);
   $('detFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) detAjouter(f); e.target.value = ''; });
-  $('detRefs').addEventListener('click', e => {
-    const bt = e.target.closest('[data-retirer]'); if (!bt) return;
-    det.refs = det.refs.filter(r => r.cle !== bt.dataset.retirer); detGarderLocaux(); det.st = {}; detListe();
-  });
+  $('detRefs').addEventListener('click', e => { const bt = e.target.closest('[data-retirer]'); if (bt) detRetirer(bt); });
   $('detLog').addEventListener('click', e => {
     const a = e.target.closest('[data-ecouter]'), t = e.target.closest('[data-telecharger]');
     if (a) dEcouter(+a.dataset.ecouter);
