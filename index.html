@@ -35,6 +35,7 @@
   --bulle-bg:var(--panel-2); --bulle-ink:var(--ink); --bulle-bord:var(--line);
   --sel-bg:var(--accent-soft); --sel-ink:var(--accent-text); --prim-bg:var(--accent-soft); --prim-ink:var(--accent-text); --prim-bord:var(--accent);
   --meter-grad:linear-gradient(90deg,#5fae2e 0%,#93c01f 52%,#e8d21d 66%,#f59c00 80%,#e4032e 91%,#e4032e 100%);
+  --meter-grad-v:linear-gradient(0deg,#5fae2e 0%,#93c01f 52%,#e8d21d 66%,#f59c00 80%,#e4032e 91%,#e4032e 100%);
   /* Cartes : même matière que les tuiles d'accueil (halo blanc discret, liseré clair en haut, ombre douce) */
   --surf:var(--panel-2); --surf-bord:var(--line); --surf-hl:inset 0 1px 0 rgba(255,255,255,.8); --surf-ombre:0 8px 24px rgba(20,16,30,.06);
   --surf-halo:radial-gradient(90% 80% at 85% 0%, rgba(255,255,255,.5), transparent 70%);
@@ -100,16 +101,17 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
 .home:hover{background:var(--home-h-bg);color:var(--home-h-ink);transform:scale(1.05)}
 .vue-t{margin:0;font-family:var(--font-display);font-weight:800;font-size:24px;line-height:1.1;letter-spacing:.005em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Les 4 départs en direct, dans le bandeau */
-.strip{grid-area:strip;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
-.sv{position:relative;display:grid;grid-template-columns:26px minmax(0,1fr) 56px;align-items:center;gap:9px;padding:4px 10px 4px 5px;border:1.5px solid var(--surf-bord);border-radius:10px;
+.strip{grid-area:strip;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
+.sv{position:relative;display:grid;grid-template-columns:50px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:64px;padding:6px 13px 6px 6px;border:1.5px solid var(--surf-bord);border-radius:14px;
   background:var(--surf-halo),var(--surf);box-shadow:var(--surf-hl),var(--surf-ombre);color:var(--ink);min-width:0;text-align:left;transition:border-color .2s,background .2s,box-shadow .2s}
 .sv:hover{border-color:var(--hl-ui)}
-.sv-art{position:relative;width:26px;height:26px;border-radius:5px;overflow:hidden;display:grid;place-items:center;background:color-mix(in srgb, var(--c) 12%, var(--panel))}
-.sv-art svg{width:15px;height:15px;fill:var(--c)}
+.sv-art{position:relative;width:50px;height:50px;border-radius:9px;overflow:hidden;display:grid;place-items:center;background:color-mix(in srgb, var(--c) 12%, var(--panel));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--c) 16%, transparent)}
+.sv-art svg{width:24px;height:24px;fill:var(--c)}
 .sv-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s}
 .sv-art img.ok{opacity:1}
 .sv-art::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .2s;
-  background:linear-gradient(currentColor,currentColor) 6px 100%/3px 40% no-repeat,linear-gradient(currentColor,currentColor) 11.5px 100%/3px 70% no-repeat,linear-gradient(currentColor,currentColor) 17px 100%/3px 55% no-repeat,var(--eq-voile);color:var(--c)}
+  background:linear-gradient(currentColor,currentColor) 30% 82%/5px 40% no-repeat,linear-gradient(currentColor,currentColor) 50% 82%/5px 70% no-repeat,linear-gradient(currentColor,currentColor) 70% 82%/5px 55% no-repeat,var(--eq-voile);color:var(--c)}
 .sv.joue{border-color:var(--c);box-shadow:0 0 0 2px color-mix(in srgb, var(--c) 30%, transparent)}
 .sv.joue .sv-art::after{opacity:1;animation:eq .9s ease-in-out infinite alternate}
 /* Départ écouté : « ON AIR » au-dessus de sa cartouche, à sa couleur */
@@ -117,16 +119,17 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
   color:color-mix(in srgb, var(--c) var(--c-mix), var(--c-to));text-shadow:0 0 10px color-mix(in srgb, var(--c) 55%, transparent);opacity:0;transform:translateY(3px);transition:opacity .25s,transform .25s;pointer-events:none}
 .sv.joue::before{opacity:1;transform:none;animation:onair 1.6s ease-in-out infinite}
 @keyframes onair{50%{opacity:.6}}
-@keyframes eq{0%{background-size:3px 30%,3px 80%,3px 50%,auto}50%{background-size:3px 85%,3px 35%,3px 70%,auto}100%{background-size:3px 55%,3px 65%,3px 30%,auto}}
-.sv-x{display:flex;flex-direction:column;min-width:0;line-height:1.2}
-.sv-n{color:color-mix(in srgb, var(--c) var(--c-mix), var(--c-to));font-weight:800;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sv-t{font-size:11.5px;color:var(--muted);overflow:hidden;white-space:nowrap;min-width:0}
+@keyframes eq{0%{background-size:5px 30%,5px 64%,5px 44%,auto}50%{background-size:5px 64%,5px 28%,5px 56%,auto}100%{background-size:5px 44%,5px 52%,5px 24%,auto}}
+.sv-x{display:flex;flex-direction:column;gap:1px;min-width:0;line-height:1.25}
+.sv-n{color:color-mix(in srgb, var(--c) var(--c-mix), var(--c-to));font-family:var(--font-display);font-weight:800;font-size:11px;letter-spacing:.1em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv-t{font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;white-space:nowrap;min-width:0}
+.sv-a{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:1.25em}
 .sv-tt{display:inline-block;white-space:nowrap}
 .sv-t.defile .sv-tt{animation:defile var(--dur, 12s) linear infinite}
 @keyframes defile{to{transform:translateX(-50%)}}
-.sv-m{display:flex;flex-direction:column;gap:3px}
-.sv-m i{position:relative;display:block;height:4px;border-radius:2px;background:var(--panel);overflow:hidden}
-.sv-m i::after{content:"";position:absolute;inset:0;background:var(--meter-grad);clip-path:inset(0 calc(100% - var(--v, 0%)) 0 0)}
+.sv-m{display:grid;grid-template-columns:repeat(2,5px);gap:3px;height:42px}
+.sv-m i{position:relative;display:block;border-radius:2px;background:var(--panel);overflow:hidden}
+.sv-m i::after{content:"";position:absolute;inset:0;background:var(--meter-grad-v);clip-path:inset(calc(100% - var(--v, 0%)) 0 0 0)}
 .sv.off{opacity:.55}
 .sv.alerte{border-color:var(--rec);background:var(--rec-soft);animation:clignsv 1s steps(1,end) infinite}
 @keyframes clignsv{50%{border-color:var(--line)}}
@@ -247,17 +250,6 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
 .mon-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .mon-sum{font-size:13.5px;font-weight:600;color:var(--muted)}
 .mon-sum.alerte{color:var(--rec)}
-.mon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px}
-.np-hist{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px;min-width:0}
-.np-hist:empty{display:none}
-.nh{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;min-width:0;font-size:13px}
-.nh-art{position:relative;width:34px;height:34px;border-radius:5px;overflow:hidden;display:grid;place-items:center;background:color-mix(in srgb, var(--c) 10%, var(--panel))}
-.nh-art svg{width:15px;height:15px;fill:var(--c);opacity:.7}
-.nh-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s}
-.nh-art img.ok{opacity:1}
-.nh-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
-.nh-t b{font-weight:700;color:var(--ink)}
-.nh time{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600;font-size:12.5px}
 /* Cartes (surveillance, auto-podcaster, lecteur des piges) : matière commune et reflet au survol, comme les tuiles */
 .mon,.det-haut,.det-card,.deck{position:relative;isolation:isolate;background:var(--surf-halo),var(--surf);border:1.5px solid var(--surf-bord);border-radius:18px;box-shadow:var(--surf-hl),var(--surf-ombre)}
 .mon::before,.det-card::before,.det-haut::before,.deck::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;opacity:0;transition:opacity .3s;pointer-events:none;
@@ -265,10 +257,14 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
 .mon,.det-card,.det-haut{--g:var(--hl-ui)}
 .mon:hover::before,.det-card:hover::before,.det-haut:hover::before{opacity:1}
 .det-card:hover,.det-haut:hover{border-color:color-mix(in srgb, var(--hl-ui) 45%, transparent)}
-.mon{display:flex;flex-direction:column;gap:10px;text-align:left;padding:12px;min-width:0;transition:border-color .25s,box-shadow .25s,transform .25s}
+/* Surveillance des flux, façon console de régie : une tranche par départ (nom, vu-mètre vertical, niveau),
+   alignées côte à côte, puis le programme (titre en cours et derniers titres). Monte-Carlo et Paris, qui diffusent
+   les mêmes programmes, forment une seule carte de deux tranches, avec un programme commun. */
+.mon-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:stretch}
+.mon{display:flex;flex-direction:column;gap:14px;text-align:left;padding:14px 14px 16px;min-width:0;transition:border-color .25s,box-shadow .25s}
 .mon:hover{border-color:color-mix(in srgb, var(--hl-ui) 55%, transparent);box-shadow:var(--surf-hl),0 16px 40px color-mix(in srgb, var(--hl-ui) 14%, transparent)}
 .mon[aria-pressed="true"]{box-shadow:inset 0 3px 0 var(--c),var(--surf-hl),var(--surf-ombre)}
-.mon-top{display:flex;align-items:center;gap:8px;min-width:0}
+.mon-top{display:flex;align-items:center;gap:8px;min-width:0;min-height:28px}
 .mon-top .chip{grid-row:auto;width:22px;height:22px;flex:none}
 .mon-id{flex:1;min-width:0;display:flex;align-items:center;gap:8px}
 .mon-id .mon-name{flex:0 1 auto}
@@ -286,66 +282,98 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
 :is(.mon,.mon-half).alerte .lamp{color:#fff;background:var(--rec)}
 :is(.mon,.mon-half).alerte .lamp::before{background:#fff;opacity:1;animation:clign 1s steps(1,end) infinite}
 @keyframes clign{50%{opacity:.25}}
-.meter{display:block;padding:10px 12px 6px 10px;border-radius:10px;
-  background:var(--screen);box-shadow:var(--screen-bord)}
-.m-rows{display:grid;grid-template-columns:10px minmax(0,1fr);gap:5px 7px;align-items:center;min-width:0}
-.m-ch{font-size:10px;font-weight:700;color:var(--meter-dim);line-height:1}
-.m-bar{position:relative;height:9px;border-radius:3px;overflow:hidden;background:var(--screen-track)}
-.m-bar::before,.m-fill{content:"";position:absolute;inset:0;border-radius:3px;background:var(--meter-grad);
-  -webkit-mask:repeating-linear-gradient(90deg,#000 0 3px,transparent 3px 4px);mask:repeating-linear-gradient(90deg,#000 0 3px,transparent 3px 4px)}
+.mon-half{display:flex;flex-direction:column;gap:14px;min-width:0;text-align:left;padding:0;border:0;background:none;position:relative}
+/* Écran du vu-mètre : graduations, voies gauche et droite en barres verticales, crête maintenue */
+.tr-corps{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:stretch;min-width:0}
+.meter{--vu-h:164px;display:grid;grid-template-columns:18px 20px 20px;grid-template-rows:var(--vu-h) auto;gap:0 5px;
+  padding:12px 12px 8px 8px;border-radius:12px;background:var(--screen);box-shadow:var(--screen-bord)}
+.m-scale{position:relative;font-size:9.5px;font-weight:600;color:var(--meter-dim);font-variant-numeric:tabular-nums;line-height:1}
+.m-scale span{position:absolute;right:2px;bottom:var(--at);transform:translateY(50%)}
+.m-bar{position:relative;border-radius:4px;overflow:hidden;background:var(--screen-track)}
+.m-bar::before,.m-fill{content:"";position:absolute;inset:0;border-radius:4px;background:var(--meter-grad-v);
+  -webkit-mask:repeating-linear-gradient(0deg,#000 0 3px,transparent 3px 5px);mask:repeating-linear-gradient(0deg,#000 0 3px,transparent 3px 5px)}
 .m-bar::before{opacity:var(--unlit)}
-.m-fill{clip-path:inset(0 calc(100% - var(--v, 0%)) 0 0);filter:brightness(1.12) drop-shadow(0 0 3px rgba(147,192,31,.5))}
-.m-peak{position:absolute;top:0;bottom:0;width:2px;left:var(--p, 0%);margin-left:-2px;background:var(--peak);border-radius:1px;box-shadow:0 0 6px var(--peak-glow);z-index:1}
-.m-scale{grid-column:2;position:relative;height:12px;font-size:9.5px;font-weight:600;color:var(--meter-dim);font-variant-numeric:tabular-nums}
-.m-scale span{position:absolute;top:1px;transform:translateX(-50%)}
-.m-scale span:last-child{transform:translateX(-100%)}
-.m-scale span::before{content:"";position:absolute;left:50%;top:-4px;width:1px;height:3px;background:var(--meter-dim);opacity:.6}
-.m-scale span:last-child::before{left:auto;right:0}
-:is(.mon,.mon-half).off .m-rows{opacity:.4}
-.np{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:center;min-width:0}
-.np-art{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;display:grid;place-items:center;
+.m-fill{clip-path:inset(calc(100% - var(--v, 0%)) 0 0 0);filter:brightness(1.12) drop-shadow(0 0 3px rgba(147,192,31,.5))}
+.m-peak{position:absolute;left:0;right:0;height:2px;bottom:var(--p, 0%);margin-bottom:-1px;background:var(--peak);border-radius:1px;box-shadow:0 0 6px var(--peak-glow);z-index:1}
+.m-ch{font-size:10px;font-weight:700;color:var(--meter-dim);text-align:center;line-height:1;padding-top:7px}
+.m-bar + .m-bar + .m-ch{grid-column:2}
+:is(.mon,.mon-half).off .meter > *{opacity:.4}
+/* Niveau en chiffres, à côté de l'écran */
+.tr-info{display:flex;flex-direction:column;justify-content:center;gap:5px;min-width:0}
+.tr-lbl{font-family:var(--font-display);font-weight:700;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.tr-niv{display:flex;align-items:baseline;gap:5px;line-height:1;white-space:nowrap}
+.tr-niv b{font-family:var(--font-display);font-weight:800;font-size:42px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.tr-niv small{font-size:14px;font-weight:600;color:var(--muted)}
+.tr-crete{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tr-crete b{font-weight:700;color:var(--ink-2)}
+:is(.mon,.mon-half).off .tr-niv b{color:var(--muted)}
+:is(.mon,.mon-half).alerte .tr-niv b{color:var(--rec)}
+/* Programme : titre en cours, puis les 5 derniers titres */
+.np{display:grid;grid-template-columns:76px minmax(0,1fr);gap:14px;align-items:center;min-width:0;padding-top:14px;border-top:1px solid var(--line)}
+.np-art{position:relative;width:76px;height:76px;border-radius:9px;overflow:hidden;display:grid;place-items:center;
   background:color-mix(in srgb, var(--c) 12%, var(--panel));box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--c) 18%, transparent)}
-.np-art svg{width:28px;height:28px;fill:var(--c);opacity:.85}
+.np-art svg{width:32px;height:32px;fill:var(--c);opacity:.85}
 .np-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .45s}
 .np-art img.ok{opacity:1}
 .np-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
 .np-lbl{font-family:var(--font-display);font-weight:700;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;line-height:1.2;margin-bottom:3px;
   color:color-mix(in srgb, var(--c) var(--c-mix), var(--c-to))}
-.np-t,.np-a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
-.np-t{font-weight:700;font-size:14.5px;color:var(--ink)}
-.np-a{font-size:13px;font-weight:500;color:var(--ink-2);min-height:1.3em}
+.np-t,.np-a{overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.np-t{font-weight:700;font-size:15.5px;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.np-a{font-size:13px;font-weight:500;color:var(--ink-2);min-height:1.25em;white-space:nowrap}
 .np.vide .np-t{font-weight:500;color:var(--muted)}
-.mon.alerte{border-color:var(--rec);animation:alarme 1s steps(1,end) infinite}
-@keyframes alarme{50%{background:var(--rec-soft)}}
-/* Carte commune (Monte-Carlo + Paris) : un vu-mètre et un nom par départ, titres partagés */
-.mon.duo{grid-column:1 / -1;overflow:hidden;gap:14px}
-.duo-vus{position:relative;display:grid;grid-template-columns:repeat(var(--n, 2),minmax(0,1fr));gap:10px 25px}
-.duo-vus::before{content:"";position:absolute;left:50%;top:2px;bottom:2px;width:1px;background:var(--surf-bord)}
-.mon-half:hover .mon-name{color:color-mix(in srgb, var(--c) var(--c-mix), var(--c-to))}
-.mon-half[aria-pressed="true"]::after{content:"";position:absolute;top:-12px;left:0;right:0;height:3px;background:var(--c)}
-.duo-vus > .mon-half:first-child::after{left:-14px}
-.duo-vus > .mon-half:last-child::after{right:-14px}
-.duo-bas{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 25px;align-items:start;border-top:1px solid var(--line);padding-top:14px}
-.duo-bas .np-hist{border-top:0;padding-top:0}
-.duo .np{grid-template-columns:116px minmax(0,1fr);gap:16px}
-.duo .np-art{width:116px;height:116px;border-radius:10px}
-.duo .np-art svg{width:44px;height:44px}
-.duo .np-t{font-size:19px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.duo .np-a{font-size:14.5px}
-.mon.duo.touche{border-color:var(--rec);animation:alarme 1s steps(1,end) infinite}
-.mon.duo:has(.mon-half.detecte){border-color:var(--c);box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent)}
-/* Départ touché : son vu-mètre clignote en rouge, avec la carte */
+.np-hist{display:flex;flex-direction:column;gap:7px;min-width:0}
+.np-hist:empty{display:none}
+.nh{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:center;min-width:0;font-size:13px}
+.nh-art{position:relative;width:32px;height:32px;border-radius:5px;overflow:hidden;display:grid;place-items:center;background:color-mix(in srgb, var(--c) 10%, var(--panel))}
+.nh-art svg{width:14px;height:14px;fill:var(--c);opacity:.7}
+.nh-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s}
+.nh-art img.ok{opacity:1}
+.nh-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
+.nh-t b{font-weight:700;color:var(--ink)}
+.nh time{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600;font-size:12px}
+/* Alerte : la carte et l'écran du départ touché clignotent */
+.mon.alerte,.mon.duo.touche{border-color:var(--rec);animation:alarme 1s steps(1,end) infinite}
+@keyframes alarme{50%{border-color:color-mix(in srgb, var(--rec) 35%, var(--surf-bord));background:color-mix(in srgb, var(--rec-soft) 55%, var(--surf))}}
 :is(.mon,.mon-half).alerte .meter{animation:vuAlarme 1s steps(1,end) infinite}
 @keyframes vuAlarme{50%{background:color-mix(in srgb, var(--rec) 26%, var(--screen));box-shadow:inset 0 0 0 1.5px var(--rec),0 0 18px color-mix(in srgb, var(--rec) 45%, transparent)}}
+/* Carte commune (Monte-Carlo + Paris) : deux tranches côte à côte, programme commun en dessous */
+.mon.duo{grid-column:span 2;overflow:hidden}
+.duo-vus{position:relative;display:grid;grid-template-columns:repeat(var(--n, 2),minmax(0,1fr));gap:0 28px}
+.duo-vus::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line)}
+.mon-half:hover .mon-name{color:color-mix(in srgb, var(--c) var(--c-mix), var(--c-to))}
+.mon-half[aria-pressed="true"]::after{content:"";position:absolute;top:-14px;left:0;right:0;height:3px;background:var(--c)}
+.duo-vus > .mon-half:first-child::after{left:-14px}
+.duo-vus > .mon-half:last-child::after{right:-14px}
+.duo-bas{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 28px;align-items:start;border-top:1px solid var(--line);padding-top:14px}
+.duo .np{grid-template-columns:minmax(0,1fr);align-items:start;gap:12px;padding-top:0;border-top:0}
+.duo .np-art{width:min(100%,196px);height:auto;aspect-ratio:1;border-radius:12px}
+.duo .np-art svg{width:56px;height:56px}
+.duo .np-t{font-size:20px}
+.duo .np-a{font-size:14.5px}
+.mon.duo:has(.mon-half.detecte){border-color:var(--c);box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent)}
+@media (max-width:1100px){
+  .mon-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 @media (max-width:760px){
   .det-cols{grid-template-columns:minmax(0,1fr)}
-  .duo-vus,.duo-bas{grid-template-columns:minmax(0,1fr)}
-  .duo-vus{gap:18px}
-  .duo-vus::before{left:0;right:0;top:50%;bottom:auto;width:auto;height:1px;margin-top:-1px}
-  .duo-vus > .mon-half:last-child::after{display:none}
-  .duo-bas .np-hist{border-top:1px solid var(--line);padding-top:10px}
-  .duo .np{grid-template-columns:80px minmax(0,1fr)}
-  .duo .np-art{width:80px;height:80px}
+}
+@media (max-width:640px){
+  .mon-grid{grid-template-columns:minmax(0,1fr)}
+  .mon.duo{grid-column:auto}
+  .duo-vus{gap:0 16px}
+  .duo-vus > .mon-half:first-child::after{left:-14px}
+  .duo-bas{grid-template-columns:minmax(0,1fr);gap:16px}
+  .duo .np{grid-template-columns:96px minmax(0,1fr);align-items:center;gap:14px}
+  .duo .np-art{width:96px}
+  .duo .np-t{font-size:17px}
+  .duo .mon-tags{display:none}
+  .duo .mon-name{font-size:15px}
+  .duo .tr-corps{grid-template-columns:auto minmax(0,1fr);gap:10px}
+  .duo .meter{--vu-h:140px;grid-template-columns:16px 14px 14px;gap:0 4px;padding:10px 8px 7px 5px}
+  .duo .tr-niv b{font-size:28px}
+  .duo .tr-niv small{font-size:12px}
+  .duo .tr-crete{font-size:12px}
 }
 
 .note{grid-area:note;margin:0;background:var(--panel);border-left:4px solid var(--ink-2);border-radius:6px;padding:10px 14px;font-size:14px}
@@ -503,9 +531,12 @@ kbd{font-family:var(--font-body);font-weight:600;font-size:11.5px;border:1px sol
   .hour .st{font-size:10.5px}
 }
 @media (max-width:520px){
-  .sv-n{font-size:11.5px}
-  .sv{grid-template-columns:24px minmax(0,1fr) 34px;gap:7px;padding:4px 8px 4px 4px}
-  .sv-art{width:24px;height:24px}
+  .sv{grid-template-columns:40px minmax(0,1fr) auto;gap:9px;min-height:54px;padding:6px 9px 6px 6px;border-radius:12px}
+  .sv-art{width:40px;height:40px;border-radius:7px}
+  .sv-art svg{width:20px;height:20px}
+  .sv-t{font-size:12.5px}
+  .sv-a{font-size:11.5px}
+  .sv-m{height:34px;grid-template-columns:repeat(2,4px);gap:2px}
   .xt-list li{grid-template-columns:auto minmax(0,1fr)}
   .xt-act{grid-column:2;justify-content:flex-start}
   .lockup{height:50px}
@@ -1734,25 +1765,27 @@ const vuPct = db => {
   return 100;
 };
 function buildMonitor(){
-  const scale = [[-40, '40'], [-20, '20'], [-12, '12'], [-6, '6'], [-3, '3'], [0, '0']].map(([d, t]) => `<span style="left:${vuPct(d).toFixed(1)}%">${t}</span>`).join('');
-  const bar = ch => `<span class="m-ch">${ch}</span><span class="m-bar"><i class="m-fill"></i><i class="m-peak"></i></span>`;
+  const scale = [[-40, '40'], [-20, '20'], [-12, '12'], [-6, '6'], [-3, '3'], [0, '0']].map(([d, t]) => `<span style="--at:${vuPct(d).toFixed(1)}%">${t}</span>`).join('');
+  const bar = `<span class="m-bar"><i class="m-fill"></i><i class="m-peak"></i></span>`;
   // Départs qui diffusent les mêmes programmes (« titresDe ») : une seule carte, un vu-mètre par départ, titres en commun.
   const chefDe = s => { const c = s.titresDe && cfg.sources.find(x => x.id === s.titresDe); return c && c !== s && !c.titresDe ? c : null; };
   const groupes = cfg.sources.filter(s => !chefDe(s)).map(s => [s, ...cfg.sources.filter(x => chefDe(x) === s)]);
   const tete = s => `<span class="mon-top"><svg class="chip" viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span class="mon-id"><span class="mon-name">${esc(s.name)}</span>${Array.isArray(s.diffusion) && s.diffusion.length ? `<span class="mon-tags" aria-label="Diffusion">${s.diffusion.map(d => `<span class="mon-tag">${esc(d)}</span>`).join('')}</span>` : ''}</span><span class="lamp mon-txt">—</span></span>
-    <span class="meter" aria-hidden="true"><span class="m-rows">${bar('L')}${bar('R')}<span class="m-scale">${scale}</span></span></span>`;
+    <span class="tr-corps"><span class="meter" aria-hidden="true"><span class="m-scale">${scale}</span>${bar}${bar}<span class="m-ch">L</span><span class="m-ch">R</span></span>
+    <span class="tr-info"><span class="tr-lbl">Niveau</span><span class="tr-niv"><b>—</b><small>dB</small></span><span class="tr-crete">crête <b>—</b></span></span></span>`;
   const titresHtml = `<span class="np vide"><span class="np-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="np-txt"><span class="np-lbl">Now playing</span><span class="np-t">Recherche du titre…</span><span class="np-a"></span></span></span>
     <span class="np-hist" aria-label="Derniers titres"></span>`;
   const attrs = s => `data-id="${esc(s.id)}" style="--c:${srcColor(s)}" aria-pressed="${s.id === st.src}" title="Réécouter ${esc(s.name)} dans les piges"`;
   $('monGrid').innerHTML = groupes.map(g => g.length === 1
     ? `<button class="mon off" type="button" ${attrs(g[0])}>${tete(g[0])}${titresHtml}</button>`
     : `<div class="mon duo" style="--c:${srcColor(g[0])};--n:${g.length}"><div class="duo-vus">${g.map(s => `<button class="mon-half off" type="button" ${attrs(s)}>${tete(s)}</button>`).join('')}</div><div class="duo-bas">${titresHtml}</div></div>`).join('');
-  $('strip').innerHTML = cfg.sources.map(s => `<button class="sv off" type="button" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" title="Écouter ${esc(s.name)} en direct"><span class="sv-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="sv-x"><span class="sv-n">${esc(s.court || s.name.replace(/^100\s*%\s*/, ''))}</span><span class="sv-t"><span class="sv-tt">—</span></span></span><span class="sv-m" aria-hidden="true"><i></i><i></i></span></button>`).join('');
+  $('strip').innerHTML = cfg.sources.map(s => `<button class="sv off" type="button" data-id="${esc(s.id)}" style="--c:${srcColor(s)}" title="Écouter ${esc(s.name)} en direct"><span class="sv-art"><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><img alt="" decoding="async" referrerpolicy="no-referrer"></span><span class="sv-x"><span class="sv-n">${esc(s.court || s.name.replace(/^100\s*%\s*/, ''))}</span><span class="sv-t"><span class="sv-tt">—</span></span><span class="sv-a"></span></span><span class="sv-m" aria-hidden="true"><i></i><i></i></span></button>`).join('');
   $('tileVu').innerHTML = cfg.sources.map(s => `<span class="tv-col" style="--c:${srcColor(s)}"><span class="tv-bar"><i></i></span><svg viewBox="31 31 140.2 140.2" aria-hidden="true"><use href="#rmMark"/></svg><span>${esc(s.sigle || (s.court || s.name.replace(/^100\s*%\s*/, '')).split(/[\s-]+/).map((w, i, t) => t.length > 1 ? w[0] : w.slice(0, 2)).join('').slice(0, 2).toUpperCase())}</span></span>`).join('');
   mon.cards = [...$('monGrid').querySelectorAll('[data-id]')].map(el => {
     const box = el.closest('.mon'), chef = box === el || box.querySelector('.mon-half') === el;   // le premier départ d'une carte commune affiche les titres
     return {
       id: el.dataset.id, el, box, txt: el.querySelector('.mon-txt'), fills: el.querySelectorAll('.m-fill'), peaks: el.querySelectorAll('.m-peak'),
+      niv: el.querySelector('.tr-niv b'), cr: el.querySelector('.tr-crete b'), nivK: '', crK: '', nivT: 0,
       np: chef ? box.querySelector('.np') : null, npI: box.querySelector('.np-art img'), npT: box.querySelector('.np-t'), npA: box.querySelector('.np-a'), npK: '', npH: box.querySelector('.np-hist'),
       sv: $('strip').querySelector(`[data-id="${CSS.escape(el.dataset.id)}"]`),
       tv: $('tileVu').children[cfg.sources.findIndex(s => s.id === el.dataset.id)].querySelector('i'), svK: '', ouvert: null,
@@ -2683,9 +2716,10 @@ function afficherTitres(c){
   bandeauTitre(c, t);
 }
 function bandeauTitre(c, t){
-  // Bandeau : pochette et titre du départ ; le texte défile s'il est plus long que la place disponible.
-  const d = t.etat === 'ok' ? decouper(t.titre) : null, txt = d ? (d.artiste ? `${d.titre} — ${d.artiste}` : d.titre) : (t.etat === 'vide' ? 'Aucun titre transmis' : '—');
+  // Bandeau : pochette, titre et artiste du départ ; le titre défile s'il est plus long que la place disponible.
+  const d = t.etat === 'ok' ? decouper(t.titre) : null, txt = d ? d.titre : (t.etat === 'vide' ? 'Aucun titre transmis' : '—');
   const box = c.sv.querySelector('.sv-t'), tt = box.firstElementChild, img = c.sv.querySelector('.sv-art img');
+  c.sv.querySelector('.sv-a').textContent = d ? d.artiste : '';
   box.classList.remove('defile'); tt.textContent = txt;
   if (tt.scrollWidth > box.clientWidth + 2){
     tt.textContent = `${txt}\u2003•\u2003${txt}\u2003•\u2003`;
@@ -2730,6 +2764,7 @@ function blancMaj(discret){
 }
 
 function fmtSilence(sec){ return `${Math.floor(sec / 60)}:${pad(sec % 60)}`; }
+const fmtDb = v => { const n = Math.round(v); return n < 0 ? '\u2212' + (-n) : String(n); };
 function monFrame(now){
   const dt = Math.min(0.1, (now - (mon.last || now)) / 1000); mon.last = now;
   const prog = mon.data && now - mon.at < 3000;
@@ -2760,6 +2795,13 @@ function monFrame(now){
       const p = vuPct(c.pk[i]);
       c.peaks[i].style.setProperty('--p', p.toFixed(1) + '%');
       c.peaks[i].style.opacity = p > 1 ? '' : '0';
+    }
+    if (now - c.nivT > 250){                       // niveau en chiffres : 4 fois par seconde, lisible
+      c.nivT = now;
+      const vivant = cls !== 'off' && !(src && src.etat === 'coupe'), v = Math.max(c.d[0], c.d[1]), p = Math.max(c.pk[0], c.pk[1]);
+      const tv = vivant && v > -60 ? fmtDb(v) : '—', tp = vivant && p > -60 ? fmtDb(p) + ' dB' : '—';
+      if (tv !== c.nivK){ c.niv.textContent = tv; c.nivK = tv; }
+      if (tp !== c.crK){ c.cr.textContent = tp; c.crK = tp; }
     }
     afficherTitres(c);
     if (fresh && src) blancSuivre(c, src, cls);
