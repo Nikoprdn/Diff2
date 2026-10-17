@@ -1638,8 +1638,9 @@ ecoute.a.addEventListener('play', majEcoute);
 ecoute.a.addEventListener('pause', majEcoute);
 
 /* ---------- Téléphone : écran verrouillé, centre de contrôle, montre, voiture ----------
-   Le téléphone affiche ce que la page lui annonce (Media Session) : titre et artiste diffusés, pochette (sinon le logo
-   de la chaîne) et les commandes adaptées au son en cours.
+   Le téléphone affiche ce que la page lui annonce (Media Session). L'écran verrouillé n'a que deux lignes :
+   1re ligne, le titre qui passe sur le départ (« Titre — ARTISTE ») ; 2e ligne, le départ (« Monte-Carlo · en direct ») ;
+   avec la pochette du disque (sinon le logo de la chaîne), et les commandes adaptées au son en cours.
    Direct (bandeau ou bouton DIRECT des piges) : lecture, pause, chaîne précédente ou suivante.
    Pige : lecture, pause, reculer ou avancer de 10 s, déplacement dans l'heure. */
 const ms = 'mediaSession' in navigator ? navigator.mediaSession : null;
@@ -1673,15 +1674,16 @@ function majSession(){
   if (!ms) return;
   const e = sonEnCours();
   let m = null;
+  const morceau = d => d.artiste ? `${d.titre} — ${d.artiste}` : d.titre;
   if (e && e.mode === 'direct'){
     const t = titres[e.s.titresDe || e.s.id] || {}, d = t.etat === 'ok' ? decouper(t.titre) : null;
-    m = { title: d ? d.titre : `${e.s.name} en direct`, artist: d ? (d.artiste || e.s.name) : 'Radio Monaco',
-          album: `Radio Monaco · ${e.s.name} · en direct`, p: d ? pochetteConnue(t.titre) : '' };
+    m = { title: d ? morceau(d) : `${e.s.name} en direct`, artist: `${e.s.name} · en direct`, album: 'Radio Monaco',
+          p: d ? pochetteConnue(t.titre) : '' };
   } else if (e){
     const pos = curPos(), h = new Date(slotAt(pos).start), brut = titreA(e.s, pos), d = brut ? decouper(brut) : null;
     const jour = h.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-    m = { title: d ? d.titre : `Pige ${e.s.name} · ${h.getHours()} h`, artist: d ? (d.artiste || e.s.name) : jour,
-          album: `Pige ${e.s.name} · ${jour}, ${h.getHours()} h`, p: d ? pochetteConnue(brut) : '' };
+    m = { title: d ? morceau(d) : `Pige de ${h.getHours()} h`, artist: `${e.s.name} · pige du ${jour}, ${h.getHours()} h`, album: 'Radio Monaco',
+          p: d ? pochetteConnue(brut) : '' };
   }
   const cle = m ? [e.s.id, m.title, m.artist, m.album, m.p].join('|') : '';
   if (cle !== sess.cle){
