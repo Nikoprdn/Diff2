@@ -1843,6 +1843,7 @@ function memDirect(d){
   if (x){
     const t = Math.round(x.t * 1000);
     if (!det.dernier || det.dernier.t !== t) det.dernier = { id: x.src, nom: x.nom, score: x.score || 0, t };
+    else if (x.score) det.dernier.score = x.score;   // la ressemblance monte jusqu'au pic du passage
     det.jusqua = now + 1000;                       // allumé tant que le PC de pige le dit
   }
 }
