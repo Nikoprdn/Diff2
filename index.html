@@ -204,8 +204,11 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
 .lockup.neutre .lk-tag{display:none}
 .lk-tagtxt{font-family:"Barlow",sans-serif;font-weight:700;font-size:21.5px;letter-spacing:2.2px;text-transform:uppercase}
 .top-right{display:flex;align-items:center;gap:14px}
-.now{display:flex;align-items:baseline;gap:8px;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
-.now small{font-family:var(--font-display);font-size:12px;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+/* Horloge du bandeau, lisible de loin : heures et minutes en grand, secondes et date plus discrètes */
+.now{display:flex;flex-direction:column;align-items:flex-end;gap:4px;line-height:1}
+.now-h{font-family:var(--font-display);font-weight:800;font-size:44px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.now-s{font-weight:600;color:var(--muted)}
+.now-d{font-family:var(--font-display);font-weight:700;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
 
 /* Surveillance des flux — vu-mètres façon console de régie : écran sombre, barres dégradées, pastille d'état */
 .monitor{display:flex;flex-direction:column;gap:8px}
@@ -563,6 +566,8 @@ input[type="range"]{accent-color:var(--accent);width:110px}
   .xt-list li{grid-template-columns:auto minmax(0,1fr)}
   .xt-act{grid-column:2;justify-content:flex-start}
   .lockup{height:50px}
+  .now-h{font-size:32px}
+  .now-d{display:none}
   .transport{gap:5px}
   .tbtn{height:42px;min-width:40px;padding:0 7px;font-size:14px}
   .tbtn.play{width:56px;height:50px}
@@ -628,7 +633,7 @@ html:not(.logo-pret) .top .brand{opacity:0;animation:logoSecours .3s 6s forwards
     <div class="top-right">
       <span class="who" id="who" hidden></span>
       <a class="btn" id="logout" href="/cdn-cgi/access/logout" hidden>Déconnexion</a>
-      <span class="now" title="Heure locale"><small>Il est</small><span id="nowClock">--:--:--</span></span>
+      <span class="now" title="Heure de Paris"><span class="now-h" id="nowClock">--:--<span class="now-s">:--</span></span><span class="now-d" id="nowDate"></span></span>
     </div>
     <div class="strip" id="strip" aria-label="Départs en direct"></div>
   </header>
@@ -3109,8 +3114,12 @@ async function init(){
   setInterval(() => detAfficher(false), 250);
   // Onglet en arrière-plan : on continue de surveiller (alerte dans le titre de l'onglet).
   setInterval(() => { if (document.hidden) monFrame(performance.now()); }, 1000);
-  setInterval(() => { $('nowClock').textContent = fmtClock(Date.now()); }, 1000);
-  $('nowClock').textContent = fmtClock(Date.now());
+  const horloge = () => {
+    const d = new Date(), j = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    $('nowClock').innerHTML = `${pad(d.getHours())}:${pad(d.getMinutes())}<span class="now-s">:${pad(d.getSeconds())}</span>`;
+    if ($('nowDate').textContent !== j) $('nowDate').textContent = j;
+  };
+  horloge(); setInterval(horloge, 1000);
   await seek(start, { autoplay: false });
   refreshToday();
   setInterval(refreshToday, 60e3);
